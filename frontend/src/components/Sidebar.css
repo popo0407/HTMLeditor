@@ -1,0 +1,58 @@
+/**
+ * サイドバー用CSS
+ * Snowsight風ライトテーマ対応
+ */
+
+.sidebar {
+  height: 100%;
+  overflow-y: auto;
+}
+
+.sidebar-section {
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.sidebar-section:last-child {
+  border-bottom: none;
+}
+
+.sidebar-title {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0 0 12px 0;
+  color: var(--secondary-color);
+}
+
+.sidebar-button {
+  width: 100%;
+  margin-bottom: 8px;
+  text-align: left;
+  justify-content: flex-start;
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  border: 1px solid var(--border-color);
+  background-color: white;
+  color: var(--primary-color);
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: var(--primary-font);
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+.sidebar-button:hover {
+  background-color: var(--background-light);
+  border-color: var(--accent-color);
+}
+
+.sidebar-button:last-child {
+  margin-bottom: 0;
+}
+
+.block-buttons {
+  display: flex;
+  flex-direction: column;
+}

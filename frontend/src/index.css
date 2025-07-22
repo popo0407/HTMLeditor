@@ -1,0 +1,8 @@
+/* Snowsight風ライトテーマ の読み込み */
+@import './styles/theme.css';
+
+/* コードスタイル（変更なし） */
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
+}

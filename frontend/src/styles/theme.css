@@ -1,0 +1,149 @@
+/**
+ * Snowsight風ライトテーマ
+ * アプリケーション全体の統一デザインシステム
+ */
+
+/* ベースフォント・カラー設定 */
+:root {
+  --primary-font: 'Hiragino Sans', 'Yu Gothic', 'Meiryo', sans-serif;
+  --primary-color: #333;
+  --secondary-color: #2c3e50;
+  --tertiary-color: #34495e;
+  --accent-color: #3498db;
+  --success-color: #28a745;
+  --warning-color: #ffc107;
+  --border-color: #ddd;
+  --background-light: #f8f9fa;
+  --success-background: #d4edda;
+  --warning-background: #fff3cd;
+  --line-height: 1.6;
+}
+
+/* グローバルリセット */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--primary-font);
+  line-height: var(--line-height);
+  color: var(--primary-color);
+  margin: 0;
+  padding: 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* 見出しのスタイル */
+h1, h2, h3, h4, h5, h6 {
+  margin-top: 0;
+  margin-bottom: 16px;
+  font-weight: 600;
+}
+
+h1 {
+  font-size: 28px;
+  color: var(--secondary-color);
+}
+
+h2 {
+  color: var(--secondary-color);
+  border-bottom: 3px solid var(--accent-color);
+  padding-bottom: 10px;
+  margin-top: 30px;
+  font-size: 24px;
+}
+
+h3 {
+  color: var(--tertiary-color);
+  margin-top: 25px;
+  font-size: 20px;
+}
+
+/* 段落とリスト */
+p {
+  margin: 12px 0;
+  line-height: var(--line-height);
+}
+
+ul, ol {
+  margin: 10px 0;
+  padding-left: 25px;
+}
+
+li {
+  margin: 5px 0;
+}
+
+/* テーブル */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 15px 0;
+}
+
+th, td {
+  border: 1px solid var(--border-color);
+  padding: 12px;
+  text-align: left;
+}
+
+th {
+  background-color: var(--background-light);
+  font-weight: bold;
+}
+
+/* 特別なブロックスタイル */
+.action-item {
+  background-color: var(--success-background);
+  border-left: 4px solid var(--success-color);
+  padding: 15px;
+  margin: 15px 0;
+  border-radius: 4px;
+}
+
+.important {
+  background-color: var(--warning-background);
+  border-left: 4px solid var(--warning-color);
+  padding: 15px;
+  margin: 15px 0;
+  border-radius: 4px;
+}
+
+/* 水平線 */
+hr {
+  border: none;
+  height: 2px;
+  background-color: var(--border-color);
+  margin: 24px 0;
+}
+
+/* 画像 */
+img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 4px;
+}
+
+/* レスポンシブ対応 */
+@media (max-width: 768px) {
+  body {
+    padding: 10px;
+  }
+  
+  table {
+    font-size: 14px;
+  }
+  
+  h1 {
+    font-size: 24px;
+  }
+  
+  h2 {
+    font-size: 20px;
+  }
+  
+  h3 {
+    font-size: 18px;
+  }
+}

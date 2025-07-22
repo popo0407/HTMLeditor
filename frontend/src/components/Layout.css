@@ -1,0 +1,93 @@
+/**
+ * レイアウトコンポーネント用CSS
+ * 
+ * Snowsight風ライトテーマを意識したスタイリング
+ * 要件 NF-003: 指定CSSファイル（Snowsight風ライトテーマ）を適用
+ */
+
+.layout {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  font-family: var(--primary-font);
+  background-color: #ffffff;
+  color: var(--primary-color);
+}
+
+.layout-header {
+  height: 60px;
+  background-color: var(--background-light);
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.layout-body {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+
+/* 要件 F-007-1: 左側にサイドバーを配置 */
+.layout-sidebar {
+  width: 280px;
+  background-color: var(--background-light);
+  border-right: 1px solid var(--border-color);
+  padding: 20px;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.layout-main {
+  flex: 1;
+  background-color: #ffffff;
+  padding: 20px;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+/* Snowsight風のボタンスタイル */
+.btn {
+  padding: 8px 16px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background-color: #ffffff;
+  color: #374151;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.15s ease;
+}
+
+.btn:hover {
+  background-color: #f9fafb;
+  border-color: #9ca3af;
+}
+
+.btn-primary {
+  background-color: #3b82f6;
+  border-color: #3b82f6;
+  color: #ffffff;
+}
+
+.btn-primary:hover {
+  background-color: #2563eb;
+  border-color: #2563eb;
+}
+
+/* フォーム要素のスタイル */
+.form-input {
+  padding: 8px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 14px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
