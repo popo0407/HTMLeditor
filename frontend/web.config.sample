@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+  <system.webServer>
+    <!-- React Router用の設定 (SPA対応) -->
+    <rewrite>
+      <rules>
+        <!-- 静的ファイルは通常通り配信 -->
+        <rule name="Static Files" enabled="true" stopProcessing="true">
+          <match url="^(static/|.*\.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot|json))$" />
+          <action type="None" />
+        </rule>
+        
+        <!-- APIリクエストはバックエンドにプロキシ (ARR使用時) -->
+        <rule name="API Proxy" enabled="true" stopProcessing="true">
+          <match url="^api/(.*)" />
+          <conditions>
+            <add input="{REQUEST_FILENAME}" matchType="IsFile" negate="true" />
+          </conditions>
+          <action type="Rewrite" url="http://127.0.0.1:8000/api/{R:1}" />
+        </rule>
+        
+        <!-- その他すべてのリクエストをindex.htmlにリダイレクト (React Router用) -->
+        <rule name="React Router" enabled="true" stopProcessing="true">
+          <match url=".*" />
+          <conditions logicalGrouping="MatchAll">
+            <add input="{REQUEST_FILENAME}" matchType="IsFile" negate="true" />
+            <add input="{REQUEST_FILENAME}" matchType="IsDirectory" negate="true" />
+          </conditions>
+          <action type="Rewrite" url="/index.html" />
+        </rule>
+      </rules>
+    </rewrite>
+
+    <!-- MIME タイプ設定 -->
+    <staticContent>
+      <!-- Modern web fonts -->
+      <mimeMap fileExtension=".woff" mimeType="application/font-woff" />
+      <mimeMap fileExtension=".woff2" mimeType="application/font-woff2" />
+      <!-- JSON ファイル -->
+      <mimeMap fileExtension=".json" mimeType="application/json" />
+      <!-- Source map ファイル -->
+      <mimeMap fileExtension=".map" mimeType="application/json" />
+    </staticContent>
+
+    <!-- HTTP ヘッダー設定 -->
+    <httpProtocol>
+      <customHeaders>
+        <!-- セキュリティヘッダー -->
+        <add name="X-Content-Type-Options" value="nosniff" />
+        <add name="X-Frame-Options" value="DENY" />
+        <add name="X-XSS-Protection" value="1; mode=block" />
+        <add name="Referrer-Policy" value="strict-origin-when-cross-origin" />
+        
+        <!-- キャッシュ設定 -->
+        <add name="Cache-Control" value="no-cache, no-store, must-revalidate" />
+        <add name="Pragma" value="no-cache" />
+        <add name="Expires" value="0" />
+      </customHeaders>
+    </httpProtocol>
+
+    <!-- 圧縮設定 -->
+    <httpCompression>
+      <scheme name="gzip" dll="%Windir%\system32\inetsrv\gzip.dll" />
+      <dynamicTypes>
+        <add mimeType="text/html" enabled="true" />
+        <add mimeType="application/javascript" enabled="true" />
+        <add mimeType="text/css" enabled="true" />
+        <add mimeType="application/json" enabled="true" />
+      </dynamicTypes>
+      <staticTypes>
+        <add mimeType="text/css" enabled="true" />
+        <add mimeType="application/javascript" enabled="true" />
+        <add mimeType="text/html" enabled="true" />
+      </staticTypes>
+    </httpCompression>
+
+    <!-- デフォルトドキュメント -->
+    <defaultDocument>
+      <files>
+        <clear />
+        <add value="index.html" />
+      </files>
+    </defaultDocument>
+
+    <!-- ディレクトリブラウジング無効 -->
+    <directoryBrowse enabled="false" />
+
+    <!-- HTTPエラー設定 -->
+    <httpErrors errorMode="Custom" defaultResponseMode="ExecuteURL">
+      <remove statusCode="404" subStatusCode="-1" />
+      <error statusCode="404" responseMode="ExecuteURL" path="/index.html" />
+    </httpErrors>
+
+    <!-- セキュリティ設定 -->
+    <security>
+      <requestFiltering>
+        <!-- 最大ファイルサイズ: 10MB -->
+        <requestLimits maxAllowedContentLength="10485760" />
+        <!-- 危険な拡張子をブロック -->
+        <fileExtensions>
+          <add fileExtension=".exe" allowed="false" />
+          <add fileExtension=".bat" allowed="false" />
+          <add fileExtension=".cmd" allowed="false" />
+          <add fileExtension=".com" allowed="false" />
+          <add fileExtension=".pif" allowed="false" />
+          <add fileExtension=".scr" allowed="false" />
+          <add fileExtension=".vbs" allowed="false" />
+        </fileExtensions>
+      </requestFiltering>
+    </security>
+  </system.webServer>
+
+  <!-- システム設定 -->
+  <system.web>
+    <compilation debug="false" />
+    <httpRuntime enableVersionHeader="false" />
+  </system.web>
+</configuration>

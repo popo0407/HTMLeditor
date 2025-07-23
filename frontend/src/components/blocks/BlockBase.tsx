@@ -112,20 +112,20 @@ export const BlockBase: React.FC<BlockBaseProps> = ({
             {/* 移動ボタン */}
             {onMoveUp && (
               <button 
-                className="btn block-action-btn" 
+                className="btn block-action-btn move-btn" 
                 onClick={handleMoveUp}
                 title="上に移動"
               >
-                ↑
+                ⬆️
               </button>
             )}
             {onMoveDown && (
               <button 
-                className="btn block-action-btn" 
+                className="btn block-action-btn move-btn" 
                 onClick={handleMoveDown}
                 title="下に移動"
               >
-                ↓
+                ⬇️
               </button>
             )}
             

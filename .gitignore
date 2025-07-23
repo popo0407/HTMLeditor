@@ -98,3 +98,24 @@ ENV/
 
 # Cache
 .cache/
+
+# 移植時除外ファイル（システム移植時に不要なファイル）
+migrate-temp/
+backup/
+old/
+*.backup
+*.bak
+
+# エディタ・IDE設定（移植先で再設定）
+.vscode/
+.idea/
+
+# OS固有ファイル
+.DS_Store
+Thumbs.db
+
+# 移植時の一時ファイル
+*.tmp
+*.temp
+temp/
+tmp/

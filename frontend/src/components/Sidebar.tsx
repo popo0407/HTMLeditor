@@ -15,12 +15,14 @@ interface SidebarProps {
   onAddBlock: (blockType: BlockType) => void;
   onImportFromClipboard: () => void;
   onSendMail: () => void;
+  onManageAddressBook: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
   onAddBlock,
   onImportFromClipboard,
-  onSendMail
+  onSendMail,
+  onManageAddressBook
 }) => {
   const blockTypes: { type: BlockType; label: string }[] = [
     { type: 'heading1', label: '大見出し' },
@@ -64,6 +66,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       <div className="sidebar-section">
         <h3 className="sidebar-title">メール送信</h3>
+        
+        <button 
+          className="btn btn-primary sidebar-button"
+          onClick={onManageAddressBook}
+        >
+          📝 アドレス帳管理
+        </button>
         
         <button 
           className="btn btn-primary sidebar-button"

@@ -1,0 +1,15 @@
+.venv\
+.vscode\
+node_modules\
+build\
+__pycache__\
+*.db
+.env
+.git\
+dist\
+*.pyc
+*.pyo
+.DS_Store
+Thumbs.db
+*.tmp
+*.temp

@@ -19,6 +19,18 @@ export type BlockType =
 // ブロックに適用可能なスタイル
 export type BlockStyle = 'normal' | 'important' | 'action-item';
 
+// 共通ブロックプロパティインターフェース
+export interface CommonBlockProps {
+  block: Block;
+  isSelected: boolean;
+  onSelect: (blockId: string) => void;
+  onUpdate: (blockId: string, content: string) => void;
+  onDelete: (blockId: string) => void;
+  onStyleChange?: (blockId: string, style: BlockStyle) => void;
+  onMoveUp?: (blockId: string) => void;
+  onMoveDown?: (blockId: string) => void;
+}
+
 // テーブルデータ構造
 export interface TableData {
   rows: string[][];

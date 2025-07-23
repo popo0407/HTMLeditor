@@ -185,6 +185,163 @@ class ClipboardService {
   }
 
   /**
+   * Teams向けメール用HTMLを生成（最適化されたスタイル）
+   */
+  blocksToTeamsHtml(blocks: Block[]): string {
+    const htmlParts = blocks.map(block => this.blockToHtml(block));
+    
+    return `<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>議事録</title>
+  <style>
+    body { 
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      line-height: 1.6; 
+      color: #323130;
+      max-width: 100%; 
+      margin: 0; 
+      padding: 16px; 
+      background-color: #ffffff;
+    }
+    h1 { 
+      color: #323130; 
+      margin-top: 0; 
+      margin-bottom: 16px; 
+      font-size: 24px;
+      font-weight: 600;
+    }
+    h2 { 
+      color: #323130; 
+      border-bottom: 2px solid #0078d4; 
+      padding-bottom: 8px; 
+      margin-top: 24px; 
+      margin-bottom: 12px;
+      font-size: 20px;
+      font-weight: 600;
+    }
+    h3 { 
+      color: #323130; 
+      margin-top: 20px; 
+      margin-bottom: 8px;
+      font-size: 16px;
+      font-weight: 600;
+    }
+    p { 
+      margin: 8px 0; 
+      font-size: 14px;
+    }
+    ul { 
+      margin: 8px 0; 
+      padding-left: 20px; 
+    }
+    li { 
+      margin: 4px 0; 
+      font-size: 14px;
+    }
+    hr { 
+      margin: 16px 0; 
+      border: none; 
+      height: 1px; 
+      background-color: #edebe9; 
+    }
+    table { 
+      width: 100%; 
+      border-collapse: collapse; 
+      margin: 12px 0; 
+      font-size: 14px;
+    }
+    th, td { 
+      border: 1px solid #edebe9; 
+      padding: 8px 12px; 
+      text-align: left; 
+    }
+    th { 
+      background-color: #f3f2f1; 
+      font-weight: 600;
+      color: #323130;
+    }
+    img { 
+      max-width: 100%; 
+      height: auto; 
+      border-radius: 4px; 
+    }
+    
+    /* Teams最適化：重要事項スタイル */
+    .important {
+      background-color: #fff4ce;
+      border-left: 4px solid #ffb900;
+      padding: 12px;
+      margin: 12px 0;
+      border-radius: 4px;
+      font-weight: 500;
+    }
+    
+    /* Teams最適化：アクション項目スタイル */
+    .action-item {
+      background-color: #e1f5fe;
+      border-left: 4px solid #0078d4;
+      padding: 12px;
+      margin: 12px 0;
+      border-radius: 4px;
+      font-weight: 500;
+    }
+    
+    /* Teams最適化：強調表示テーブル */
+    table.important {
+      background-color: #fff4ce;
+      border-left: 4px solid #ffb900;
+      padding: 8px;
+      margin: 12px 0;
+      border-radius: 4px;
+    }
+    table.important th {
+      background-color: rgba(255, 185, 0, 0.2);
+      border-bottom: 2px solid #ffb900;
+    }
+    
+    table.action-item {
+      background-color: #e1f5fe;
+      border-left: 4px solid #0078d4;
+      padding: 8px;
+      margin: 12px 0;
+      border-radius: 4px;
+    }
+    table.action-item th {
+      background-color: rgba(0, 120, 212, 0.2);
+      border-bottom: 2px solid #0078d4;
+    }
+    
+    /* Teams向け追加スタイル */
+    .teams-header {
+      background-color: #f3f2f1;
+      padding: 12px;
+      border-radius: 4px;
+      margin-bottom: 16px;
+      border-left: 4px solid #0078d4;
+    }
+    
+    .teams-footer {
+      margin-top: 24px;
+      padding-top: 16px;
+      border-top: 1px solid #edebe9;
+      font-size: 12px;
+      color: #605e5c;
+    }
+  </style>
+</head>
+<body>
+${htmlParts.join('\n')}
+<div class="teams-footer">
+<p>この議事録は HTMLエディタ で作成されました</p>
+</div>
+</body>
+</html>`;
+  }
+
+  /**
    * ブロック構造からHTMLを生成（F-001-5, F-003-1対応）
    */
   blocksToHtml(blocks: Block[]): string {

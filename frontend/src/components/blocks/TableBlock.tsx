@@ -8,21 +8,10 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { Block, TableData } from '../../types';
+import { CommonBlockProps, TableData } from '../../types';
 import { BlockBase } from './BlockBase';
 
-interface TableBlockProps {
-  block: Block;
-  isSelected: boolean;
-  onSelect: (blockId: string) => void;
-  onUpdate: (blockId: string, content: string) => void;
-  onDelete: (blockId: string) => void;
-  onStyleChange?: (blockId: string, style: any) => void;
-  onMoveUp?: (blockId: string) => void;
-  onMoveDown?: (blockId: string) => void;
-}
-
-export const TableBlock: React.FC<TableBlockProps> = (props) => {
+export const TableBlock: React.FC<CommonBlockProps> = (props) => {
   const { block, onUpdate } = props;
   
   // テーブルデータを初期化
@@ -184,9 +173,11 @@ export const TableBlock: React.FC<TableBlockProps> = (props) => {
               position: 'absolute', 
               left: '-35px', 
               top: '0', 
+              bottom: '0',
               display: 'flex', 
               flexDirection: 'column',
-              zIndex: 10
+              zIndex: 10,
+              justifyContent: 'stretch'
             }}>
               {tableData.rows.map((_, rowIndex) => (
                 <button
@@ -200,12 +191,13 @@ export const TableBlock: React.FC<TableBlockProps> = (props) => {
                     fontSize: '12px',
                     padding: '4px 6px',
                     cursor: 'pointer',
-                    marginBottom: '2px',
-                    height: '34px', // テーブル行の高さに合わせる
+                    marginBottom: '1px',
+                    flex: '1', // フレックスで自動高さ調整
                     width: '24px',
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'center'
+                    justifyContent: 'center',
+                    boxSizing: 'border-box'
                   }}
                   title={`${rowIndex + 1}行目を削除`}
                 >

@@ -7,20 +7,10 @@
  */
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Block } from '../../types';
+import { CommonBlockProps } from '../../types';
 import { BlockBase } from './BlockBase';
 
-interface ParagraphBlockProps {
-  block: Block;
-  isSelected: boolean;
-  onSelect: (blockId: string) => void;
-  onUpdate: (blockId: string, content: string) => void;
-  onDelete: (blockId: string) => void;
-  onMoveUp?: (blockId: string) => void;
-  onMoveDown?: (blockId: string) => void;
-}
-
-export const ParagraphBlock: React.FC<ParagraphBlockProps> = (props) => {
+export const ParagraphBlock: React.FC<CommonBlockProps> = (props) => {
   const { block, onUpdate } = props;
   const [isEditing, setIsEditing] = useState(false);
   const [content, setContent] = useState(block.content);

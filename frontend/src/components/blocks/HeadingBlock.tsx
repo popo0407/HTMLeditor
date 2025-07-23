@@ -7,20 +7,10 @@
  */
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Block } from '../../types';
+import { CommonBlockProps } from '../../types';
 import { BlockBase } from './BlockBase';
 
-interface HeadingBlockProps {
-  block: Block;
-  isSelected: boolean;
-  onSelect: (blockId: string) => void;
-  onUpdate: (blockId: string, content: string) => void;
-  onDelete: (blockId: string) => void;
-  onMoveUp?: (blockId: string) => void;
-  onMoveDown?: (blockId: string) => void;
-}
-
-export const HeadingBlock: React.FC<HeadingBlockProps> = (props) => {
+export const HeadingBlock: React.FC<CommonBlockProps> = (props) => {
   const { block, onUpdate } = props;
   const [isEditing, setIsEditing] = useState(false);
   const [content, setContent] = useState(block.content);

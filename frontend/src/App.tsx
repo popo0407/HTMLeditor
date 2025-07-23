@@ -13,8 +13,10 @@ import React, { useState } from 'react';
 import { Layout } from './components/Layout';
 import { Sidebar } from './components/Sidebar';
 import { BlockEditor } from './components/BlockEditor';
+import { AddressBookManager } from './components/AddressBookManager';
 import { Block, BlockType, BlockStyle, AppState } from './types';
 import { clipboardService } from './services/clipboardService';
+import { apiService } from './services/apiService';
 import './App.css';
 
 function App() {
@@ -26,6 +28,9 @@ function App() {
     contacts: [],
     isPreviewMode: false,
   });
+
+  // アドレス帳管理モーダルの状態
+  const [isAddressBookOpen, setIsAddressBookOpen] = useState(false);
 
   // ブロック追加ハンドラー（F-001-2対応）
   const handleAddBlock = (blockType: BlockType, insertAfter?: string) => {
@@ -95,13 +100,13 @@ function App() {
       ...prev,
       blocks: prev.blocks.map(block => {
         if (block.id === blockId) {
-          // テーブルブロックの場合、contentはJSONStringified blockデータ
-          if (block.type === 'table') {
+          // テーブルブロックや画像ブロックの場合、contentはJSONStringified blockデータ
+          if (block.type === 'table' || block.type === 'image') {
             try {
               const updatedBlock = JSON.parse(content);
               return { ...block, ...updatedBlock };
             } catch (error) {
-              console.error('テーブルデータの解析に失敗しました:', error);
+              console.error('ブロックデータの解析に失敗しました:', error);
               return { ...block, content };
             }
           }
@@ -179,10 +184,72 @@ function App() {
     }
   };
 
-  // メール送信ハンドラー（フェーズ3で詳細実装）
-  const handleSendMail = () => {
-    console.log('メール送信機能（フェーズ3で実装予定）');
-    alert('メール送信機能はフェーズ3で実装予定です');
+  // メール送信ハンドラー（F-004, F-005対応）
+  const handleSendMail = async () => {
+    if (appState.blocks.length === 0) {
+      alert('送信するコンテンツがありません');
+      return;
+    }
+
+    // 共通IDの確認
+    if (!appState.currentCommonId) {
+      const commonId = prompt('メール送信用の共通IDを入力してください:');
+      if (!commonId) return;
+      
+      try {
+        // 共通IDの存在確認
+        const validation = await apiService.validateAddressBook({ common_id: commonId });
+        if (!validation.exists) {
+          // eslint-disable-next-line no-restricted-globals
+          const create = confirm('指定された共通IDのアドレス帳が存在しません。新しく作成しますか？');
+          if (!create) return;
+          
+          await apiService.createAddressBook(commonId);
+          alert('アドレス帳を作成しました。連絡先を追加してからメールを送信してください。');
+          return;
+        }
+        
+        setAppState(prev => ({ ...prev, currentCommonId: commonId }));
+      } catch (error) {
+        console.error('共通ID確認エラー:', error);
+        const errorMessage = error instanceof Error ? error.message : '不明なエラー';
+        alert(`共通IDの確認に失敗しました。\n\nエラー詳細: ${errorMessage}\n\nバックエンドサーバーが起動していることを確認してください。`);
+        return;
+      }
+    }
+
+    // メール送信の詳細設定
+    const subject = prompt('件名を入力してください:', 'HTML Editor - ドキュメント');
+    if (!subject) return;
+
+    const additionalEmails = prompt('追加受信者のメールアドレスを入力してください（複数の場合はカンマ区切り）:');
+
+    try {
+      // HTMLコンテンツを生成
+      const htmlContent = clipboardService.blocksToHtml(appState.blocks);
+      
+      // メール送信
+      const result = await apiService.sendMail({
+        commonId: appState.currentCommonId!,
+        subject,
+        htmlContent,
+        recipientEmails: additionalEmails || undefined
+      });
+
+      alert(`メール送信が完了しました。\n送信先: ${result.recipients.join(', ')}`);
+    } catch (error) {
+      console.error('メール送信エラー:', error);
+      alert(`メール送信に失敗しました: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  };
+
+  // アドレス帳管理ハンドラー
+  const handleManageAddressBook = () => {
+    setIsAddressBookOpen(true);
+  };
+
+  const handleCommonIdChange = (commonId: string) => {
+    setAppState(prev => ({ ...prev, currentCommonId: commonId }));
   };
 
   // ブロックタイプに応じたデフォルトコンテンツ
@@ -200,14 +267,6 @@ function App() {
     }
   };
 
-  // プレビュー/編集モードの切り替え
-  const togglePreviewMode = () => {
-    setAppState(prev => ({
-      ...prev,
-      isPreviewMode: !prev.isPreviewMode,
-    }));
-  };
-
   return (
     <div className="App">
       <Layout
@@ -215,12 +274,6 @@ function App() {
           <div className="app-header">
             <h1>HTML Editor</h1>
             <div className="header-controls">
-              <button 
-                className={`btn ${appState.isPreviewMode ? 'btn-primary' : ''}`}
-                onClick={togglePreviewMode}
-              >
-                {appState.isPreviewMode ? '📝 編集モード' : '👁 プレビューモード'}
-              </button>
               <button 
                 className="btn"
                 onClick={handleDownloadHtml}
@@ -243,13 +296,34 @@ function App() {
             onAddBlock={handleAddBlock}
             onImportFromClipboard={handleImportFromClipboard}
             onSendMail={handleSendMail}
+            onManageAddressBook={handleManageAddressBook}
           />
         }
       >
-        <div className="main-content">
-          {appState.isPreviewMode ? (
-            <div className="preview-area">
-              <h2>プレビューエリア</h2>
+        <div className="main-content split-view">
+          <div className="editor-pane">
+            <div className="pane-header">
+              <h3>📝 編集エリア</h3>
+            </div>
+            <div className="pane-content">
+              <BlockEditor
+                blocks={appState.blocks}
+                selectedBlockId={appState.selectedBlockId}
+                onBlockSelect={handleBlockSelect}
+                onBlockUpdate={handleBlockUpdate}
+                onBlockDelete={handleBlockDelete}
+                onBlockAdd={handleAddBlock}
+                onBlockMove={handleBlockMove}
+                onBlockStyleChange={handleBlockStyleChange}
+              />
+            </div>
+          </div>
+          
+          <div className="preview-pane">
+            <div className="pane-header">
+              <h3>👁 プレビューエリア</h3>
+            </div>
+            <div className="pane-content">
               <style>
                 {`
                   .preview-content table.important th {
@@ -301,20 +375,17 @@ function App() {
                 }}
               />
             </div>
-          ) : (
-            <BlockEditor
-              blocks={appState.blocks}
-              selectedBlockId={appState.selectedBlockId}
-              onBlockSelect={handleBlockSelect}
-              onBlockUpdate={handleBlockUpdate}
-              onBlockDelete={handleBlockDelete}
-              onBlockAdd={handleAddBlock}
-              onBlockMove={handleBlockMove}
-              onBlockStyleChange={handleBlockStyleChange}
-            />
-          )}
+          </div>
         </div>
       </Layout>
+
+      {/* アドレス帳管理モーダル */}
+      <AddressBookManager
+        isOpen={isAddressBookOpen}
+        onClose={() => setIsAddressBookOpen(false)}
+        currentCommonId={appState.currentCommonId}
+        onCommonIdChange={handleCommonIdChange}
+      />
     </div>
   );
 }

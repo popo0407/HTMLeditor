@@ -7,20 +7,10 @@
  */
 
 import React from 'react';
-import { Block } from '../../types';
+import { CommonBlockProps } from '../../types';
 import { BlockBase } from './BlockBase';
 
-interface HorizontalRuleBlockProps {
-  block: Block;
-  isSelected: boolean;
-  onSelect: (blockId: string) => void;
-  onUpdate: (blockId: string, content: string) => void;
-  onDelete: (blockId: string) => void;
-  onMoveUp?: (blockId: string) => void;
-  onMoveDown?: (blockId: string) => void;
-}
-
-export const HorizontalRuleBlock: React.FC<HorizontalRuleBlockProps> = (props) => {
+export const HorizontalRuleBlock: React.FC<CommonBlockProps> = (props) => {
   return (
     <BlockBase {...props}>
       <hr className="block-horizontal-rule" />

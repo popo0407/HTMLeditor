@@ -9,7 +9,7 @@
  * 開発憲章の「単一責任の原則」に従い、ブロック管理のみに特化
  */
 
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Block, BlockType, BlockStyle } from '../types';
 import {
   HeadingBlock,
@@ -81,6 +81,78 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
     }
   };
 
+  // ブロック間挿入ボタンコンポーネント
+  const BlockInsertButton: React.FC<{ insertAfter?: string; index: number }> = ({ insertAfter, index }) => {
+    const [showMenu, setShowMenu] = useState(false);
+    const dropdownRef = useRef<HTMLDivElement>(null);
+    
+    const blockTypes: { type: BlockType; label: string; icon: string }[] = [
+      { type: 'heading1', label: '大見出し', icon: '📝' },
+      { type: 'heading2', label: '中見出し', icon: '📝' },
+      { type: 'heading3', label: '小見出し', icon: '📝' },
+      { type: 'paragraph', label: '段落', icon: '📄' },
+      { type: 'bulletList', label: '箇条書き', icon: '📋' },
+      { type: 'image', label: '画像', icon: '🖼️' },
+      { type: 'table', label: 'テーブル', icon: '📊' },
+      { type: 'horizontalRule', label: '水平線', icon: '➖' },
+    ];
+
+    // ウィンドウ外クリックでドロップダウンを閉じる
+    useEffect(() => {
+      const handleClickOutside = (event: MouseEvent) => {
+        if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+          setShowMenu(false);
+        }
+      };
+
+      if (showMenu) {
+        document.addEventListener('mousedown', handleClickOutside);
+      }
+
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside);
+      };
+    }, [showMenu]);
+
+    const handleInsert = (blockType: BlockType) => {
+      onBlockAdd(blockType, insertAfter);
+      setShowMenu(false);
+    };
+
+    const handleButtonClick = () => {
+      setShowMenu(!showMenu);
+    };
+
+    return (
+      <div 
+        className="block-insert-section"
+        ref={dropdownRef}
+      >
+        <div className="block-insert-line">
+          <button 
+            className="block-insert-button"
+            onClick={handleButtonClick}
+          >
+            ➕
+          </button>
+        </div>
+        {showMenu && (
+          <div className="block-insert-dropdown">
+            {blockTypes.map(({ type, label, icon }) => (
+              <button
+                key={type}
+                className="block-insert-option"
+                onClick={() => handleInsert(type)}
+              >
+                {icon} {label}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   // 空の状態の表示
   const renderEmptyState = () => (
     <div className="editor-empty-state">
@@ -105,7 +177,18 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
         {blocks.length === 0 ? (
           renderEmptyState()
         ) : (
-          blocks.map((block, index) => renderBlock(block, index))
+          <>
+            {/* 最初のブロックの前の挿入ボタン */}
+            <BlockInsertButton index={-1} />
+            
+            {blocks.map((block, index) => (
+              <React.Fragment key={`${block.id}-fragment`}>
+                {renderBlock(block, index)}
+                {/* 各ブロックの後の挿入ボタン */}
+                <BlockInsertButton insertAfter={block.id} index={index} />
+              </React.Fragment>
+            ))}
+          </>
         )}
       </div>
     </div>

@@ -9,7 +9,8 @@ HTMLエディタ バックエンドアプリケーション
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routes import address_book_routes, mail_routes
+from app.routes import address_book_routes
+from routes import mail_routes
 from app.models.database import engine, Base
 
 # データベーステーブルの作成
