@@ -1,0 +1,295 @@
+/**
+ * カレンダーブロック専用スタイル
+ * 
+ * Snowsight風のデザインテーマに統一
+ * 開発憲章の「設定とロジックの分離」に従い、スタイルを独立ファイルで管理
+ */
+
+.calendar-block {
+  margin: 16px 0;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.calendar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  border-bottom: 1px solid #e5e7eb;
+  background: #f9fafb;
+  border-radius: 8px 8px 0 0;
+}
+
+.calendar-header h3 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.calendar-nav-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #6b7280;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 14px;
+}
+
+.calendar-nav-button:hover {
+  background: #f3f4f6;
+  border-color: #9ca3af;
+  color: #374151;
+}
+
+.calendar-nav-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.calendar-nav-button:disabled:hover {
+  background: #ffffff;
+  border-color: #d1d5db;
+  color: #6b7280;
+}
+
+.calendar-content {
+  padding: 16px;
+}
+
+.calendar-month-section {
+  margin-bottom: 32px;
+}
+
+.calendar-month-section:last-child {
+  margin-bottom: 0;
+}
+
+.calendar-month-header {
+  margin-bottom: 16px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #e5e7eb;
+}
+
+.calendar-month-header h4 {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.calendar-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.calendar-table th {
+  padding: 12px 8px;
+  text-align: center;
+  font-weight: 600;
+  color: #374151;
+  background: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.calendar-table th.sunday {
+  color: #dc2626;
+}
+
+.calendar-table th.saturday {
+  color: #2563eb;
+}
+
+.calendar-date-cell {
+  width: 14.28%;
+  height: 80px;
+  padding: 4px;
+  border: 1px solid #f3f4f6;
+  vertical-align: top;
+  position: relative;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.calendar-date-cell:hover {
+  background: #f8fafc;
+}
+
+.calendar-date-cell.other-month {
+  background: #f9fafb;
+  color: #9ca3af;
+}
+
+.calendar-date-cell.today {
+  background: #dbeafe;
+  border-color: #3b82f6;
+  font-weight: 600;
+}
+
+.calendar-date-cell.sunday {
+  background: #fef2f2;
+}
+
+.calendar-date-cell.saturday {
+  background: #eff6ff;
+}
+
+.calendar-date-cell.other-month.sunday {
+  background: #fafafa;
+}
+
+.calendar-date-cell.other-month.saturday {
+  background: #fafafa;
+}
+
+.calendar-date-number {
+  display: block;
+  margin-bottom: 2px;
+  font-size: 13px;
+  line-height: 1;
+}
+
+.calendar-events {
+  font-size: 11px;
+  line-height: 1.2;
+}
+
+.calendar-event {
+  display: block;
+  margin-bottom: 1px;
+  padding: 1px 3px;
+  background: #3b82f6;
+  color: #ffffff;
+  border-radius: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.calendar-event:hover {
+  background: #2563eb;
+}
+
+.calendar-event.multi-day {
+  background: #10b981;
+}
+
+.calendar-event.multi-day:hover {
+  background: #059669;
+}
+
+/* イベント追加モーダル用スタイル */
+.calendar-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.calendar-modal {
+  background: #ffffff;
+  border-radius: 8px;
+  padding: 24px;
+  min-width: 400px;
+  max-width: 500px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+}
+
+.calendar-modal h3 {
+  margin: 0 0 16px 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.calendar-form-group {
+  margin-bottom: 16px;
+}
+
+.calendar-form-label {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+}
+
+.calendar-form-input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 14px;
+  box-sizing: border-box;
+}
+
+.calendar-form-input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.calendar-modal-buttons {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 24px;
+}
+
+.calendar-button {
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 1px solid transparent;
+}
+
+.calendar-button-primary {
+  background: #3b82f6;
+  color: #ffffff;
+}
+
+.calendar-button-primary:hover {
+  background: #2563eb;
+}
+
+.calendar-button-secondary {
+  background: #ffffff;
+  color: #374151;
+  border-color: #d1d5db;
+}
+
+.calendar-button-secondary:hover {
+  background: #f9fafb;
+}
+
+.calendar-button-danger {
+  background: #dc2626;
+  color: #ffffff;
+}
+
+.calendar-button-danger:hover {
+  background: #b91c1c;
+}
+
+

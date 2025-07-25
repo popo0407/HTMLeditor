@@ -14,7 +14,8 @@ export type BlockType =
   | 'bulletList' 
   | 'image' 
   | 'table' 
-  | 'horizontalRule';
+  | 'horizontalRule'
+  | 'calendar';
 
 // ブロックに適用可能なスタイル
 export type BlockStyle = 'normal' | 'important' | 'action-item';
@@ -38,6 +39,33 @@ export interface TableData {
   hasHeaderColumn?: boolean;
 }
 
+// Calendar関連の型定義
+export interface CalendarEvent {
+  id: string;
+  title: string;
+  start: string;
+  end?: string;
+  color?: string;
+}
+
+export interface DateInfo {
+  date: number;
+  isCurrentMonth: boolean;
+  isToday: boolean;
+  events: CalendarEvent[];
+}
+
+export interface WeekInfo {
+  dates: DateInfo[];
+}
+
+export interface CalendarData {
+  year: number;
+  month: number;
+  weeks: WeekInfo[];
+  events?: CalendarEvent[];
+}
+
 export interface Block {
   id: string;
   type: BlockType;
@@ -45,6 +73,7 @@ export interface Block {
   style?: BlockStyle;
   src?: string; // 画像用
   tableData?: TableData; // テーブル用
+  calendarData?: CalendarData; // カレンダー用
 }
 
 // アドレス帳関連の型定義

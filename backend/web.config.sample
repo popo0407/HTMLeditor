@@ -20,11 +20,17 @@
     </httpErrors>
 
     <!-- CORS ヘッダー設定 (FastAPIでも設定していますが、IIS側でも設定) -->
+    <!-- 注意: FastAPIの環境変数設定(CORS_ORIGINS)と合わせて設定してください -->
     <httpProtocol>
       <customHeaders>
+        <!-- 開発・動作確認用: 全オリジン許可 -->
         <add name="Access-Control-Allow-Origin" value="*" />
+        <!-- 本番環境用: 特定オリジンのみ許可 (必要に応じてコメントアウトを外す) -->
+        <!-- <add name="Access-Control-Allow-Origin" value="http://192.168.1.10" /> -->
+        <!-- <add name="Access-Control-Allow-Origin" value="https://yourdomain.com" /> -->
         <add name="Access-Control-Allow-Methods" value="GET,PUT,POST,DELETE,OPTIONS" />
         <add name="Access-Control-Allow-Headers" value="Content-Type,Authorization,Accept,Origin,User-Agent,DNT,Cache-Control,X-Mx-ReqToken,Keep-Alive,X-Requested-With,If-Modified-Since" />
+        <add name="Access-Control-Allow-Credentials" value="true" />
       </customHeaders>
     </httpProtocol>
 

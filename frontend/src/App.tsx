@@ -19,6 +19,22 @@ import { clipboardService } from './services/clipboardService';
 import { apiService } from './services/apiService';
 import './App.css';
 
+// ブロックタイプの表示名を取得するヘルパー関数
+const getBlockTypeDisplayName = (type: string): string => {
+  const displayNames: Record<string, string> = {
+    heading1: 'タイトル(H1)',
+    heading2: 'サブタイトル(H2)',
+    heading3: '小見出し(H3)',
+    paragraph: '段落',
+    bulletList: 'リスト',
+    table: 'テーブル',
+    image: '画像',
+    horizontalRule: '区切り線',
+    calendar: 'カレンダー'
+  };
+  return displayNames[type] || type;
+};
+
 function App() {
   // アプリケーション状態の管理
   const [appState, setAppState] = useState<AppState>({
@@ -28,9 +44,6 @@ function App() {
     contacts: [],
     isPreviewMode: false,
   });
-
-  // アドレス帳管理モーダルの状態
-  const [isAddressBookOpen, setIsAddressBookOpen] = useState(false);
 
   // ブロック追加ハンドラー（F-001-2対応）
   const handleAddBlock = (blockType: BlockType, insertAfter?: string) => {
@@ -43,6 +56,13 @@ function App() {
           rows: [['ヘッダー1', 'ヘッダー2'], ['セル1', 'セル2']],
           hasHeaderRow: true,
           hasHeaderColumn: false
+        }
+      }),
+      ...(blockType === 'calendar' && {
+        calendarData: {
+          year: new Date().getFullYear(),
+          month: new Date().getMonth() + 1,
+          weeks: []
         }
       })
     };
@@ -79,7 +99,24 @@ function App() {
         selectedBlockId: importedBlocks.length > 0 ? importedBlocks[0].id : null,
       }));
 
-      console.log(`${importedBlocks.length}個のブロックをインポートしました`);
+      // 読み込み結果の詳細を表示
+      const blockTypeCounts = importedBlocks.reduce((counts, block) => {
+        counts[block.type] = (counts[block.type] || 0) + 1;
+        return counts;
+      }, {} as Record<string, number>);
+
+      const scheduleBlocks = importedBlocks.filter(block => block.type === 'calendar');
+      const scheduleMessage = scheduleBlocks.length > 0 
+        ? `\n・スケジュール: ${scheduleBlocks.length}個のカレンダー`
+        : '';
+
+      const message = `クリップボードから ${importedBlocks.length}個のブロックを読み込みました:\n` +
+        Object.entries(blockTypeCounts)
+          .map(([type, count]) => `・${getBlockTypeDisplayName(type)}: ${count}個`)
+          .join('\n') + scheduleMessage;
+
+      console.log(message);
+      alert(message);
     } catch (error) {
       console.error('クリップボードの読み込みに失敗しました:', error);
       alert(`クリップボードの読み込みに失敗しました: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -100,8 +137,8 @@ function App() {
       ...prev,
       blocks: prev.blocks.map(block => {
         if (block.id === blockId) {
-          // テーブルブロックや画像ブロックの場合、contentはJSONStringified blockデータ
-          if (block.type === 'table' || block.type === 'image') {
+          // テーブルブロック、画像ブロック、カレンダーブロックの場合、contentはJSONStringified blockデータ
+          if (block.type === 'table' || block.type === 'image' || block.type === 'calendar') {
             try {
               const updatedBlock = JSON.parse(content);
               return { ...block, ...updatedBlock };
@@ -245,11 +282,7 @@ function App() {
 
   // アドレス帳管理ハンドラー
   const handleManageAddressBook = () => {
-    setIsAddressBookOpen(true);
-  };
-
-  const handleCommonIdChange = (commonId: string) => {
-    setAppState(prev => ({ ...prev, currentCommonId: commonId }));
+    console.log('アドレス帳管理機能');
   };
 
   // ブロックタイプに応じたデフォルトコンテンツ
@@ -263,6 +296,7 @@ function App() {
       case 'table': return 'テーブルセル';
       case 'horizontalRule': return '';
       case 'image': return '';
+      case 'calendar': return 'カレンダー (0件のイベント)';
       default: return '';
     }
   };
@@ -381,10 +415,9 @@ function App() {
 
       {/* アドレス帳管理モーダル */}
       <AddressBookManager
-        isOpen={isAddressBookOpen}
-        onClose={() => setIsAddressBookOpen(false)}
-        currentCommonId={appState.currentCommonId}
-        onCommonIdChange={handleCommonIdChange}
+        onEntrySelect={(entry) => {
+          console.log('Selected entry:', entry);
+        }}
       />
     </div>
   );

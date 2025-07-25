@@ -12,7 +12,7 @@ start "Frontend Server" cmd /k "npm start"
 
 echo.
 echo 両方のサーバーが起動しました:
-echo - バックエンド: http://localhost:8000
+echo - バックエンド: http://localhost:8002
 echo - フロントエンド: http://localhost:3000
 echo.
 echo ブラウザでフロントエンドにアクセスしてテストを開始してください。

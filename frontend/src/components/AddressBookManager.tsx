@@ -1,204 +1,434 @@
-/**
- * アドレス帳管理コンポーネント
- * 
- * 責務:
- * - 共通IDの管理
- * - 連絡先の追加・編集・削除
- * - アドレス帳の表示
- */
-
 import React, { useState, useEffect } from 'react';
-import { Contact, CommonID } from '../types';
-import { apiService } from '../services/apiService';
-import './AddressBookManager.css';
 
-interface AddressBookManagerProps {
-  isOpen: boolean;
-  onClose: () => void;
-  currentCommonId?: string | null;
-  onCommonIdChange: (commonId: string) => void;
+// アドレス帳関連の型定義（インライン定義）
+interface AddressBook {
+  id: string;
+  name: string;
+  description?: string;
+  created_at: string;
+  updated_at: string;
 }
 
-export const AddressBookManager: React.FC<AddressBookManagerProps> = ({
-  isOpen,
-  onClose,
-  currentCommonId,
-  onCommonIdChange
-}) => {
-  const [commonId, setCommonId] = useState(currentCommonId || '');
-  const [contacts, setContacts] = useState<Contact[]>([]);
-  const [newContact, setNewContact] = useState({ name: '', email: '' });
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+interface AddressBookEntry {
+  id: string;
+  name: string;
+  email: string;
+  phone?: string;
+  company?: string;
+  position?: string;
+  notes?: string;
+  created_at: string;
+  updated_at: string;
+}
 
-  // 共通IDが変更された時に連絡先を取得
+interface CreateAddressBookRequest {
+  name: string;
+  description?: string;
+}
+
+interface UpdateAddressBookRequest {
+  name: string;
+  email: string;
+  phone?: string;
+  company?: string;
+  position?: string;
+  notes?: string;
+}
+
+// 簡単なAPIサービス（仮実装）
+const addressBookService = {
+  async getAddressBooks(): Promise<AddressBook[]> {
+    // 仮実装
+    return [];
+  },
+  async getAddressBookEntries(bookId: string): Promise<AddressBookEntry[]> {
+    // 仮実装
+    return [];
+  },
+  async createAddressBook(request: CreateAddressBookRequest): Promise<AddressBook> {
+    // 仮実装
+    return {} as AddressBook;
+  },
+  async createAddressBookEntry(bookId: string, entry: AddressBookEntry): Promise<AddressBookEntry> {
+    // 仮実装
+    return {} as AddressBookEntry;
+  },
+  async updateAddressBookEntry(bookId: string, entryId: string, request: UpdateAddressBookRequest): Promise<AddressBookEntry> {
+    // 仮実装
+    return {} as AddressBookEntry;
+  },
+  async deleteAddressBookEntry(bookId: string, entryId: string): Promise<void> {
+    // 仮実装
+  }
+};
+
+interface AddressBookManagerProps {
+  onEntrySelect: (entry: AddressBookEntry | null) => void;
+}
+
+const AddressBookManager: React.FC<AddressBookManagerProps> = ({ onEntrySelect }) => {
+  const [addressBooks, setAddressBooks] = useState<AddressBook[]>([]);
+  const [selectedBookId, setSelectedBookId] = useState<string>('');
+  const [entries, setEntries] = useState<AddressBookEntry[]>([]);
+  const [selectedEntry, setSelectedEntry] = useState<AddressBookEntry | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
+  const [isCreatingBook, setIsCreatingBook] = useState(false);
+  const [error, setError] = useState<string>('');
+  
+  const [newBook, setNewBook] = useState({
+    name: '',
+    description: ''
+  });
+  
+  const [editingEntry, setEditingEntry] = useState<Partial<AddressBookEntry>>({
+    name: '',
+    email: '',
+    phone: '',
+    company: '',
+    position: '',
+    notes: ''
+  });
+
+  // アドレス帳一覧の読み込み
   useEffect(() => {
-    if (currentCommonId) {
-      loadContacts(currentCommonId);
+    loadAddressBooks();
+  }, []);
+
+  // 選択されたアドレス帳のエントリ読み込み
+  useEffect(() => {
+    if (selectedBookId) {
+      loadEntries(selectedBookId);
+    } else {
+      setEntries([]);
     }
-  }, [currentCommonId]);
+  }, [selectedBookId]);
 
-  const loadContacts = async (id: string) => {
+  const loadAddressBooks = async () => {
     try {
-      setLoading(true);
-      setError(null);
-      const contactList = await apiService.getContacts(id);
-      setContacts(contactList);
-    } catch (error) {
-      console.error('連絡先取得エラー:', error);
-      setError('連絡先の取得に失敗しました');
-      setContacts([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleCommonIdSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!commonId.trim()) return;
-
-    try {
-      setLoading(true);
-      setError(null);
-
-      // 共通IDの存在確認
-      const validation = await apiService.validateAddressBook({ common_id: commonId });
-      
-      if (!validation.exists) {
-        // eslint-disable-next-line no-restricted-globals
-        const create = confirm(`共通ID "${commonId}" のアドレス帳が存在しません。新しく作成しますか？`);
-        if (!create) return;
-        
-        await apiService.createAddressBook(commonId);
-        setContacts([]);
-      } else {
-        setContacts(validation.contacts);
-      }
-
-      onCommonIdChange(commonId);
-    } catch (error) {
-      console.error('共通ID確認エラー:', error);
-      setError('共通IDの確認に失敗しました');
-    } finally {
-      setLoading(false);
+      const books = await addressBookService.getAddressBooks();
+      setAddressBooks(books);
+      setError('');
+    } catch (err) {
+      setError('アドレス帳の読み込みに失敗しました');
+      console.error(err);
     }
   };
 
-  const handleAddContact = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newContact.name.trim() || !newContact.email.trim() || !currentCommonId) return;
-
+  const loadEntries = async (bookId: string) => {
     try {
-      setLoading(true);
-      setError(null);
+      const entriesData = await addressBookService.getAddressBookEntries(bookId);
+      setEntries(entriesData);
+      setError('');
+    } catch (err) {
+      setError('エントリの読み込みに失敗しました');
+      console.error(err);
+    }
+  };
 
-      const contact = await apiService.addContact(currentCommonId, {
-        name: newContact.name,
-        email: newContact.email
+  const handleCreateBook = async () => {
+    try {
+      const request: CreateAddressBookRequest = {
+        name: newBook.name,
+        description: newBook.description
+      };
+      await addressBookService.createAddressBook(request);
+      setNewBook({ name: '', description: '' });
+      setIsCreatingBook(false);
+      await loadAddressBooks();
+      setError('');
+    } catch (err) {
+      setError('アドレス帳の作成に失敗しました');
+      console.error(err);
+    }
+  };
+
+  const handleCreateEntry = async () => {
+    if (!selectedBookId) return;
+    
+    try {
+      await addressBookService.createAddressBookEntry(selectedBookId, editingEntry as AddressBookEntry);
+      setEditingEntry({
+        name: '',
+        email: '',
+        phone: '',
+        company: '',
+        position: '',
+        notes: ''
       });
-
-      setContacts(prev => [...prev, contact]);
-      setNewContact({ name: '', email: '' });
-    } catch (error) {
-      console.error('連絡先追加エラー:', error);
-      setError('連絡先の追加に失敗しました');
-    } finally {
-      setLoading(false);
+      setIsCreating(false);
+      await loadEntries(selectedBookId);
+      setError('');
+    } catch (err) {
+      setError('エントリの作成に失敗しました');
+      console.error(err);
     }
   };
 
-  if (!isOpen) return null;
+  const handleUpdateEntry = async () => {
+    if (!selectedEntry || !selectedBookId) return;
+    
+    try {
+      const request: UpdateAddressBookRequest = {
+        name: editingEntry.name || '',
+        email: editingEntry.email || '',
+        phone: editingEntry.phone || '',
+        company: editingEntry.company || '',
+        position: editingEntry.position || '',
+        notes: editingEntry.notes || ''
+      };
+      await addressBookService.updateAddressBookEntry(selectedBookId, selectedEntry.id, request);
+      setIsEditing(false);
+      setSelectedEntry(null);
+      await loadEntries(selectedBookId);
+      setError('');
+    } catch (err) {
+      setError('エントリの更新に失敗しました');
+      console.error(err);
+    }
+  };
+
+  const handleDeleteEntry = async (entryId: string) => {
+    if (!selectedBookId) return;
+    
+    if (!window.confirm('このエントリを削除しますか？')) return;
+    
+    try {
+      await addressBookService.deleteAddressBookEntry(selectedBookId, entryId);
+      await loadEntries(selectedBookId);
+      setError('');
+    } catch (err) {
+      setError('エントリの削除に失敗しました');
+      console.error(err);
+    }
+  };
+
+  const startEdit = (entry: AddressBookEntry) => {
+    setSelectedEntry(entry);
+    setEditingEntry({ ...entry });
+    setIsEditing(true);
+  };
+
+  const cancelEdit = () => {
+    setIsEditing(false);
+    setIsCreating(false);
+    setIsCreatingBook(false);
+    setSelectedEntry(null);
+    setEditingEntry({
+      name: '',
+      email: '',
+      phone: '',
+      company: '',
+      position: '',
+      notes: ''
+    });
+  };
+
+  const selectEntry = (entry: AddressBookEntry) => {
+    onEntrySelect(entry);
+  };
 
   return (
-    <div className="address-book-overlay">
-      <div className="address-book-modal">
-        <div className="modal-header">
-          <h2>アドレス帳管理</h2>
-          <button className="close-button" onClick={onClose}>×</button>
-        </div>
+    <div className="address-book-manager">
+      <div className="address-book-header">
+        <h2>アドレス帳管理</h2>
+        {error && <div className="error-message">{error}</div>}
+      </div>
 
-        <div className="modal-content">
-          {/* 共通ID設定セクション */}
-          <div className="section">
-            <h3>共通ID設定</h3>
-            <form onSubmit={handleCommonIdSubmit} className="common-id-form">
-              <input
-                type="text"
-                value={commonId}
-                onChange={(e) => setCommonId(e.target.value)}
-                placeholder="共通IDを入力（例: 営業部、開発チーム）"
-                className="input-field"
-              />
-              <button type="submit" className="btn btn-primary" disabled={loading}>
-                {loading ? '確認中...' : '確認・設定'}
-              </button>
-            </form>
-          </div>
-
-          {error && (
-            <div className="error-message">
-              {error}
-            </div>
-          )}
-
-          {/* 現在の共通ID表示 */}
-          {currentCommonId && (
-            <div className="section">
-              <h3>現在のアドレス帳: {currentCommonId}</h3>
-              
-              {/* 連絡先追加フォーム */}
-              <form onSubmit={handleAddContact} className="contact-form">
-                <div className="form-row">
-                  <input
-                    type="text"
-                    value={newContact.name}
-                    onChange={(e) => setNewContact(prev => ({ ...prev, name: e.target.value }))}
-                    placeholder="名前"
-                    className="input-field"
-                  />
-                  <input
-                    type="email"
-                    value={newContact.email}
-                    onChange={(e) => setNewContact(prev => ({ ...prev, email: e.target.value }))}
-                    placeholder="メールアドレス"
-                    className="input-field"
-                  />
-                  <button type="submit" className="btn btn-secondary" disabled={loading}>
-                    追加
-                  </button>
-                </div>
-              </form>
-
-              {/* 連絡先リスト */}
-              <div className="contacts-list">
-                <h4>連絡先一覧 ({contacts.length}件)</h4>
-                {loading ? (
-                  <div className="loading">読み込み中...</div>
-                ) : contacts.length === 0 ? (
-                  <div className="no-contacts">連絡先がありません</div>
-                ) : (
-                  <div className="contact-items">
-                    {contacts.map((contact) => (
-                      <div key={contact.id} className="contact-item">
-                        <div className="contact-info">
-                          <span className="contact-name">{contact.name}</span>
-                          <span className="contact-email">{contact.email}</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-
-        <div className="modal-footer">
-          <button className="btn btn-secondary" onClick={onClose}>
-            閉じる
+      {/* アドレス帳選択 */}
+      <div className="address-book-selection">
+        <label htmlFor="book-select">アドレス帳を選択</label>
+        <div className="book-select-container">
+          <select
+            id="book-select"
+            value={selectedBookId}
+            onChange={(e) => setSelectedBookId(e.target.value)}
+            className="book-select"
+          >
+            <option value="">アドレス帳を選択してください</option>
+            {addressBooks.map(book => (
+              <option key={book.id} value={book.id}>
+                {book.name}
+              </option>
+            ))}
+          </select>
+          <button
+            onClick={() => setIsCreatingBook(true)}
+            className="create-book-button"
+          >
+            ＋ 新規作成
           </button>
         </div>
       </div>
+
+      {/* アドレス帳作成フォーム */}
+      {isCreatingBook && (
+        <div className="create-book-form">
+          <h3>新しいアドレス帳の作成</h3>
+          <div className="form-group">
+            <label htmlFor="book-name">アドレス帳名</label>
+            <input
+              id="book-name"
+              type="text"
+              value={newBook.name}
+              onChange={(e) => setNewBook({ ...newBook, name: e.target.value })}
+              placeholder="アドレス帳名を入力"
+            />
+          </div>
+          <div className="form-group">
+            <label htmlFor="book-description">説明</label>
+            <textarea
+              id="book-description"
+              value={newBook.description}
+              onChange={(e) => setNewBook({ ...newBook, description: e.target.value })}
+              placeholder="説明を入力（任意）"
+              rows={3}
+            />
+          </div>
+          <div className="form-actions">
+            <button onClick={handleCreateBook} className="save-button">
+              ✓ 作成
+            </button>
+            <button onClick={cancelEdit} className="cancel-button">
+              ✕ キャンセル
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* エントリ一覧 */}
+      {selectedBookId && (
+        <div className="entries-section">
+          <div className="entries-header">
+            <h3>エントリ一覧</h3>
+            <button
+              onClick={() => setIsCreating(true)}
+              className="create-entry-button"
+            >
+              ＋ 新規エントリ
+            </button>
+          </div>
+
+          {/* エントリ作成/編集フォーム */}
+          {(isCreating || isEditing) && (
+            <div className="entry-form">
+              <h4>{isCreating ? '新規エントリの作成' : 'エントリの編集'}</h4>
+              <div className="form-grid">
+                <div className="form-group">
+                  <label htmlFor="entry-name">名前</label>
+                  <input
+                    id="entry-name"
+                    type="text"
+                    value={editingEntry.name || ''}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEditingEntry({ ...editingEntry, name: e.target.value })}
+                    placeholder="名前"
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="entry-email">メールアドレス</label>
+                  <input
+                    id="entry-email"
+                    type="email"
+                    value={editingEntry.email || ''}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEditingEntry({ ...editingEntry, email: e.target.value })}
+                    placeholder="メールアドレス"
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="entry-phone">電話番号</label>
+                  <input
+                    id="entry-phone"
+                    type="text"
+                    value={editingEntry.phone || ''}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEditingEntry({ ...editingEntry, phone: e.target.value })}
+                    placeholder="電話番号"
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="entry-company">会社名</label>
+                  <input
+                    id="entry-company"
+                    type="text"
+                    value={editingEntry.company || ''}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEditingEntry({ ...editingEntry, company: e.target.value })}
+                    placeholder="会社名"
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="entry-position">役職</label>
+                  <input
+                    id="entry-position"
+                    type="text"
+                    value={editingEntry.position || ''}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEditingEntry({ ...editingEntry, position: e.target.value })}
+                    placeholder="役職"
+                  />
+                </div>
+                <div className="form-group form-group-full">
+                  <label htmlFor="entry-notes">備考</label>
+                  <textarea
+                    id="entry-notes"
+                    value={editingEntry.notes || ''}
+                    onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setEditingEntry({ ...editingEntry, notes: e.target.value })}
+                    placeholder="備考"
+                    rows={3}
+                  />
+                </div>
+              </div>
+              <div className="form-actions">
+                <button
+                  onClick={isCreating ? handleCreateEntry : handleUpdateEntry}
+                  className="save-button"
+                >
+                  ✓ {isCreating ? '作成' : '更新'}
+                </button>
+                <button onClick={cancelEdit} className="cancel-button">
+                  ✕ キャンセル
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* エントリリスト */}
+          <div className="entries-list">
+            {entries.length === 0 ? (
+              <p className="no-entries">エントリがありません</p>
+            ) : (
+              entries.map(entry => (
+                <div key={entry.id} className="entry-item">
+                  <div className="entry-info">
+                    <h4>{entry.name}</h4>
+                    <p>{entry.email}</p>
+                    {entry.company && <p>{entry.company}</p>}
+                  </div>
+                  <div className="entry-actions">
+                    <button
+                      onClick={() => selectEntry(entry)}
+                      className="select-button"
+                    >
+                      選択
+                    </button>
+                    <button
+                      onClick={() => startEdit(entry)}
+                      className="edit-button"
+                    >
+                      ✏ 編集
+                    </button>
+                    <button
+                      onClick={() => handleDeleteEntry(entry.id)}
+                      className="delete-button"
+                    >
+                      🗑 削除
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
+
+export { AddressBookManager };

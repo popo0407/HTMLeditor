@@ -19,6 +19,22 @@ export const TableBlock: React.FC<CommonBlockProps> = (props) => {
     if (block.tableData) {
       return block.tableData;
     }
+    
+    // block.contentがタブ区切りデータの場合、それをパースする
+    if (block.content && block.content.includes('\t')) {
+      const rows = block.content.split('\n')
+        .filter(row => row.trim())
+        .map(row => row.split('\t'));
+      
+      if (rows.length > 0) {
+        return {
+          rows: rows,
+          hasHeaderRow: true, // 最初の行をヘッダーとして扱う
+          hasHeaderColumn: false
+        };
+      }
+    }
+    
     // デフォルトテーブル（2x2、ヘッダー行あり）
     return {
       rows: [

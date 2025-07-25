@@ -11,3 +11,4 @@ export { BulletListBlock } from './BulletListBlock';
 export { HorizontalRuleBlock } from './HorizontalRuleBlock';
 export { ImageBlock } from './ImageBlock';
 export { TableBlock } from './TableBlock';
+export { CalendarBlock } from './CalendarBlock';

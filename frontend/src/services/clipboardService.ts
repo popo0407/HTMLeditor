@@ -10,7 +10,9 @@
  * 要件 F-001-5: 再アップロード時に編集可能な構造を持つHTMLを出力する
  */
 
-import { Block, BlockType } from '../types';
+import { Block, BlockType, CalendarData } from '../types';
+import { calendarExporter } from './calendarExporter';
+import { calendarService } from './calendarService';
 
 class ClipboardService {
   /**
@@ -51,6 +53,9 @@ class ClipboardService {
     const doc = parser.parseFromString(html, 'text/html');
     const blocks: Block[] = [];
 
+    // スケジュールデータを自動検出（<script>タグ内のJSONを含む）
+    const scheduleEvents = this.extractScheduleData(html);
+    
     // 既存のブロック構造を持つHTMLかチェック（data-block-type属性の存在）
     const existingBlocks = doc.querySelectorAll('[data-block-type]');
     
@@ -60,16 +65,44 @@ class ClipboardService {
         const blockType = element.getAttribute('data-block-type') as BlockType;
         const blockId = element.getAttribute('data-block-id') || `restored-${Date.now()}-${index}`;
         
-        blocks.push({
+        const block: Block = {
           id: blockId,
           type: blockType,
           content: this.extractContentFromElement(element, blockType),
           src: element.getAttribute('src') || undefined,
-        });
+        };
+
+        // テーブルの場合、より詳細にパース
+        if (blockType === 'table') {
+          block.content = this.extractTableContent(element as HTMLTableElement);
+        }
+        
+        blocks.push(block);
       });
     } else {
       // 通常のHTMLから変換
       this.parseHtmlElements(doc.body, blocks);
+    }
+
+    // スケジュールデータが見つかった場合、カレンダーブロックを自動追加
+    // （既存のブロック構造にカレンダーブロックがない場合のみ）
+    if (scheduleEvents.length > 0 && !blocks.some(block => block.type === 'calendar')) {
+      const now = new Date();
+      const currentMonth = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}`;
+      
+      const calendarBlock: Block = {
+        id: `calendar-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        type: 'calendar',
+        content: `カレンダー (${scheduleEvents.length}件のイベント)`,
+        calendarData: {
+          year: now.getFullYear(),
+          month: now.getMonth() + 1,
+          weeks: [],
+          events: scheduleEvents
+        } as CalendarData
+      };
+      
+      blocks.push(calendarBlock);
     }
 
     return blocks.length > 0 ? blocks : this.createDefaultBlocks();
@@ -104,7 +137,8 @@ class ClipboardService {
       case 'h3':
         return { id, type: 'heading3', content: element.textContent || '' };
       case 'p':
-        return { id, type: 'paragraph', content: element.textContent || '' };
+        // 段落の内容をより詳細に処理（HTMLタグを含む）
+        return { id, type: 'paragraph', content: this.extractParagraphContent(element) };
       case 'ul':
       case 'ol':
         const listItems = Array.from(element.querySelectorAll('li'))
@@ -121,7 +155,11 @@ class ClipboardService {
           src: element.getAttribute('src') || undefined
         };
       case 'table':
-        return { id, type: 'table', content: element.textContent || '' };
+        return { 
+          id, 
+          type: 'table', 
+          content: this.extractTableContent(element as HTMLTableElement)
+        };
       default:
         // 不明な要素は段落として扱う
         if (element.textContent && element.textContent.trim()) {
@@ -141,9 +179,87 @@ class ClipboardService {
           .map(li => li.textContent || '')
           .join('\n');
         return listItems;
+      case 'table':
+        return this.extractTableContent(element as HTMLTableElement);
       default:
         return element.textContent || '';
     }
+  }
+
+  /**
+   * HTMLからスケジュールデータを抽出
+   */
+  private extractScheduleData(html: string): any[] {
+    try {
+      // <script id="schedule-data" type="application/json">...</script> の検出
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(html, 'text/html');
+      const scheduleScript = doc.querySelector('script#schedule-data[type="application/json"]');
+      
+      if (scheduleScript && scheduleScript.textContent) {
+        const scheduleData = JSON.parse(scheduleScript.textContent.trim());
+        if (Array.isArray(scheduleData)) {
+          console.log(`スケジュールデータを検出: ${scheduleData.length}件のイベント`);
+          return scheduleData;
+        }
+      }
+      
+      // 既存のcalendarService.extractScheduleFromHTMLも試行
+      const legacyData = calendarService.extractScheduleFromHTML(html);
+      if (legacyData.length > 0) {
+        console.log(`既存のパーサーでスケジュールデータを検出: ${legacyData.length}件`);
+        return legacyData;
+      }
+      
+      return [];
+    } catch (error) {
+      console.warn('スケジュールデータの抽出に失敗:', error);
+      return [];
+    }
+  }
+
+  /**
+   * テーブル要素から構造化されたコンテンツを抽出
+   */
+  private extractTableContent(table: HTMLTableElement): string {
+    const rows: string[] = [];
+    
+    // ヘッダー行を処理
+    const headerRow = table.querySelector('thead tr');
+    if (headerRow) {
+      const headers = Array.from(headerRow.querySelectorAll('th'))
+        .map(th => th.textContent?.trim() || '');
+      rows.push(headers.join('\t'));
+    }
+    
+    // データ行を処理
+    const bodyRows = table.querySelectorAll('tbody tr');
+    bodyRows.forEach(row => {
+      const cells = Array.from(row.querySelectorAll('td'))
+        .map(td => td.textContent?.trim() || '');
+      rows.push(cells.join('\t'));
+    });
+    
+    // ヘッダーがない場合、全ての行を処理
+    if (!headerRow) {
+      const allRows = table.querySelectorAll('tr');
+      allRows.forEach(row => {
+        const cells = Array.from(row.querySelectorAll('td, th'))
+          .map(cell => cell.textContent?.trim() || '');
+        rows.push(cells.join('\t'));
+      });
+    }
+    
+    return rows.join('\n');
+  }
+
+  /**
+   * 段落要素から内容を抽出（太字などの書式を保持）
+   */
+  private extractParagraphContent(element: Element): string {
+    // 基本的にはテキストコンテンツを返すが、
+    // 将来的にはHTML書式（<strong>, <em>等）を保持できるように拡張可能
+    return element.textContent || '';
   }
 
   /**
@@ -555,6 +671,12 @@ ${htmlParts.join('\n')}`;
         }
         
         return `<table ${attrs}${classAttr}>${tableHtml}</table>`;
+      case 'calendar':
+        // カレンダーブロックは専用エクスポーターで処理
+        if (block.calendarData) {
+          return calendarExporter.exportToHTML(block.calendarData, 'カレンダー');
+        }
+        return `<div ${attrs}${classAttr}><p>カレンダーデータが見つかりません</p></div>`;
       default:
         return `<p ${attrs}${classAttr}>${this.escapeHtml(block.content)}</p>`;
     }

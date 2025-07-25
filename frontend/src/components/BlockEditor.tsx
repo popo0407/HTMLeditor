@@ -17,7 +17,8 @@ import {
   BulletListBlock,
   HorizontalRuleBlock,
   ImageBlock,
-  TableBlock
+  TableBlock,
+  CalendarBlock
 } from './blocks';
 import './BlockEditor.css';
 
@@ -76,6 +77,18 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
       case 'table':
         return <TableBlock key={block.id} {...commonProps} />;
       
+      case 'calendar':
+        return (
+          <CalendarBlock 
+            key={block.id} 
+            data={{ events: [] }} 
+            onUpdate={(newData) => {
+              // カレンダーデータの更新は簡易実装
+              console.log('Calendar data updated:', newData);
+            }}
+          />
+        );
+      
       default:
         return <ParagraphBlock key={block.id} {...commonProps} />;
     }
@@ -94,6 +107,7 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
       { type: 'bulletList', label: '箇条書き', icon: '📋' },
       { type: 'image', label: '画像', icon: '🖼️' },
       { type: 'table', label: 'テーブル', icon: '📊' },
+      { type: 'calendar', label: 'カレンダー', icon: '📅' },
       { type: 'horizontalRule', label: '水平線', icon: '➖' },
     ];
 

@@ -32,6 +32,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { type: 'bulletList', label: '箇条書き' },
     { type: 'image', label: '画像' },
     { type: 'table', label: 'テーブル' },
+    { type: 'calendar', label: 'カレンダー' },
     { type: 'horizontalRule', label: '水平線' },
   ];
 
