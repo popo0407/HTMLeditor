@@ -11,7 +11,8 @@ import os
 from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routes import address_book_routes, mail_routes
+from fastapi.staticfiles import StaticFiles
+from app.routes import address_book_routes, mail_routes, gantt_routes
 from app.models.database import engine, Base
 
 # 環境変数を .env ファイルから読み込み（ルートディレクトリから）
@@ -54,17 +55,23 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# 静的ファイルの提供設定
+if os.path.exists("static"):
+    app.mount("/static", StaticFiles(directory="static"), name="static")
+
 # --- ルーターの登録（修正箇所） ---
 # アドレス帳APIは /api を起点とする
-app.include_router(address_book_routes.router, prefix="/api", tags=["address-books"])
+app.include_router(address_book_routes.router, prefix="/api/address-book", tags=["address-book"])
 # メールAPIは /api/mail を起点とする
 app.include_router(mail_routes.router, prefix="/api/mail", tags=["mail"])
+# ガントチャートAPIは /api/gantt を起点とする
+app.include_router(gantt_routes.router, prefix="/api/gantt", tags=["gantt"])
 
 
 @app.get("/")
 async def root():
     """ヘルスチェック用エンドポイント"""
-    return {"message": "HTML Editor API is running"}
+    return {"message": "HTML Editor Backend API"}
 
 
 if __name__ == "__main__":

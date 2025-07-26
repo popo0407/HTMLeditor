@@ -9,7 +9,7 @@
  * フェーズ2: ブロックエディタの基本機能実装完了
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Layout } from './components/Layout';
 import { Sidebar } from './components/Sidebar';
 import { BlockEditor } from './components/BlockEditor';
@@ -496,79 +496,7 @@ function App() {
                   }
                 `}
               </style>
-              {(() => {
-                try {
-                  const previewHtml = clipboardService.blocksToPreviewHtml(appState.blocks);
-                  console.log('Preview HTML:', previewHtml);
-                  console.log('Blocks count:', appState.blocks.length);
-                  
-                  if (!previewHtml || previewHtml.trim() === '') {
-                    console.warn('Preview HTML is empty');
-                    return (
-                      <div className="preview-content">
-                        <p>プレビューコンテンツが空です</p>
-                        <p>ブロック数: {appState.blocks.length}</p>
-                      </div>
-                    );
-                  }
-                  
-                  return (
-                    <div 
-                      className="preview-content"
-                      dangerouslySetInnerHTML={{ 
-                        __html: previewHtml
-                      }}
-                    />
-                  );
-                } catch (error) {
-                  console.error('Preview HTML generation error:', error);
-                  
-                  // フォールバック: シンプルなHTML生成
-                  try {
-                    const fallbackHtml = appState.blocks.map(block => {
-                      switch (block.type) {
-                        case 'heading1':
-                          return `<h1>${block.content}</h1>`;
-                        case 'heading2':
-                          return `<h2>${block.content}</h2>`;
-                        case 'heading3':
-                          return `<h3>${block.content}</h3>`;
-                        case 'paragraph':
-                          return `<p>${block.content}</p>`;
-                        case 'bulletList':
-                          const items = block.content.split('\n')
-                            .filter(item => item.trim())
-                            .map(item => `<li>${item}</li>`)
-                            .join('');
-                          return `<ul>${items}</ul>`;
-                        case 'table':
-                          return `<p>テーブル: ${block.content}</p>`;
-                        case 'calendar':
-                          return `<p>カレンダー: ${block.content}</p>`;
-                        default:
-                          return `<p>${block.content}</p>`;
-                      }
-                    }).join('');
-                    
-                    return (
-                      <div 
-                        className="preview-content"
-                        dangerouslySetInnerHTML={{ 
-                          __html: fallbackHtml
-                        }}
-                      />
-                    );
-                  } catch (fallbackError) {
-                    console.error('Fallback HTML generation error:', fallbackError);
-                    return (
-                      <div className="preview-content">
-                        <p>プレビューの生成中にエラーが発生しました: {error instanceof Error ? error.message : 'Unknown error'}</p>
-                        <p>ブロック数: {appState.blocks.length}</p>
-                      </div>
-                    );
-                  }
-                }
-              })()}
+              <PreviewContent blocks={appState.blocks} />
             </div>
           </div>
         </div>
@@ -585,3 +513,113 @@ function App() {
 }
 
 export default App;
+
+// プレビューコンテンツ用の非同期コンポーネント
+const PreviewContent: React.FC<{ blocks: Block[] }> = ({ blocks }) => {
+  const [previewHtml, setPreviewHtml] = useState<string>('');
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+  const previewRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const generatePreview = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        
+        const html = await clipboardService.blocksToPreviewHtml(blocks);
+        console.log('Preview HTML:', html);
+        console.log('Blocks count:', blocks.length);
+        
+        if (!html || html.trim() === '') {
+          console.warn('Preview HTML is empty');
+          setPreviewHtml('<div class="preview-content"><p>プレビューコンテンツが空です</p><p>ブロック数: ' + blocks.length + '</p></div>');
+        } else {
+          setPreviewHtml(html);
+        }
+      } catch (error) {
+        console.error('Preview HTML generation error:', error);
+        
+        // フォールバック: シンプルなHTML生成
+        try {
+          const fallbackHtml = blocks.map(block => {
+            switch (block.type) {
+              case 'heading1':
+                return `<h1>${block.content}</h1>`;
+              case 'heading2':
+                return `<h2>${block.content}</h2>`;
+              case 'heading3':
+                return `<h3>${block.content}</h3>`;
+              case 'paragraph':
+                return `<p>${block.content}</p>`;
+              case 'bulletList':
+                const items = block.content.split('\n')
+                  .filter(item => item.trim())
+                  .map(item => `<li>${item}</li>`)
+                  .join('');
+                return `<ul>${items}</ul>`;
+              case 'table':
+                return `<p>テーブル: ${block.content}</p>`;
+              case 'calendar':
+                return `<p>カレンダー: ${block.content}</p>`;
+              default:
+                return `<p>${block.content}</p>`;
+            }
+          }).join('');
+          
+          setPreviewHtml(fallbackHtml);
+        } catch (fallbackError) {
+          console.error('Fallback HTML generation error:', fallbackError);
+          setError(error instanceof Error ? error.message : 'Unknown error');
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    generatePreview();
+  }, [blocks]);
+
+  // HTMLを動的に挿入し、JavaScriptを実行
+  useEffect(() => {
+    if (previewRef.current && previewHtml) {
+      previewRef.current.innerHTML = previewHtml;
+      
+      // スクリプトタグを実行
+      const scripts = previewRef.current.querySelectorAll('script');
+      scripts.forEach(script => {
+        const newScript = document.createElement('script');
+        if (script.src) {
+          newScript.src = script.src;
+        } else {
+          newScript.textContent = script.textContent || '';
+        }
+        script.parentNode?.replaceChild(newScript, script);
+      });
+    }
+  }, [previewHtml]);
+
+  if (isLoading) {
+    return (
+      <div className="preview-content">
+        <p>プレビューを生成中...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="preview-content">
+        <p>プレビューの生成中にエラーが発生しました: {error}</p>
+        <p>ブロック数: {blocks.length}</p>
+      </div>
+    );
+  }
+
+  return (
+    <div 
+      ref={previewRef}
+      className="preview-content"
+    />
+  );
+};

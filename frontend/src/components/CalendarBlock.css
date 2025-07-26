@@ -1,0 +1,25 @@
+.button-group {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.save-image-button {
+  background-color: #28a745;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.2s;
+}
+
+.save-image-button:hover {
+  background-color: #218838;
+}
+
+.save-image-button:disabled {
+  background-color: #6c757d;
+  cursor: not-allowed;
+} 

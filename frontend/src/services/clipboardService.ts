@@ -256,7 +256,6 @@ class ClipboardService {
       if (scheduleScript && scheduleScript.textContent) {
         const scheduleData = JSON.parse(scheduleScript.textContent.trim());
         if (Array.isArray(scheduleData)) {
-          console.log(`スケジュールデータを検出: ${scheduleData.length}件のイベント`);
           return scheduleData.map((event: any) => ({
             id: event.id || `evt-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
             title: event.title || 'イベント',
@@ -270,7 +269,6 @@ class ClipboardService {
       // 既存のcalendarService.extractScheduleFromHTMLも試行
       const legacyData = calendarService.extractScheduleFromHTML(html);
       if (legacyData.length > 0) {
-        console.log(`既存のパーサーでスケジュールデータを検出: ${legacyData.length}件`);
         return legacyData;
       }
       
@@ -665,14 +663,14 @@ ${htmlParts.join('\n')}
   /**
    * プレビュー用にブロック構造からスタイル付きHTMLコンテンツを生成
    */
-  blocksToPreviewHtml(blocks: Block[]): string {
+  async blocksToPreviewHtml(blocks: Block[]): Promise<string> {
     console.log('blocksToPreviewHtml called with blocks:', blocks);
     
-    const htmlParts = blocks.map(block => {
-      const html = this.blockToHtml(block);
+    const htmlParts = await Promise.all(blocks.map(async block => {
+      const html = await this.blockToHtml(block);
       console.log(`Block ${block.id} (${block.type}):`, html);
       return html;
-    });
+    }));
     
     const result = `<style>
     /* 特別なブロックスタイル */
@@ -727,7 +725,7 @@ ${htmlParts.join('\n')}`;
   /**
    * 単一ブロックをHTMLに変換
    */
-  private blockToHtml(block: Block): string {
+  private async blockToHtml(block: Block): Promise<string> {
     const attrs = `data-block-type="${block.type}" data-block-id="${block.id}"`;
     const classAttr = block.style && block.style !== 'normal' ? ` class="${block.style}"` : '';
     
@@ -789,12 +787,46 @@ ${htmlParts.join('\n')}`;
         
         return `<table ${attrs}${classAttr}>${tableHtml}</table>`;
       case 'calendar':
-        // カレンダーブロックはJSONそのまま出力
-        if (block.calendarData) {
-          const jsonData = JSON.stringify(block.calendarData, null, 2);
-          return `<pre ${attrs}${classAttr} style="background: #f8f9fa; padding: 15px; border-radius: 4px; overflow-x: auto; font-family: 'Courier New', monospace; font-size: 12px;">${this.escapeHtml(jsonData)}</pre>`;
+        // カレンダーブロックはガントチャートHTMLと画像を出力
+        if (block.calendarData && block.calendarData.events && block.calendarData.events.length > 0) {
+          try {
+            // ガントチャート生成を試行
+            const { ganttService } = await import('./ganttService');
+            const result = await ganttService.generateGanttChart(block.calendarData.events);
+            
+            // HTMLと画像の両方を表示
+            const htmlContent = result.html;
+            let imageSection = '';
+            
+            if (result.image && result.image.length > 0) {
+              const imageHtml = ganttService.generateImageHtml(result.image, 'スケジュールガントチャート');
+              imageSection = `
+                <div style="width: 100%; text-align: center; margin-top: 20px;">
+                  <h4 style="margin-bottom: 10px; color: #666;">ガントチャート画像版</h4>
+                  ${imageHtml}
+                </div>
+              `;
+            } else {
+              imageSection = `
+                <div style="width: 100%; text-align: center; margin-top: 20px;">
+                  <p style="color: #999; font-style: italic;">画像生成に失敗しました</p>
+                </div>
+              `;
+            }
+            
+            return `<div ${attrs}${classAttr} style="width: 100%;">
+              <div style="width: 100%; height: 600px; overflow: auto; margin-bottom: 20px;">${htmlContent}</div>
+              ${imageSection}
+            </div>`;
+          } catch (error) {
+            console.warn('ガントチャート生成に失敗、JSON形式で表示:', error);
+            // フォールバック: JSON形式で表示
+            const jsonData = JSON.stringify(block.calendarData, null, 2);
+            return `<pre ${attrs}${classAttr} style="background: #f8f9fa; padding: 15px; border-radius: 4px; overflow-x: auto; font-family: 'Courier New', monospace; font-size: 12px;">${this.escapeHtml(jsonData)}</pre>`;
+          }
+        } else {
+          return `<div ${attrs}${classAttr}>スケジュールデータがありません</div>`;
         }
-        return `<div ${attrs}${classAttr}><p>カレンダーデータが見つかりません</p></div>`;
       default:
         return `<p ${attrs}${classAttr}>${this.escapeHtml(block.content)}</p>`;
     }
@@ -818,7 +850,18 @@ ${htmlParts.join('\n')}`;
         throw new Error('テキストが入力されていません');
       }
       
-      return this.parseHtmlToBlocks(htmlText);
+      console.log('=== テキスト読み込み開始 ===');
+      console.log('入力テキスト長さ:', htmlText.length);
+      console.log('入力テキストプレビュー:', htmlText.substring(0, 200));
+      
+      const blocks = this.parseHtmlToBlocks(htmlText);
+      
+      console.log('解析結果:', blocks.length, '個のブロック');
+      blocks.forEach((block, index) => {
+        console.log(`ブロック ${index}:`, block.type, block.content.substring(0, 50));
+      });
+      
+      return blocks;
     } catch (error) {
       console.error('テキスト読み込みエラー:', error);
       throw new Error('テキストの読み込みに失敗しました。');
