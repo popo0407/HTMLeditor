@@ -10,7 +10,7 @@
  * 要件 F-001-5: 再アップロード時に編集可能な構造を持つHTMLを出力する
  */
 
-import { Block, BlockType, CalendarData } from '../types';
+import { Block, BlockType, CalendarData, TableData } from '../types';
 import { calendarExporter } from './calendarExporter';
 import { calendarService } from './calendarService';
 
@@ -46,6 +46,31 @@ class ClipboardService {
   }
 
   /**
+   * 開発環境用：サンプルHTMLを読み込み
+   */
+  private async loadSampleHtml(): Promise<Block[]> {
+    try {
+      const response = await fetch('/sample-clipboard-html.html');
+      if (!response.ok) {
+        throw new Error('サンプルHTMLファイルが見つかりません');
+      }
+      const htmlText = await response.text();
+      return this.parseHtmlToBlocks(htmlText);
+    } catch (error) {
+      console.error('サンプルHTML読み込みエラー:', error);
+      // フォールバック：ハードコードされたサンプルHTML
+      return this.parseHtmlToBlocks(this.getHardcodedSampleHtml());
+    }
+  }
+
+  /**
+   * ハードコードされたサンプルHTML
+   */
+  private getHardcodedSampleHtml(): string {
+    return `<h1 data-block-type="heading1" data-block-id="block-20250123-001">会議 議事録</h1> <h2 data-block-type="heading2" data-block-id="block-20250123-002">トピック一覧</h2> <p data-block-type="paragraph" data-block-id="block-20250123-003">① 新メンバー紹介：ダミーテキスト</p> <p data-block-type="paragraph" data-block-id="block-20250123-004">② 情報共有：ダミーテキスト</p> <p data-block-type="paragraph" data-block-id="block-20250123-005">③ 購入計画：ダミーテキスト</p> <p data-block-type="paragraph" data-block-id="block-20250123-006">④ ツール紹介：ダミーテキスト</p> <p data-block-type="paragraph" data-block-id="block-20250123-007">⑤ サイト：ダミーテキスト</p> <p data-block-type="paragraph" data-block-id="block-20250123-008">⑥ 活用事例紹介：ダミーテキスト</p> <h2 data-block-type="heading2" data-block-id="block-20250123-009">①新メンバー紹介</h2> <p data-block-type="paragraph" data-block-id="block-20250123-010"><strong>担当者:</strong> ダミー担当者</p> <p data-block-type="paragraph" data-block-id="block-20250123-011"><strong>共有内容:</strong> ダミーテキストです。</p> <p data-block-type="paragraph" data-block-id="block-20250123-012"><strong>質問・コメント:</strong> 特になし</p> <p data-block-type="paragraph" data-block-id="block-20250123-013"><strong>対応の有無:</strong> 対応不要</p> <h2 data-block-type="heading2" data-block-id="block-20250123-014">②情報共有</h2> <p data-block-type="paragraph" data-block-id="block-20250123-015"><strong>担当者:</strong> ダミー担当者</p> <p data-block-type="paragraph" data-block-id="block-20250123-016"><strong>共有内容:</strong></p> <table data-block-type="table" data-block-id="block-20250123-017"> <thead> <tr> <th>項目</th> <th>進捗状況</th> <th>今後の予定</th> </tr> </thead> <tbody> <tr> <td>ダミー項目1</td> <td>ダミー進捗</td> <td>7月9日9時頃にダミー作業予定</td> </tr> <tr> <td>ダミー項目2</td> <td>ダミー進捗</td> <td>7月8日ダミーレビュー後、海外展開（7月28日～次週予定）</td> </tr> <tr> <td>ダミー項目3</td> <td>ダミー進捗</td> <td>ダミー対応が必要</td> </tr> </tbody> </table> <p data-block-type="paragraph" data-block-id="block-20250123-018"><strong>その他:</strong> ダミー数値。</p> <p data-block-type="paragraph" data-block-id="block-20250123-019"><strong>質問・コメント:</strong> 特になし</p> <p data-block-type="paragraph" data-block-id="block-20250123-020"><strong>対応の有無:</strong> ダミー対応が必要</p> <h2 data-block-type="heading2" data-block-id="block-20250123-021">③snowflakeクレジット購入計画</h2> <p data-block-type="paragraph" data-block-id="block-20250123-022"><strong>担当者:</strong> ダミー担当者</p> <p data-block-type="paragraph" data-block-id="block-20250123-023"><strong>共有内容:</strong> 2026年度ダミー計画についてダミーテキスト。</p> <p data-block-type="paragraph" data-block-id="block-20250123-024"><strong>質問・コメント:</strong> ダミー質問あり。</p> <p data-block-type="paragraph" data-block-id="block-20250123-025"><strong>対応の有無:</strong> 8月末までにダミー対応が必要</p> <h2 data-block-type="heading2" data-block-id="block-20250123-026">④AI活用ツール紹介</h2> <p data-block-type="paragraph" data-block-id="block-20250123-027"><strong>担当者:</strong> ダミー担当者</p> <p data-block-type="paragraph" data-block-id="block-20250123-028"><strong>共有内容:</strong> ダミーAIツールを紹介。</p> <ul data-block-type="bulletList" data-block-id="block-20250123-029"> <li><strong>ダミー機能1:</strong> ダミーテキスト</li> <li><strong>ダミー機能2:</strong> ダミーテキスト</li> <li><strong>ダミー機能3:</strong> ダミーテキスト</li> <li><strong>ダミー機能4:</strong> ダミーテキスト</li> </ul> <p data-block-type="paragraph" data-block-id="block-20250123-030"><strong>質問・コメント:</strong> ダミー質問あり。</p> <p data-block-type="paragraph" data-block-id="block-20250123-031"><strong>対応の有無:</strong> ダミー共有予定</p> <h2 data-block-type="heading2" data-block-id="block-20250123-032">⑤SharePointサイト</h2> <p data-block-type="paragraph" data-block-id="block-20250123-033"><strong>担当者:</strong> ダミー担当者</p> <p data-block-type="paragraph" data-block-id="block-20250123-034"><strong>共有内容:</strong> 5月30日ダミー作業完了。ダミーテキスト。</p> <p data-block-type="paragraph" data-block-id="block-20250123-035"><strong>質問・コメント:</strong> 特になし</p> <p data-block-type="paragraph" data-block-id="block-20250123-036"><strong>対応の有無:</strong> ダミー対応を依頼</p> <h2 data-block-type="heading2" data-block-id="block-20250123-037">⑥活用事例紹介</h2> <p data-block-type="paragraph" data-block-id="block-20250123-038"><strong>担当者:</strong> ダミー担当者</p> <p data-block-type="paragraph" data-block-id="block-20250123-039"><strong>共有内容:</strong></p> <h3 data-block-type="heading3" data-block-id="block-20250123-040">ダミー事例1</h3> <p data-block-type="paragraph" data-block-id="block-20250123-041">ダミーテキストです。</p> <h3 data-block-type="heading3" data-block-id="block-20250123-042">ダミー事例2</h3> <p data-block-type="paragraph" data-block-id="block-20250123-043">ダミーテキストです。</p> <p data-block-type="paragraph" data-block-id="block-20250123-044"><strong>技術的補足:</strong> ダミーテキスト。</p> <p data-block-type="paragraph" data-block-id="block-20250123-045"><strong>質問・コメント:</strong> ダミー質問あり。</p> <p data-block-type="paragraph" data-block-id="block-20250123-046"><strong>対応の有無:</strong> ダミー共有予定</p> <h2 data-block-type="heading2" data-block-id="block-20250123-047">次回への持ち越し・確認事項</h2> <p data-block-type="paragraph" data-block-id="block-20250123-048">次回8月5日のダミー会議を予定。</p> <h2 data-block-type="heading2" data-block-id="block-20250123-049">備考・全体コメント</h2> <p data-block-type="paragraph" data-block-id="block-20250123-050">ダミーテキストです。</p> <script id="schedule-data" type="application/json"> [ { "id": "evt-20250708-01", "title": "早期レビュー", "start": "2025-07-08", "end": "2025-07-08" }, { "id": "evt-20250709-01", "title": "削除", "start": "2025-07-09", "end": "2025-07-09" }, { "id": "evt-20250711-01", "title": "完了", "start": "2025-07-11", "end": "2025-07-11" }, { "id": "evt-20250728-01", "title": "展開開始", "start": "2025-07-28", "end": "2025-08-04" }, { "id": "evt-20250805-01", "title": "会議", "start": "2025-08-05", "end": "2025-08-05" }, { "id": "evt-20250831-01", "title": "締切", "start": "2025-08-31", "end": "2025-08-31" } ] </script>`;
+  }
+
+  /**
    * HTMLテキストをブロック構造に変換
    */
   private parseHtmlToBlocks(html: string): Block[] {
@@ -65,7 +90,7 @@ class ClipboardService {
         const blockType = element.getAttribute('data-block-type') as BlockType;
         const blockId = element.getAttribute('data-block-id') || `restored-${Date.now()}-${index}`;
         
-        const block: Block = {
+        let block: Block = {
           id: blockId,
           type: blockType,
           content: this.extractContentFromElement(element, blockType),
@@ -74,6 +99,8 @@ class ClipboardService {
 
         // テーブルの場合、より詳細にパース
         if (blockType === 'table') {
+          const tableData = this.parseTableElement(element as HTMLTableElement);
+          block.tableData = tableData;
           block.content = this.extractTableContent(element as HTMLTableElement);
         }
         
@@ -88,7 +115,6 @@ class ClipboardService {
     // （既存のブロック構造にカレンダーブロックがない場合のみ）
     if (scheduleEvents.length > 0 && !blocks.some(block => block.type === 'calendar')) {
       const now = new Date();
-      const currentMonth = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}`;
       
       const calendarBlock: Block = {
         id: `calendar-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
@@ -170,6 +196,33 @@ class ClipboardService {
   }
 
   /**
+   * プレーンテキストをブロック構造に変換
+   */
+  private parseTextToBlocks(text: string): Block[] {
+    const lines = text.split('\n').filter(line => line.trim());
+    const blocks: Block[] = [];
+
+    lines.forEach(line => {
+      const id = `block-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      
+      // 簡単なマークダウン風の解析
+      if (line.startsWith('# ')) {
+        blocks.push({ id, type: 'heading1', content: line.substring(2) });
+      } else if (line.startsWith('## ')) {
+        blocks.push({ id, type: 'heading2', content: line.substring(3) });
+      } else if (line.startsWith('### ')) {
+        blocks.push({ id, type: 'heading3', content: line.substring(4) });
+      } else if (line.startsWith('- ') || line.startsWith('* ')) {
+        blocks.push({ id, type: 'bulletList', content: line.substring(2) });
+      } else {
+        blocks.push({ id, type: 'paragraph', content: line });
+      }
+    });
+
+    return blocks.length > 0 ? blocks : this.createDefaultBlocks();
+  }
+
+  /**
    * 要素からブロック固有のコンテンツを抽出
    */
   private extractContentFromElement(element: Element, blockType: BlockType): string {
@@ -181,7 +234,11 @@ class ClipboardService {
         return listItems;
       case 'table':
         return this.extractTableContent(element as HTMLTableElement);
+      case 'paragraph':
+        // 段落の場合はHTML書式を保持
+        return this.extractParagraphContent(element);
       default:
+        // 見出しやその他の要素はテキストコンテンツを返す
         return element.textContent || '';
     }
   }
@@ -200,7 +257,13 @@ class ClipboardService {
         const scheduleData = JSON.parse(scheduleScript.textContent.trim());
         if (Array.isArray(scheduleData)) {
           console.log(`スケジュールデータを検出: ${scheduleData.length}件のイベント`);
-          return scheduleData;
+          return scheduleData.map((event: any) => ({
+            id: event.id || `evt-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            title: event.title || 'イベント',
+            start: event.start || new Date().toISOString().split('T')[0],
+            end: event.end || event.start || new Date().toISOString().split('T')[0],
+            color: event.color || '#0078d4'
+          }));
         }
       }
       
@@ -254,39 +317,84 @@ class ClipboardService {
   }
 
   /**
-   * 段落要素から内容を抽出（太字などの書式を保持）
+   * テーブル要素をTableData構造に変換
    */
-  private extractParagraphContent(element: Element): string {
-    // 基本的にはテキストコンテンツを返すが、
-    // 将来的にはHTML書式（<strong>, <em>等）を保持できるように拡張可能
-    return element.textContent || '';
+  private parseTableElement(table: HTMLTableElement): TableData {
+    const rows: string[][] = [];
+    let hasHeaderRow = false;
+    let hasHeaderColumn = false;
+    
+    // theadがある場合はヘッダー行として扱う
+    const thead = table.querySelector('thead');
+    if (thead) {
+      hasHeaderRow = true;
+      const headerRows = thead.querySelectorAll('tr');
+      headerRows.forEach(row => {
+        const cells = Array.from(row.querySelectorAll('th, td'))
+          .map(cell => cell.textContent?.trim() || '');
+        rows.push(cells);
+      });
+    }
+    
+    // tbodyの行を処理
+    const tbody = table.querySelector('tbody');
+    if (tbody) {
+      const bodyRows = tbody.querySelectorAll('tr');
+      bodyRows.forEach(row => {
+        const cells = Array.from(row.querySelectorAll('td, th'))
+          .map(cell => cell.textContent?.trim() || '');
+        rows.push(cells);
+      });
+    }
+    
+    // thead/tbodyがない場合、全ての行を処理
+    if (!thead && !tbody) {
+      const allRows = table.querySelectorAll('tr');
+      allRows.forEach((row, index) => {
+        const cells = Array.from(row.querySelectorAll('td, th'))
+          .map(cell => cell.textContent?.trim() || '');
+        rows.push(cells);
+        
+        // 最初の行がthのみの場合はヘッダー行として扱う
+        if (index === 0 && cells.every(cell => row.querySelectorAll('th').length > 0)) {
+          hasHeaderRow = true;
+        }
+      });
+    }
+    
+    // 最初の列がthのみの場合はヘッダー列として扱う
+    if (rows.length > 0) {
+      const hasThInFirstColumn = Array.from(table.querySelectorAll('tr'))
+        .every(row => row.querySelector('th:first-child'));
+      
+      if (hasThInFirstColumn) {
+        hasHeaderColumn = true;
+      }
+    }
+    
+    return {
+      rows,
+      hasHeaderRow,
+      hasHeaderColumn
+    };
   }
 
   /**
-   * プレーンテキストをブロック構造に変換
+   * 段落要素から内容を抽出（太字などの書式を保持）
    */
-  private parseTextToBlocks(text: string): Block[] {
-    const lines = text.split('\n').filter(line => line.trim());
-    const blocks: Block[] = [];
-
-    lines.forEach(line => {
-      const id = `block-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-      
-      // 簡単なマークダウン風の解析
-      if (line.startsWith('# ')) {
-        blocks.push({ id, type: 'heading1', content: line.substring(2) });
-      } else if (line.startsWith('## ')) {
-        blocks.push({ id, type: 'heading2', content: line.substring(3) });
-      } else if (line.startsWith('### ')) {
-        blocks.push({ id, type: 'heading3', content: line.substring(4) });
-      } else if (line.startsWith('- ') || line.startsWith('* ')) {
-        blocks.push({ id, type: 'bulletList', content: line.substring(2) });
-      } else {
-        blocks.push({ id, type: 'paragraph', content: line });
-      }
-    });
-
-    return blocks.length > 0 ? blocks : this.createDefaultBlocks();
+  private extractParagraphContent(element: Element): string {
+    // HTMLの書式を保持しつつテキストコンテンツを抽出
+    // 将来的にはHTML書式（<strong>, <em>等）を保持できるように拡張可能
+    const content = element.innerHTML || element.textContent || '';
+    
+    // 基本的なHTML書式をテキストに変換
+    return content
+      .replace(/<strong>/g, '**')
+      .replace(/<\/strong>/g, '**')
+      .replace(/<em>/g, '*')
+      .replace(/<\/em>/g, '*')
+      .replace(/<br\s*\/?>/g, '\n')
+      .replace(/<[^>]*>/g, ''); // その他のHTMLタグを除去
   }
 
   /**
@@ -558,9 +666,15 @@ ${htmlParts.join('\n')}
    * プレビュー用にブロック構造からスタイル付きHTMLコンテンツを生成
    */
   blocksToPreviewHtml(blocks: Block[]): string {
-    const htmlParts = blocks.map(block => this.blockToHtml(block));
+    console.log('blocksToPreviewHtml called with blocks:', blocks);
     
-    return `<style>
+    const htmlParts = blocks.map(block => {
+      const html = this.blockToHtml(block);
+      console.log(`Block ${block.id} (${block.type}):`, html);
+      return html;
+    });
+    
+    const result = `<style>
     /* 特別なブロックスタイル */
     .action-item {
       background-color: #d4edda;
@@ -605,6 +719,9 @@ ${htmlParts.join('\n')}
     }
     </style>
 ${htmlParts.join('\n')}`;
+
+    console.log('Final preview HTML:', result);
+    return result;
   }
 
   /**
@@ -672,9 +789,10 @@ ${htmlParts.join('\n')}`;
         
         return `<table ${attrs}${classAttr}>${tableHtml}</table>`;
       case 'calendar':
-        // カレンダーブロックは専用エクスポーターで処理
+        // カレンダーブロックはJSONそのまま出力
         if (block.calendarData) {
-          return calendarExporter.exportToHTML(block.calendarData, 'カレンダー');
+          const jsonData = JSON.stringify(block.calendarData, null, 2);
+          return `<pre ${attrs}${classAttr} style="background: #f8f9fa; padding: 15px; border-radius: 4px; overflow-x: auto; font-family: 'Courier New', monospace; font-size: 12px;">${this.escapeHtml(jsonData)}</pre>`;
         }
         return `<div ${attrs}${classAttr}><p>カレンダーデータが見つかりません</p></div>`;
       default:
@@ -689,6 +807,22 @@ ${htmlParts.join('\n')}`;
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+  }
+
+  /**
+   * テキストボックスからHTMLテキストを読み込み
+   */
+  importFromText(htmlText: string): Block[] {
+    try {
+      if (!htmlText.trim()) {
+        throw new Error('テキストが入力されていません');
+      }
+      
+      return this.parseHtmlToBlocks(htmlText);
+    } catch (error) {
+      console.error('テキスト読み込みエラー:', error);
+      throw new Error('テキストの読み込みに失敗しました。');
+    }
   }
 }
 

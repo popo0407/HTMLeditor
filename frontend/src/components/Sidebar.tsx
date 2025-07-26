@@ -7,13 +7,14 @@
  * - メール送信ボタン
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import { BlockType } from '../types';
 import './Sidebar.css';
 
 interface SidebarProps {
   onAddBlock: (blockType: BlockType) => void;
   onImportFromClipboard: () => void;
+  onImportFromText: (htmlText: string) => void;
   onSendMail: () => void;
   onManageAddressBook: () => void;
 }
@@ -21,9 +22,13 @@ interface SidebarProps {
 export const Sidebar: React.FC<SidebarProps> = ({
   onAddBlock,
   onImportFromClipboard,
+  onImportFromText,
   onSendMail,
   onManageAddressBook
 }) => {
+  const [showTextInput, setShowTextInput] = useState(false);
+  const [htmlText, setHtmlText] = useState('');
+
   const blockTypes: { type: BlockType; label: string }[] = [
     { type: 'heading1', label: '大見出し' },
     { type: 'heading2', label: '中見出し' },
@@ -36,6 +41,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { type: 'horizontalRule', label: '水平線' },
   ];
 
+  const handleImportFromText = () => {
+    if (htmlText.trim()) {
+      onImportFromText(htmlText);
+      setHtmlText('');
+      setShowTextInput(false);
+    }
+  };
+
   return (
     <div className="sidebar">
       <div className="sidebar-section">
@@ -47,6 +60,43 @@ export const Sidebar: React.FC<SidebarProps> = ({
         >
           📋 クリップボードから読み込み
         </button>
+
+        <button 
+          className="btn btn-secondary sidebar-button"
+          onClick={() => setShowTextInput(!showTextInput)}
+        >
+          📝 テキストから読み込み
+        </button>
+
+        {showTextInput && (
+          <div className="text-input-section">
+            <textarea
+              className="html-textarea"
+              placeholder="HTMLテキストをここに貼り付けてください..."
+              value={htmlText}
+              onChange={(e) => setHtmlText(e.target.value)}
+              rows={10}
+            />
+            <div className="text-input-buttons">
+              <button 
+                className="btn btn-primary"
+                onClick={handleImportFromText}
+                disabled={!htmlText.trim()}
+              >
+                📥 読み込み
+              </button>
+              <button 
+                className="btn btn-secondary"
+                onClick={() => {
+                  setHtmlText('');
+                  setShowTextInput(false);
+                }}
+              >
+                ❌ キャンセル
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="sidebar-section">

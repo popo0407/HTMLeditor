@@ -1,4 +1,4 @@
-import { CalendarEvent, DateInfo, WeekInfo } from '../types/index';
+import { CalendarEvent, WeekInfo } from '../types/index';
 
 export class CalendarService {
   /**

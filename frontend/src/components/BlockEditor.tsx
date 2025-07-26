@@ -81,10 +81,13 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
         return (
           <CalendarBlock 
             key={block.id} 
-            data={{ events: [] }} 
+            data={block.calendarData || { events: [] }} 
             onUpdate={(newData) => {
-              // カレンダーデータの更新は簡易実装
-              console.log('Calendar data updated:', newData);
+              // カレンダーデータの更新
+              onBlockUpdate(block.id, JSON.stringify({
+                ...block,
+                calendarData: newData
+              }));
             }}
           />
         );

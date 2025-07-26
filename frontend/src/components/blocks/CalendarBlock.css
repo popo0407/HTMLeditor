@@ -1,0 +1,209 @@
+/**
+ * カレンダーブロック用CSS（表形式）
+ */
+
+.calendar-block {
+  background: white;
+  border: 1px solid #e1e5e9;
+  border-radius: 8px;
+  padding: 16px;
+  margin: 16px 0;
+  font-family: 'Hiragino Sans', 'Yu Gothic', 'Meiryo', sans-serif;
+}
+
+.calendar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.calendar-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #495057;
+}
+
+.calendar-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.add-event-button {
+  background: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 8px 16px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+.add-event-button:hover {
+  background: #0056b3;
+}
+
+.add-event-form {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.add-event-form input {
+  padding: 6px 8px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  font-size: 12px;
+  min-width: 120px;
+}
+
+.color-picker {
+  width: 40px;
+  height: 32px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.save-button,
+.cancel-button {
+  background: #28a745;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 6px 12px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.2s ease;
+}
+
+.save-button:hover {
+  background: #1e7e34;
+}
+
+.cancel-button {
+  background: #dc3545;
+}
+
+.cancel-button:hover {
+  background: #c82333;
+}
+
+.calendar-table-container {
+  overflow-x: auto;
+  margin-top: 12px;
+}
+
+.calendar-events-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 600px;
+  background: white;
+}
+
+.calendar-events-table th {
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
+  padding: 12px 8px;
+  text-align: left;
+  font-weight: 600;
+  font-size: 14px;
+  color: #495057;
+}
+
+.calendar-events-table td {
+  border: 1px solid #dee2e6;
+  padding: 8px;
+  text-align: left;
+  font-size: 14px;
+  vertical-align: middle;
+}
+
+.calendar-events-table tr:hover {
+  background: #f8f9fa;
+}
+
+.edit-input {
+  width: 100%;
+  padding: 4px 6px;
+  border: 1px solid #ced4da;
+  border-radius: 3px;
+  font-size: 12px;
+  box-sizing: border-box;
+}
+
+.color-preview {
+  width: 20px;
+  height: 20px;
+  border-radius: 3px;
+  border: 1px solid #dee2e6;
+}
+
+.edit-button,
+.delete-button {
+  background: #6c757d;
+  color: white;
+  border: none;
+  border-radius: 3px;
+  padding: 4px 8px;
+  cursor: pointer;
+  font-size: 10px;
+  margin-right: 4px;
+  transition: all 0.2s ease;
+}
+
+.edit-button:hover {
+  background: #5a6268;
+}
+
+.delete-button {
+  background: #dc3545;
+}
+
+.delete-button:hover {
+  background: #c82333;
+}
+
+.no-events {
+  text-align: center;
+  padding: 40px 20px;
+  color: #6c757d;
+  font-style: italic;
+}
+
+/* レスポンシブ対応 */
+@media (max-width: 768px) {
+  .calendar-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .calendar-controls {
+    justify-content: center;
+  }
+  
+  .add-event-form {
+    justify-content: center;
+  }
+  
+  .calendar-events-table {
+    min-width: 400px;
+    font-size: 12px;
+  }
+  
+  .calendar-events-table th,
+  .calendar-events-table td {
+    padding: 6px 4px;
+    font-size: 12px;
+  }
+  
+  .edit-input {
+    font-size: 10px;
+  }
+} 

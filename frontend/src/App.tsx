@@ -123,6 +123,41 @@ function App() {
     }
   };
 
+  // テキストボックス読み込みハンドラー
+  const handleImportFromText = (htmlText: string) => {
+    try {
+      const importedBlocks = clipboardService.importFromText(htmlText);
+      
+      setAppState(prev => ({
+        ...prev,
+        blocks: importedBlocks,
+        selectedBlockId: importedBlocks.length > 0 ? importedBlocks[0].id : null,
+      }));
+
+      // 読み込み結果の詳細を表示
+      const blockTypeCounts = importedBlocks.reduce((counts, block) => {
+        counts[block.type] = (counts[block.type] || 0) + 1;
+        return counts;
+      }, {} as Record<string, number>);
+
+      const scheduleBlocks = importedBlocks.filter(block => block.type === 'calendar');
+      const scheduleMessage = scheduleBlocks.length > 0 
+        ? `\n・スケジュール: ${scheduleBlocks.length}個のカレンダー`
+        : '';
+
+      const message = `テキストから ${importedBlocks.length}個のブロックを読み込みました:\n` +
+        Object.entries(blockTypeCounts)
+          .map(([type, count]) => `・${getBlockTypeDisplayName(type)}: ${count}個`)
+          .join('\n') + scheduleMessage;
+
+      console.log(message);
+      alert(message);
+    } catch (error) {
+      console.error('テキストの読み込みに失敗しました:', error);
+      alert(`テキストの読み込みに失敗しました: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  };
+
   // ブロック選択ハンドラー
   const handleBlockSelect = (blockId: string) => {
     setAppState(prev => ({
@@ -329,6 +364,7 @@ function App() {
           <Sidebar
             onAddBlock={handleAddBlock}
             onImportFromClipboard={handleImportFromClipboard}
+            onImportFromText={handleImportFromText}
             onSendMail={handleSendMail}
             onManageAddressBook={handleManageAddressBook}
           />
@@ -360,6 +396,66 @@ function App() {
             <div className="pane-content">
               <style>
                 {`
+                  .preview-content {
+                    font-family: 'Hiragino Sans', 'Yu Gothic', 'Meiryo', sans-serif;
+                    line-height: 1.6;
+                    color: #333;
+                    padding: 16px;
+                    word-wrap: break-word;
+                    overflow-wrap: break-word;
+                    width: 100%;
+                    min-width: 0;
+                    box-sizing: border-box;
+                  }
+                  .preview-content h1, .preview-content h2, .preview-content h3 { 
+                    margin-top: 24px; 
+                    margin-bottom: 16px; 
+                  }
+                  .preview-content h2 { 
+                    color: #2c3e50; 
+                    border-bottom: 3px solid #3498db; 
+                    padding-bottom: 10px; 
+                    margin-top: 30px; 
+                  }
+                  .preview-content h3 { 
+                    color: #34495e; 
+                    margin-top: 25px; 
+                  }
+                  .preview-content p { 
+                    margin: 12px 0; 
+                  }
+                  .preview-content ul { 
+                    margin: 10px 0; 
+                    padding-left: 25px; 
+                  }
+                  .preview-content li { 
+                    margin: 5px 0; 
+                  }
+                  .preview-content hr { 
+                    margin: 24px 0; 
+                    border: none; 
+                    height: 2px; 
+                    background-color: #ddd; 
+                  }
+                  .preview-content table { 
+                    width: 100%; 
+                    border-collapse: collapse; 
+                    margin: 15px 0; 
+                  }
+                  .preview-content th, .preview-content td { 
+                    border: 1px solid #ddd; 
+                    padding: 12px; 
+                    text-align: left; 
+                  }
+                  .preview-content th { 
+                    background-color: #f8f9fa; 
+                    font-weight: bold; 
+                  }
+                  .preview-content img { 
+                    max-width: 100%; 
+                    height: auto; 
+                    border-radius: 4px; 
+                  }
                   .preview-content table.important th {
                     background-color: rgba(255, 193, 7, 0.3) !important;
                     border-bottom: 2px solid #ffc107 !important;
@@ -400,14 +496,79 @@ function App() {
                   }
                 `}
               </style>
-              <div 
-                className="preview-content"
-                dangerouslySetInnerHTML={{ 
-                  __html: clipboardService.blocksToHtml(appState.blocks)
-                    .replace(/<!DOCTYPE html>[\s\S]*<body>/, '')
-                    .replace(/<\/body>[\s\S]*<\/html>/, '')
-                }}
-              />
+              {(() => {
+                try {
+                  const previewHtml = clipboardService.blocksToPreviewHtml(appState.blocks);
+                  console.log('Preview HTML:', previewHtml);
+                  console.log('Blocks count:', appState.blocks.length);
+                  
+                  if (!previewHtml || previewHtml.trim() === '') {
+                    console.warn('Preview HTML is empty');
+                    return (
+                      <div className="preview-content">
+                        <p>プレビューコンテンツが空です</p>
+                        <p>ブロック数: {appState.blocks.length}</p>
+                      </div>
+                    );
+                  }
+                  
+                  return (
+                    <div 
+                      className="preview-content"
+                      dangerouslySetInnerHTML={{ 
+                        __html: previewHtml
+                      }}
+                    />
+                  );
+                } catch (error) {
+                  console.error('Preview HTML generation error:', error);
+                  
+                  // フォールバック: シンプルなHTML生成
+                  try {
+                    const fallbackHtml = appState.blocks.map(block => {
+                      switch (block.type) {
+                        case 'heading1':
+                          return `<h1>${block.content}</h1>`;
+                        case 'heading2':
+                          return `<h2>${block.content}</h2>`;
+                        case 'heading3':
+                          return `<h3>${block.content}</h3>`;
+                        case 'paragraph':
+                          return `<p>${block.content}</p>`;
+                        case 'bulletList':
+                          const items = block.content.split('\n')
+                            .filter(item => item.trim())
+                            .map(item => `<li>${item}</li>`)
+                            .join('');
+                          return `<ul>${items}</ul>`;
+                        case 'table':
+                          return `<p>テーブル: ${block.content}</p>`;
+                        case 'calendar':
+                          return `<p>カレンダー: ${block.content}</p>`;
+                        default:
+                          return `<p>${block.content}</p>`;
+                      }
+                    }).join('');
+                    
+                    return (
+                      <div 
+                        className="preview-content"
+                        dangerouslySetInnerHTML={{ 
+                          __html: fallbackHtml
+                        }}
+                      />
+                    );
+                  } catch (fallbackError) {
+                    console.error('Fallback HTML generation error:', fallbackError);
+                    return (
+                      <div className="preview-content">
+                        <p>プレビューの生成中にエラーが発生しました: {error instanceof Error ? error.message : 'Unknown error'}</p>
+                        <p>ブロック数: {appState.blocks.length}</p>
+                      </div>
+                    );
+                  }
+                }
+              })()}
             </div>
           </div>
         </div>

@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { CalendarEvent, DateInfo, WeekInfo, CalendarData } from '../../types/index';
+import './CalendarBlock.css';
 
 interface CalendarBlockData {
   events?: CalendarEvent[];
@@ -11,16 +12,23 @@ interface CalendarBlockProps {
 }
 
 const CalendarBlock: React.FC<CalendarBlockProps> = ({ data, onUpdate }) => {
-  const [calendar, setCalendar] = useState<CalendarData>({
-    year: new Date().getFullYear(),
-    month: new Date().getMonth() + 1,
-    weeks: []
-  });
-  const [selectedDate, setSelectedDate] = useState<DateInfo | null>(null);
+  const [events, setEvents] = useState<CalendarEvent[]>(data.events || []);
   const [isAddingEvent, setIsAddingEvent] = useState(false);
-  const [newEventTitle, setNewEventTitle] = useState('');
+  const [newEvent, setNewEvent] = useState<Partial<CalendarEvent>>({
+    title: '',
+    start: '',
+    end: '',
+    color: '#0078d4'
+  });
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
   const eventInputRef = useRef<HTMLInputElement>(null);
+
+  // propsのデータが変更された場合にイベントを更新
+  useEffect(() => {
+    if (data && data.events) {
+      setEvents(data.events);
+    }
+  }, [data]);
 
   useEffect(() => {
     if (isAddingEvent && eventInputRef.current) {
@@ -28,174 +36,66 @@ const CalendarBlock: React.FC<CalendarBlockProps> = ({ data, onUpdate }) => {
     }
   }, [isAddingEvent]);
 
-  const navigateMonth = (direction: 'prev' | 'next') => {
-    setCalendar(prev => {
-      let newYear = prev.year;
-      let newMonth = prev.month;
-      
-      if (direction === 'prev') {
-        newMonth -= 1;
-        if (newMonth < 1) {
-          newMonth = 12;
-          newYear -= 1;
-        }
-      } else {
-        newMonth += 1;
-        if (newMonth > 12) {
-          newMonth = 1;
-          newYear += 1;
-        }
-      }
-      
-      return { ...prev, year: newYear, month: newMonth };
-    });
-  };
-
-  const handleDateClick = (date: DateInfo) => {
-    setSelectedDate(date);
-  };
-
   const handleAddEvent = () => {
-    if (newEventTitle.trim() && selectedDate) {
-      const newEvent: CalendarEvent = {
-        id: `event-${Date.now()}`,
-        title: newEventTitle.trim(),
-        start: `${calendar.year}-${String(calendar.month).padStart(2, '0')}-${String(selectedDate.date).padStart(2, '0')}`,
-        end: `${calendar.year}-${String(calendar.month).padStart(2, '0')}-${String(selectedDate.date).padStart(2, '0')}`
+    if (newEvent.title && newEvent.start) {
+      const event: CalendarEvent = {
+        id: `event-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        title: newEvent.title,
+        start: newEvent.start,
+        end: newEvent.end || newEvent.start,
+        color: newEvent.color || '#0078d4'
       };
 
-      const currentEvents = data.events || [];
-      const updatedData = {
-        ...data,
-        events: [...currentEvents, newEvent]
-      };
-
-      onUpdate(updatedData);
-      setNewEventTitle('');
+      const updatedEvents = [...events, event];
+      setEvents(updatedEvents);
+      onUpdate({ events: updatedEvents });
+      
+      setNewEvent({ title: '', start: '', end: '', color: '#0078d4' });
       setIsAddingEvent(false);
-      setSelectedDate(null);
     }
   };
 
-  const cancelAddEvent = () => {
-    setNewEventTitle('');
-    setIsAddingEvent(false);
-    setSelectedDate(null);
-  };
-
-  const handleEventEdit = (event: CalendarEvent) => {
+  const handleEditEvent = (event: CalendarEvent) => {
     setEditingEvent(event);
   };
 
-  const handleEventSave = () => {
-    if (editingEvent) {
-      const currentEvents = data.events || [];
-      const updatedEvents = currentEvents.map((e: CalendarEvent) => 
+  const handleSaveEvent = () => {
+    if (editingEvent && editingEvent.title && editingEvent.start) {
+      const updatedEvents = events.map(e => 
         e.id === editingEvent.id ? editingEvent : e
       );
-      
-      const updatedData = {
-        ...data,
-        events: updatedEvents
-      };
-
-      onUpdate(updatedData);
+      setEvents(updatedEvents);
+      onUpdate({ events: updatedEvents });
       setEditingEvent(null);
     }
   };
 
-  const handleEventDelete = (eventId: string) => {
-    if (window.confirm('このイベントを削除しますか？')) {
-      const currentEvents = data.events || [];
-      const updatedEvents = currentEvents.filter((e: CalendarEvent) => e.id !== eventId);
-      
-      const updatedData = {
-        ...data,
-        events: updatedEvents
-      };
-
-      onUpdate(updatedData);
-    }
+  const handleDeleteEvent = (eventId: string) => {
+    const updatedEvents = events.filter(e => e.id !== eventId);
+    setEvents(updatedEvents);
+    onUpdate({ events: updatedEvents });
   };
 
-  const getEventsForDate = (date: DateInfo): CalendarEvent[] => {
-    const dateString = `${calendar.year}-${String(calendar.month).padStart(2, '0')}-${String(date.date).padStart(2, '0')}`;
-    return (data.events || []).filter((event: CalendarEvent) => event.start === dateString);
+  const cancelEdit = () => {
+    setEditingEvent(null);
+    setIsAddingEvent(false);
+    setNewEvent({ title: '', start: '', end: '', color: '#0078d4' });
   };
 
-  const renderCalendarCell = (date: DateInfo) => {
-    const events = getEventsForDate(date);
-    const isSelected = selectedDate === date;
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('ja-JP');
+  };
 
-    return (
-      <td
-        key={`${date.date}-${date.isCurrentMonth}`}
-        className={`calendar-date ${date.isCurrentMonth ? '' : 'other-month'} ${isSelected ? 'selected' : ''}`}
-        onClick={() => handleDateClick(date)}
-      >
-        <div className="date-number">{date.date}</div>
-        {events.length > 0 && (
-          <div className="date-events">
-            {events.map((event: CalendarEvent) => (
-              <span
-                key={event.id}
-                className="event-item"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleEventEdit(event);
-                }}
-              >
-                {editingEvent?.id === event.id ? (
-                  <input
-                    type="text"
-                    value={editingEvent.title}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEditingEvent({ ...editingEvent, title: e.target.value })}
-                    onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
-                      if (e.key === 'Enter') {
-                        handleEventSave();
-                      } else if (e.key === 'Escape') {
-                        setEditingEvent(null);
-                      }
-                    }}
-                    onBlur={handleEventSave}
-                    className="event-edit-input"
-                  />
-                ) : (
-                  <>
-                    <span className="event-title">{event.title}</span>
-                    <button
-                      className="delete-event-button"
-                      onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
-                        e.stopPropagation();
-                        handleEventDelete(event.id);
-                      }}
-                    >
-                      🗑
-                    </button>
-                  </>
-                )}
-              </span>
-            ))}
-          </div>
-        )}
-      </td>
-    );
+  const formatDateSafe = (dateString: string | undefined, fallback: string) => {
+    if (!dateString) return formatDate(fallback);
+    return formatDate(dateString);
   };
 
   return (
     <div className="calendar-block">
       <div className="calendar-header">
-        <div className="calendar-navigation">
-          <button onClick={() => navigateMonth('prev')} className="nav-button">
-            ＜
-          </button>
-          <h3 className="calendar-title">
-            {calendar.year}年{calendar.month}月
-          </h3>
-          <button onClick={() => navigateMonth('next')} className="nav-button">
-            ＞
-          </button>
-        </div>
+        <h3 className="calendar-title">スケジュール管理</h3>
         
         <div className="calendar-controls">
           {!isAddingEvent ? (
@@ -209,22 +109,33 @@ const CalendarBlock: React.FC<CalendarBlockProps> = ({ data, onUpdate }) => {
             <div className="add-event-form">
               <input
                 type="text"
-                value={newEventTitle}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewEventTitle(e.target.value)}
+                value={newEvent.title}
+                onChange={(e) => setNewEvent({...newEvent, title: e.target.value})}
                 placeholder="イベントタイトル"
                 ref={eventInputRef}
-                onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
-                  if (e.key === 'Enter') {
-                    handleAddEvent();
-                  } else if (e.key === 'Escape') {
-                    cancelAddEvent();
-                  }
-                }}
+              />
+              <input
+                type="date"
+                value={newEvent.start}
+                onChange={(e) => setNewEvent({...newEvent, start: e.target.value})}
+                placeholder="開始日"
+              />
+              <input
+                type="date"
+                value={newEvent.end}
+                onChange={(e) => setNewEvent({...newEvent, end: e.target.value})}
+                placeholder="終了日"
+              />
+              <input
+                type="color"
+                value={newEvent.color}
+                onChange={(e) => setNewEvent({...newEvent, color: e.target.value})}
+                className="color-picker"
               />
               <button onClick={handleAddEvent} className="save-button">
                 ✓
               </button>
-              <button onClick={cancelAddEvent} className="cancel-button">
+              <button onClick={cancelEdit} className="cancel-button">
                 ✕
               </button>
             </div>
@@ -232,32 +143,95 @@ const CalendarBlock: React.FC<CalendarBlockProps> = ({ data, onUpdate }) => {
         </div>
       </div>
 
-      <div className="calendar-grid">
-        <table className="calendar-table">
+      <div className="calendar-table-container">
+        <table className="calendar-events-table">
           <thead>
             <tr>
-              {['日', '月', '火', '水', '木', '金', '土'].map((dayName: string) => (
-                <th key={dayName} className="calendar-day-header">
-                  {dayName}
-                </th>
-              ))}
+              <th>タイトル</th>
+              <th>開始日</th>
+              <th>終了日</th>
+              <th>色</th>
+              <th>操作</th>
             </tr>
           </thead>
           <tbody>
-            {calendar.weeks.map((week: WeekInfo, weekIndex: number) => (
-              <tr key={`week-${weekIndex}`} className="calendar-week">
-                {week.dates.map((date: DateInfo) => renderCalendarCell(date))}
+            {events.map((event) => (
+              <tr key={event.id}>
+                {editingEvent && editingEvent.id === event.id ? (
+                  <>
+                    <td>
+                      <input
+                        type="text"
+                        value={editingEvent.title}
+                        onChange={(e) => setEditingEvent({...editingEvent, title: e.target.value})}
+                        className="edit-input"
+                      />
+                    </td>
+                    <td>
+                      <input
+                        type="date"
+                        value={editingEvent.start}
+                        onChange={(e) => setEditingEvent({...editingEvent, start: e.target.value})}
+                        className="edit-input"
+                      />
+                    </td>
+                    <td>
+                      <input
+                        type="date"
+                        value={editingEvent.end}
+                        onChange={(e) => setEditingEvent({...editingEvent, end: e.target.value})}
+                        className="edit-input"
+                      />
+                    </td>
+                    <td>
+                      <input
+                        type="color"
+                        value={editingEvent.color}
+                        onChange={(e) => setEditingEvent({...editingEvent, color: e.target.value})}
+                        className="color-picker"
+                      />
+                    </td>
+                    <td>
+                      <button onClick={handleSaveEvent} className="save-button">
+                        ✓
+                      </button>
+                      <button onClick={cancelEdit} className="cancel-button">
+                        ✕
+                      </button>
+                    </td>
+                  </>
+                ) : (
+                  <>
+                    <td>{event.title}</td>
+                    <td>{formatDate(event.start)}</td>
+                    <td>{formatDateSafe(event.end, event.start)}</td>
+                    <td>
+                      <div 
+                        className="color-preview" 
+                        style={{backgroundColor: event.color}}
+                      />
+                    </td>
+                    <td>
+                      <button onClick={() => handleEditEvent(event)} className="edit-button">
+                        ✎
+                      </button>
+                      <button onClick={() => handleDeleteEvent(event.id)} className="delete-button">
+                        🗑
+                      </button>
+                    </td>
+                  </>
+                )}
               </tr>
             ))}
           </tbody>
         </table>
+        
+        {events.length === 0 && (
+          <div className="no-events">
+            <p>イベントがありません。新しいイベントを追加してください。</p>
+          </div>
+        )}
       </div>
-
-      {selectedDate && (
-        <div className="selected-date-info">
-          <p>選択日: {calendar.year}年{calendar.month}月{selectedDate.date}日</p>
-        </div>
-      )}
     </div>
   );
 };
