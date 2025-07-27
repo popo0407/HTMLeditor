@@ -232,9 +232,61 @@ function App() {
   // HTML出力ハンドラー（F-003-1対応）
   const handleDownloadHtml = async () => {
     try {
+      // ファイル名を生成
+      let filename = 'document';
+      
+      // 一番上のブロックのテキスト内容を取得
+      if (appState.blocks.length > 0) {
+        const firstBlock = appState.blocks[0];
+        let blockText = '';
+        
+        switch (firstBlock.type) {
+          case 'heading1':
+          case 'heading2':
+          case 'heading3':
+          case 'paragraph':
+            blockText = firstBlock.content.trim();
+            break;
+          case 'bulletList':
+            // リストの最初の項目を取得
+            const firstItem = firstBlock.content.split('\n')[0].trim();
+            blockText = firstItem;
+            break;
+          case 'table':
+            // テーブルの最初のセルの内容を取得
+            if (firstBlock.tableData && firstBlock.tableData.rows.length > 0) {
+              blockText = firstBlock.tableData.rows[0][0] || '';
+            }
+            break;
+          default:
+            blockText = firstBlock.content.trim();
+        }
+        
+        // テキストが存在し、適切な長さの場合にファイル名に使用
+        if (blockText && blockText.length > 0 && blockText.length <= 50) {
+          // 特殊文字を除去してファイル名に使用
+          const cleanText = blockText
+            .replace(/[<>:"/\\|?*]/g, '') // ファイル名に使用できない文字を除去
+            .replace(/\s+/g, '_') // スペースをアンダースコアに変更
+            .substring(0, 30); // 最大30文字に制限
+          
+          if (cleanText) {
+            filename = cleanText;
+          }
+        }
+      }
+      
+      // 年月日を追加
+      const today = new Date();
+      const dateStr = today.getFullYear().toString() +
+        (today.getMonth() + 1).toString().padStart(2, '0') +
+        today.getDate().toString().padStart(2, '0');
+      
+      const finalFilename = `${filename}_${dateStr}.html`;
+      
       const success = await clipboardService.downloadHtmlFile(
         appState.blocks, 
-        `document-${new Date().toISOString().split('T')[0]}.html`
+        finalFilename
       );
       if (success) {
         alert('HTMLファイルがダウンロードされました');
