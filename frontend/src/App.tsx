@@ -230,26 +230,32 @@ function App() {
   };
 
   // HTML出力ハンドラー（F-003-1対応）
-  const handleDownloadHtml = () => {
-    const html = clipboardService.blocksToHtml(appState.blocks);
-    const blob = new Blob([html], { type: 'text/html' });
-    const url = URL.createObjectURL(blob);
-    
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `document-${new Date().toISOString().split('T')[0]}.html`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+  const handleDownloadHtml = async () => {
+    try {
+      const success = await clipboardService.downloadHtmlFile(
+        appState.blocks, 
+        `document-${new Date().toISOString().split('T')[0]}.html`
+      );
+      if (success) {
+        alert('HTMLファイルがダウンロードされました');
+      } else {
+        alert('HTMLファイルのダウンロードに失敗しました');
+      }
+    } catch (error) {
+      console.error('HTMLダウンロードエラー:', error);
+      alert('HTMLファイルのダウンロードに失敗しました');
+    }
   };
 
   // クリップボードにHTMLコピー（F-003-3対応）
   const handleCopyToClipboard = async () => {
     try {
-      const html = clipboardService.blocksToHtml(appState.blocks);
-      await navigator.clipboard.writeText(html);
-      alert('HTMLがクリップボードにコピーされました');
+      const success = await clipboardService.copyHtmlToClipboard(appState.blocks);
+      if (success) {
+        alert('HTMLがクリップボードにコピーされました');
+      } else {
+        alert('HTMLのコピーに失敗しました');
+      }
     } catch (error) {
       console.error('クリップボードへのコピーに失敗しました:', error);
       alert('クリップボードへのコピーに失敗しました');
@@ -297,8 +303,8 @@ function App() {
     const additionalEmails = prompt('追加受信者のメールアドレスを入力してください（複数の場合はカンマ区切り）:');
 
     try {
-      // HTMLコンテンツを生成
-      const htmlContent = clipboardService.blocksToHtml(appState.blocks);
+      // HTMLコンテンツを生成（プレビューと同じ）
+      const htmlContent = await clipboardService.generatePreviewHtml(appState.blocks);
       
       // メール送信
       const result = await apiService.sendMail({

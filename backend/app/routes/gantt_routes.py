@@ -110,16 +110,18 @@ async def html_to_image(html_content: str) -> str:
         
         # Playwrightを使用してHTMLを画像に変換
         try:
-            # HTMLを画像に変換
+            # HTMLを画像に変換（設定を最適化）
             cmd = [
                 'playwright', 'screenshot',
                 html_file,
                 '--output', image_file,
                 '--viewport-size', '1200x800',
-                '--wait-for-timeout', '2000'
+                '--wait-for-timeout', '3000',  # 3秒に短縮
+                '--timeout', '30000',  # 30秒に設定
+                '--headed', 'false'  # ヘッドレスモードを明示的に指定
             ]
             
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
             
             if result.returncode == 0 and os.path.exists(image_file):
                 # 画像をBase64に変換
@@ -136,6 +138,9 @@ async def html_to_image(html_content: str) -> str:
                 print(f"Playwrightエラー: {result.stderr}")
                 return ""
                 
+        except subprocess.TimeoutExpired:
+            print("Playwrightタイムアウト: 60秒でタイムアウトしました")
+            return ""
         except Exception as e:
             print(f"Playwright実行エラー: {e}")
             return ""
@@ -178,12 +183,13 @@ async def save_gantt_image(request: GanttRequest):
             title="",
             xaxis_title="",
             yaxis_title="",
-            height=600,
-            width=1200,
-            font=dict(size=18),
-            title_font_size=24,
-            xaxis=dict(title_font_size=20, tickfont_size=16),
-            yaxis=dict(title_font_size=20, tickfont_size=16)
+            height=400,  # 高さを削減
+            width=800,   # 幅を削減
+            font=dict(size=14),  # フォントサイズを削減
+            title_font_size=20,
+            xaxis=dict(title_font_size=16, tickfont_size=12),
+            yaxis=dict(title_font_size=16, tickfont_size=12),
+            margin=dict(l=50, r=50, t=30, b=50)  # マージンを最適化
         )
 
         # 画像として保存

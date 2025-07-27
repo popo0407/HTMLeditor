@@ -661,6 +661,162 @@ ${htmlParts.join('\n')}
   }
 
   /**
+   * プレビューと同じHTMLを生成（保存・コピー用）
+   */
+  async generatePreviewHtml(blocks: Block[]): Promise<string> {
+    const htmlParts = await Promise.all(blocks.map(async block => {
+      const html = await this.blockToHtml(block);
+      return html;
+    }));
+    
+    return `<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HTMLエディタで作成されたドキュメント</title>
+  <style>
+    body { 
+      font-family: 'Hiragino Sans', 'Yu Gothic', 'Meiryo', sans-serif; 
+      line-height: 1.6; 
+      color: #333;
+      max-width: 800px; 
+      margin: 0 auto; 
+      padding: 20px; 
+    }
+    h1, h2, h3 { margin-top: 24px; margin-bottom: 16px; }
+    h2 { 
+      color: #2c3e50; 
+      border-bottom: 3px solid #3498db; 
+      padding-bottom: 10px; 
+      margin-top: 30px; 
+    }
+    h3 { color: #34495e; margin-top: 25px; }
+    p { margin: 12px 0; }
+    ul { margin: 10px 0; padding-left: 25px; }
+    li { margin: 5px 0; }
+    hr { margin: 24px 0; border: none; height: 2px; background-color: #ddd; }
+    table { 
+      width: 100%; 
+      border-collapse: collapse; 
+      margin: 15px 0; 
+    }
+    th, td { 
+      border: 1px solid #ddd; 
+      padding: 12px; 
+      text-align: left; 
+    }
+    th { background-color: #f8f9fa; font-weight: bold; }
+    img { max-width: 100%; height: auto; border-radius: 4px; }
+    
+    /* 特別なブロックスタイル */
+    .action-item {
+      background-color: #d4edda;
+      border-left: 4px solid #28a745;
+      padding: 15px;
+      margin: 15px 0;
+      border-radius: 4px;
+    }
+    .important {
+      background-color: #fff3cd;
+      border-left: 4px solid #ffc107;
+      padding: 15px;
+      margin: 15px 0;
+      border-radius: 4px;
+    }
+    
+    /* 強調表示時のテーブルヘッダースタイル */
+    table.important th {
+      background-color: rgba(255, 193, 7, 0.3) !important;
+      border-bottom: 2px solid #ffc107;
+      font-weight: bold;
+    }
+    table.action-item th {
+      background-color: rgba(40, 167, 69, 0.2) !important;
+      border-bottom: 2px solid #28a745;
+      font-weight: bold;
+    }
+    
+    /* 強調表示テーブル全体のスタイル */
+    table.important {
+      background-color: #fff3cd;
+      border-left: 4px solid #ffc107;
+      padding: 15px;
+      margin: 15px 0;
+      border-radius: 4px;
+    }
+    table.action-item {
+      background-color: #d4edda;
+      border-left: 4px solid #28a745;
+      padding: 15px;
+      margin: 15px 0;
+      border-radius: 4px;
+    }
+    
+    /* ガントチャート用スタイル */
+    .gantt-chart {
+      margin: 20px 0;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      overflow: auto;
+    }
+    .gantt-image {
+      margin: 20px 0;
+      text-align: center;
+    }
+    .gantt-image img {
+      max-width: 100%;
+      height: auto;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+${htmlParts.join('\n')}
+</body>
+</html>`;
+  }
+
+  /**
+   * HTMLをクリップボードにコピー
+   */
+  async copyHtmlToClipboard(blocks: Block[]): Promise<boolean> {
+    try {
+      const html = await this.generatePreviewHtml(blocks);
+      await navigator.clipboard.writeText(html);
+      return true;
+    } catch (error) {
+      console.error('HTMLコピーエラー:', error);
+      return false;
+    }
+  }
+
+  /**
+   * HTMLをファイルとしてダウンロード
+   */
+  async downloadHtmlFile(blocks: Block[], filename: string = 'document.html'): Promise<boolean> {
+    try {
+      const html = await this.generatePreviewHtml(blocks);
+      const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      URL.revokeObjectURL(url);
+      return true;
+    } catch (error) {
+      console.error('HTMLダウンロードエラー:', error);
+      return false;
+    }
+  }
+
+  /**
    * プレビュー用にブロック構造からスタイル付きHTMLコンテンツを生成
    */
   async blocksToPreviewHtml(blocks: Block[]): Promise<string> {
