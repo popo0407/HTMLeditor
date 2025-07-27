@@ -17,6 +17,8 @@ import { calendarService } from './calendarService';
 class ClipboardService {
   private previewCache = new Map<string, string>();
   private lastBlocksKey = '';
+  private lastCalendarDataKey = '';
+  private lastGanttHtml = ''; // 前回生成したガントチャートHTMLを保存
 
   /**
    * クリップボードからHTMLテキストを読み込み
@@ -953,17 +955,55 @@ ${htmlParts.join('\n')}
       return '<div class="preview-content"><p>ブロックがありません</p></div>';
     }
     
-    // ブロックセットのキーを生成（より詳細な比較）
-    const blocksKey = JSON.stringify(blocks.map(b => ({ 
-      id: b.id, 
-      type: b.type, 
-      content: b.content,
-      calendarData: b.calendarData // カレンダーデータも含める
-    })));
+    // スケジュール変更の検出
+    const calendarBlocks = blocks.filter(b => b.type === 'calendar');
+    const currentCalendarDataKey = JSON.stringify(calendarBlocks.map(b => b.calendarData));
+    // 最初の実行時はlastCalendarDataKeyが空文字列のため、初期化が必要
+    const isScheduleChanged = this.lastCalendarDataKey === '' ? false : currentCalendarDataKey !== this.lastCalendarDataKey;
     
-    // キャッシュをチェック
-    if (blocksKey === this.lastBlocksKey && this.previewCache.has(blocksKey)) {
-      console.log('キャッシュからプレビューを取得');
+    console.log('スケジュール変更検出デバッグ:');
+    console.log('- カレンダーブロック数:', calendarBlocks.length);
+    console.log('- 現在のカレンダーデータキー:', currentCalendarDataKey);
+    console.log('- 前回のカレンダーデータキー:', this.lastCalendarDataKey);
+    console.log('- スケジュール変更あり:', isScheduleChanged);
+    console.log('- 初回実行か:', this.lastCalendarDataKey === '');
+    
+    if (isScheduleChanged) {
+      console.log('スケジュール変更を検出しました');
+      this.lastCalendarDataKey = currentCalendarDataKey;
+    } else {
+      console.log('スケジュール変更なし');
+      // 初回実行時またはスケジュール変更がない場合は、現在のキーを保存
+      if (this.lastCalendarDataKey === '') {
+        this.lastCalendarDataKey = currentCalendarDataKey;
+      }
+    }
+    
+    // ブロックセットのキーを生成（カレンダーデータを除く）
+    const blocksKey = JSON.stringify(blocks.map(b => {
+      const baseBlock = {
+        id: b.id, 
+        type: b.type, 
+        content: b.content
+      };
+      
+      // カレンダーブロック以外の場合のみcalendarDataを含める
+      if (b.type !== 'calendar' && b.calendarData) {
+        return { ...baseBlock, calendarData: b.calendarData };
+      }
+      
+      return baseBlock;
+    }));
+    
+    console.log('ブロックキーデバッグ:');
+    console.log('- 現在のブロックキー:', blocksKey);
+    console.log('- 前回のブロックキー:', this.lastBlocksKey);
+    console.log('- ブロックキー一致:', blocksKey === this.lastBlocksKey);
+    console.log('- キャッシュ存在:', this.previewCache.has(blocksKey));
+    
+    // キャッシュをチェック（スケジュール変更がない場合のみ）
+    if (!isScheduleChanged && blocksKey === this.lastBlocksKey && this.previewCache.has(blocksKey)) {
+      console.log('キャッシュからプレビューを取得（スケジュール変更なし）');
       const cachedResult = this.previewCache.get(blocksKey);
       if (cachedResult) {
         return cachedResult;
@@ -971,7 +1011,15 @@ ${htmlParts.join('\n')}
     }
     
     console.log('新しいプレビューを生成');
+    if (isScheduleChanged) {
+      console.log('スケジュール変更によりガントチャートを再生成します');
+    } else {
+      console.log('スケジュール変更なしのため、ガントチャート生成をスキップします');
+    }
     this.lastBlocksKey = blocksKey;
+    
+    // スケジュール変更フラグを設定
+    (this as any).isScheduleChanged = isScheduleChanged;
     
     const htmlParts = await Promise.all(blocks.map(async (block, index) => {
       console.log(`ブロック ${index + 1}/${blocks.length} 処理中:`, block.id, block.type);
@@ -1102,34 +1150,78 @@ ${htmlParts.join('\n')}`;
         
         return `<table ${attrs}${classAttr}>${tableHtml}</table>`;
       case 'calendar':
-        // カレンダーブロックはガントチャートHTMLのみを出力
+        // カレンダーブロックの処理
         if (block.calendarData && block.calendarData.events && block.calendarData.events.length > 0) {
-          try {
-            // ガントチャート生成を試行
-            const { ganttService } = await import('./ganttService');
-            // CalendarEventをGanttRequestの形式に変換
-            const events = block.calendarData.events.map(event => ({
-              id: event.id,
-              title: event.title,
-              start: event.start,
-              end: event.end || event.start, // endが未定義の場合はstartを使用
-              color: event.color || '#3498db' // colorが未定義の場合はデフォルト色を使用
-            }));
-            console.log('ガントチャート生成開始:', events);
-            const htmlContent = await ganttService.generateGanttChart(events);
-            console.log('ガントチャート生成成功');
-            
-            return `<div ${attrs}${classAttr} style="width: 100%;">
-              <div style="width: 100%; height: 600px; overflow: auto;">${htmlContent}</div>
-            </div>`;
-          } catch (error) {
-            console.error('ガントチャート生成に失敗:', error);
-            // フォールバック: JSON形式で表示
-            const jsonData = JSON.stringify(block.calendarData, null, 2);
-            return `<pre ${attrs}${classAttr} style="background: #f8f9fa; padding: 15px; border-radius: 4px; overflow-x: auto; font-family: 'Courier New', monospace; font-size: 12px;">
+          // スケジュール変更の有無を確認（外部から渡されたフラグを使用）
+          const isScheduleChanged = (this as any).isScheduleChanged;
+          
+          if (isScheduleChanged) {
+            // スケジュール変更がある場合のみガントチャートを生成
+            try {
+              const { ganttService } = await import('./ganttService');
+              const events = block.calendarData.events.map(event => ({
+                id: event.id,
+                title: event.title,
+                start: event.start,
+                end: event.end || event.start,
+                color: event.color || '#3498db'
+              }));
+              console.log('ガントチャート生成開始:', events);
+              const htmlContent = await ganttService.generateGanttChart(events);
+              console.log('ガントチャート生成成功');
+              
+              // 生成したガントチャートHTMLを保存
+              this.lastGanttHtml = htmlContent;
+              
+              return `<div ${attrs}${classAttr} style="width: 100%;">
+                <div style="width: 100%; height: 600px; overflow: auto;">${htmlContent}</div>
+              </div>`;
+            } catch (error) {
+              console.error('ガントチャート生成に失敗:', error);
+              const jsonData = JSON.stringify(block.calendarData, null, 2);
+              return `<pre ${attrs}${classAttr} style="background: #f8f9fa; padding: 15px; border-radius: 4px; overflow-x: auto; font-family: 'Courier New', monospace; font-size: 12px;">
 エラー: ${error instanceof Error ? error.message : '不明なエラー'}
 データ: ${this.escapeHtml(jsonData)}
-            </pre>`;
+              </pre>`;
+            }
+          } else {
+            // スケジュール変更がない場合は前回生成したガントチャートHTMLを再利用
+            if (this.lastGanttHtml) {
+              console.log('スケジュール変更なしのため、前回のガントチャートHTMLを再利用');
+              return `<div ${attrs}${classAttr} style="width: 100%;">
+                <div style="width: 100%; height: 600px; overflow: auto;">${this.lastGanttHtml}</div>
+              </div>`;
+            } else {
+              // 前回のガントチャートHTMLがない場合は新規生成
+              console.log('前回のガントチャートHTMLがないため、新規生成します');
+              try {
+                const { ganttService } = await import('./ganttService');
+                const events = block.calendarData.events.map(event => ({
+                  id: event.id,
+                  title: event.title,
+                  start: event.start,
+                  end: event.end || event.start,
+                  color: event.color || '#3498db'
+                }));
+                console.log('ガントチャート生成開始:', events);
+                const htmlContent = await ganttService.generateGanttChart(events);
+                console.log('ガントチャート生成成功');
+                
+                // 生成したガントチャートHTMLを保存
+                this.lastGanttHtml = htmlContent;
+                
+                return `<div ${attrs}${classAttr} style="width: 100%;">
+                  <div style="width: 100%; height: 600px; overflow: auto;">${htmlContent}</div>
+                </div>`;
+              } catch (error) {
+                console.error('ガントチャート生成に失敗:', error);
+                const jsonData = JSON.stringify(block.calendarData, null, 2);
+                return `<pre ${attrs}${classAttr} style="background: #f8f9fa; padding: 15px; border-radius: 4px; overflow-x: auto; font-family: 'Courier New', monospace; font-size: 12px;">
+エラー: ${error instanceof Error ? error.message : '不明なエラー'}
+データ: ${this.escapeHtml(jsonData)}
+                </pre>`;
+              }
+            }
           }
         } else {
           return `<div ${attrs}${classAttr}>スケジュールデータがありません</div>`;
