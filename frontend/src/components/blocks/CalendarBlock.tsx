@@ -1,34 +1,48 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { CalendarEvent, DateInfo, WeekInfo, CalendarData } from '../../types/index';
+import { Block, BlockStyle } from '../../types';
+import { BlockBase } from './BlockBase';
 import './CalendarBlock.css';
 
-interface CalendarBlockData {
-  events?: CalendarEvent[];
-}
-
 interface CalendarBlockProps {
-  data: CalendarBlockData;
-  onUpdate: (newData: CalendarBlockData) => void;
+  block: Block;
+  isSelected: boolean;
+  onSelect: (blockId: string) => void;
+  onUpdate: (blockId: string, content: string) => void;
+  onDelete: (blockId: string) => void;
+  onStyleChange: (blockId: string, style: BlockStyle) => void;
+  onMoveUp?: () => void;
+  onMoveDown?: () => void;
 }
 
-const CalendarBlock: React.FC<CalendarBlockProps> = ({ data, onUpdate }) => {
-  const [events, setEvents] = useState<CalendarEvent[]>(data.events || []);
+const CalendarBlock: React.FC<CalendarBlockProps> = ({
+  block,
+  isSelected,
+  onSelect,
+  onUpdate,
+  onDelete,
+  onStyleChange,
+  onMoveUp,
+  onMoveDown,
+}) => {
+  const [events, setEvents] = useState<any[]>(block.calendarData?.events || []);
   const [isAddingEvent, setIsAddingEvent] = useState(false);
-  const [newEvent, setNewEvent] = useState<Partial<CalendarEvent>>({
+  const [newEvent, setNewEvent] = useState<Partial<any>>({
     title: '',
     start: '',
     end: '',
     color: '#0078d4'
   });
-  const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
+  const [editingEvent, setEditingEvent] = useState<any | null>(null);
   const eventInputRef = useRef<HTMLInputElement>(null);
 
-  // propsのデータが変更された場合にイベントを更新
+  // イベントが変更されたときにブロックを更新
   useEffect(() => {
-    if (data && data.events) {
-      setEvents(data.events);
-    }
-  }, [data]);
+    const updatedBlock = {
+      ...block,
+      calendarData: { events }
+    };
+    onUpdate(block.id, JSON.stringify(updatedBlock));
+  }, [events, block.id]); // onUpdateを依存配列から削除
 
   useEffect(() => {
     if (isAddingEvent && eventInputRef.current) {
@@ -38,8 +52,8 @@ const CalendarBlock: React.FC<CalendarBlockProps> = ({ data, onUpdate }) => {
 
   const handleAddEvent = () => {
     if (newEvent.title && newEvent.start) {
-      const event: CalendarEvent = {
-        id: `event-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      const event = {
+        id: `evt-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         title: newEvent.title,
         start: newEvent.start,
         end: newEvent.end || newEvent.start,
@@ -48,32 +62,29 @@ const CalendarBlock: React.FC<CalendarBlockProps> = ({ data, onUpdate }) => {
 
       const updatedEvents = [...events, event];
       setEvents(updatedEvents);
-      onUpdate({ events: updatedEvents });
       
       setNewEvent({ title: '', start: '', end: '', color: '#0078d4' });
       setIsAddingEvent(false);
     }
   };
 
-  const handleEditEvent = (event: CalendarEvent) => {
+  const handleEditEvent = (event: any) => {
     setEditingEvent(event);
   };
 
   const handleSaveEvent = () => {
     if (editingEvent && editingEvent.title && editingEvent.start) {
-      const updatedEvents = events.map(e => 
+      const updatedEvents = events.map((e: any) => 
         e.id === editingEvent.id ? editingEvent : e
       );
       setEvents(updatedEvents);
-      onUpdate({ events: updatedEvents });
       setEditingEvent(null);
     }
   };
 
   const handleDeleteEvent = (eventId: string) => {
-    const updatedEvents = events.filter(e => e.id !== eventId);
+    const updatedEvents = events.filter((e: any) => e.id !== eventId);
     setEvents(updatedEvents);
-    onUpdate({ events: updatedEvents });
   };
 
   const cancelEdit = () => {
@@ -92,7 +103,7 @@ const CalendarBlock: React.FC<CalendarBlockProps> = ({ data, onUpdate }) => {
     return formatDate(dateString);
   };
 
-  return (
+  const renderCalendarContent = () => (
     <div className="calendar-block">
       <div className="calendar-header">
         <h3 className="calendar-title">スケジュール管理</h3>
@@ -155,7 +166,7 @@ const CalendarBlock: React.FC<CalendarBlockProps> = ({ data, onUpdate }) => {
             </tr>
           </thead>
           <tbody>
-            {events.map((event) => (
+            {events.map((event: any) => (
               <tr key={event.id}>
                 {editingEvent && editingEvent.id === event.id ? (
                   <>
@@ -233,6 +244,21 @@ const CalendarBlock: React.FC<CalendarBlockProps> = ({ data, onUpdate }) => {
         )}
       </div>
     </div>
+  );
+
+  return (
+    <BlockBase
+      block={block}
+      isSelected={isSelected}
+      onSelect={onSelect}
+      onUpdate={onUpdate}
+      onDelete={onDelete}
+      onStyleChange={onStyleChange}
+      onMoveUp={onMoveUp}
+      onMoveDown={onMoveDown}
+    >
+      {renderCalendarContent()}
+    </BlockBase>
   );
 };
 

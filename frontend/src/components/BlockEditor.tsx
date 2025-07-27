@@ -78,19 +78,7 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
         return <TableBlock key={block.id} {...commonProps} />;
       
       case 'calendar':
-        return (
-          <CalendarBlock 
-            key={block.id} 
-            data={block.calendarData || { events: [] }} 
-            onUpdate={(newData) => {
-              // カレンダーデータの更新
-              onBlockUpdate(block.id, JSON.stringify({
-                ...block,
-                calendarData: newData
-              }));
-            }}
-          />
-        );
+        return <CalendarBlock key={block.id} {...commonProps} />;
       
       default:
         return <ParagraphBlock key={block.id} {...commonProps} />;

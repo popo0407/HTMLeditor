@@ -191,11 +191,21 @@ function App() {
 
   // ブロック削除ハンドラー（F-001-6対応）
   const handleBlockDelete = (blockId: string) => {
-    setAppState(prev => ({
-      ...prev,
-      blocks: prev.blocks.filter(block => block.id !== blockId),
-      selectedBlockId: prev.selectedBlockId === blockId ? null : prev.selectedBlockId,
-    }));
+    console.log('=== ブロック削除開始 ===');
+    console.log('削除対象ブロックID:', blockId);
+    console.log('削除前ブロック数:', appState.blocks.length);
+    
+    setAppState(prev => {
+      const newBlocks = prev.blocks.filter(block => block.id !== blockId);
+      console.log('削除後ブロック数:', newBlocks.length);
+      console.log('削除後ブロックID一覧:', newBlocks.map(b => b.id));
+      
+      return {
+        ...prev,
+        blocks: newBlocks,
+        selectedBlockId: prev.selectedBlockId === blockId ? null : prev.selectedBlockId,
+      };
+    });
   };
 
   // ブロック移動ハンドラー（F-001-7対応）
@@ -576,25 +586,49 @@ const PreviewContent: React.FC<{ blocks: Block[] }> = ({ blocks }) => {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const previewRef = useRef<HTMLDivElement>(null);
+  const lastBlocksRef = useRef<string>('');
 
   useEffect(() => {
     const generatePreview = async () => {
       try {
+        // ブロックの変更をチェック（より詳細な比較）
+        const currentBlocksString = JSON.stringify(blocks.map(b => ({ 
+          id: b.id, 
+          type: b.type, 
+          content: b.content,
+          calendarData: b.calendarData // カレンダーデータも含める
+        })));
+        
+        if (currentBlocksString === lastBlocksRef.current && previewHtml !== '') {
+          console.log('ブロックに変更がないため、プレビュー生成をスキップ');
+          return;
+        }
+        
+        console.log('ブロックに変更を検知、プレビュー生成を実行');
+        console.log('前回のブロック:', lastBlocksRef.current);
+        console.log('現在のブロック:', currentBlocksString);
+        lastBlocksRef.current = currentBlocksString;
+        
         setIsLoading(true);
         setError(null);
         
+        console.log('=== プレビュー生成開始 ===');
+        console.log('ブロック数:', blocks.length);
+        console.log('ブロックID一覧:', blocks.map(b => b.id));
+        console.log('ブロックタイプ一覧:', blocks.map(b => b.type));
+        
         const html = await clipboardService.blocksToPreviewHtml(blocks);
-        console.log('Preview HTML:', html);
-        console.log('Blocks count:', blocks.length);
+        console.log('プレビューHTML長さ:', html.length);
         
         if (!html || html.trim() === '') {
-          console.warn('Preview HTML is empty');
+          console.warn('プレビューHTMLが空です');
           setPreviewHtml('<div class="preview-content"><p>プレビューコンテンツが空です</p><p>ブロック数: ' + blocks.length + '</p></div>');
         } else {
+          console.log('プレビューHTML設定完了');
           setPreviewHtml(html);
         }
       } catch (error) {
-        console.error('Preview HTML generation error:', error);
+        console.error('プレビューHTML生成エラー:', error);
         
         // フォールバック: シンプルなHTML生成
         try {
@@ -625,7 +659,7 @@ const PreviewContent: React.FC<{ blocks: Block[] }> = ({ blocks }) => {
           
           setPreviewHtml(fallbackHtml);
         } catch (fallbackError) {
-          console.error('Fallback HTML generation error:', fallbackError);
+          console.error('フォールバックHTML生成エラー:', fallbackError);
           setError(error instanceof Error ? error.message : 'Unknown error');
         }
       } finally {
@@ -633,12 +667,17 @@ const PreviewContent: React.FC<{ blocks: Block[] }> = ({ blocks }) => {
       }
     };
 
+    // ブロックが変更されたら即座にプレビューを更新
     generatePreview();
-  }, [blocks]);
+  }, [blocks]); // blocksの変更を監視
 
   // HTMLを動的に挿入し、JavaScriptを実行
   useEffect(() => {
     if (previewRef.current && previewHtml) {
+      // 既存のコンテンツをクリア
+      previewRef.current.innerHTML = '';
+      
+      // 新しいHTMLを挿入
       previewRef.current.innerHTML = previewHtml;
       
       // スクリプトタグを実行

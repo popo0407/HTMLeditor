@@ -15,6 +15,9 @@ import { calendarExporter } from './calendarExporter';
 import { calendarService } from './calendarService';
 
 class ClipboardService {
+  private previewCache = new Map<string, string>();
+  private lastBlocksKey = '';
+
   /**
    * クリップボードからHTMLテキストを読み込み
    */
@@ -804,13 +807,44 @@ ${htmlParts.join('\n')}
    * プレビュー用にブロック構造からスタイル付きHTMLコンテンツを生成
    */
   async blocksToPreviewHtml(blocks: Block[]): Promise<string> {
-    console.log('blocksToPreviewHtml called with blocks:', blocks);
+    console.log('=== blocksToPreviewHtml 開始 ===');
+    console.log('処理対象ブロック数:', blocks.length);
+    console.log('ブロックID一覧:', blocks.map(b => b.id));
+    console.log('ブロックタイプ一覧:', blocks.map(b => b.type));
     
-    const htmlParts = await Promise.all(blocks.map(async block => {
+    if (blocks.length === 0) {
+      console.log('ブロックが0個のため、空のプレビューを返します');
+      return '<div class="preview-content"><p>ブロックがありません</p></div>';
+    }
+    
+    // ブロックセットのキーを生成（より詳細な比較）
+    const blocksKey = JSON.stringify(blocks.map(b => ({ 
+      id: b.id, 
+      type: b.type, 
+      content: b.content,
+      calendarData: b.calendarData // カレンダーデータも含める
+    })));
+    
+    // キャッシュをチェック
+    if (blocksKey === this.lastBlocksKey && this.previewCache.has(blocksKey)) {
+      console.log('キャッシュからプレビューを取得');
+      const cachedResult = this.previewCache.get(blocksKey);
+      if (cachedResult) {
+        return cachedResult;
+      }
+    }
+    
+    console.log('新しいプレビューを生成');
+    this.lastBlocksKey = blocksKey;
+    
+    const htmlParts = await Promise.all(blocks.map(async (block, index) => {
+      console.log(`ブロック ${index + 1}/${blocks.length} 処理中:`, block.id, block.type);
       const html = await this.blockToHtml(block);
-      console.log(`Block ${block.id} (${block.type}):`, html);
+      console.log(`ブロック ${block.id} (${block.type}) HTML長さ:`, html.length);
       return html;
     }));
+    
+    console.log('生成されたHTMLパーツ数:', htmlParts.length);
     
     const result = `<style>
     /* 特別なブロックスタイル */
@@ -858,7 +892,12 @@ ${htmlParts.join('\n')}
     </style>
 ${htmlParts.join('\n')}`;
 
-    console.log('Final preview HTML:', result);
+    console.log('最終プレビューHTML長さ:', result.length);
+    console.log('=== blocksToPreviewHtml 完了 ===');
+    
+    // キャッシュに保存
+    this.previewCache.set(blocksKey, result);
+    
     return result;
   }
 
