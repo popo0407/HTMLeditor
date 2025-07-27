@@ -596,8 +596,17 @@ const PreviewContent: React.FC<{ blocks: Block[] }> = ({ blocks }) => {
           id: b.id, 
           type: b.type, 
           content: b.content,
+          style: b.style, // スタイルも含める
           calendarData: b.calendarData // カレンダーデータも含める
         })));
+        
+        console.log('ブロック変更検出デバッグ:');
+        console.log('- 現在のブロック数:', blocks.length);
+        console.log('- 現在のブロックスタイル:', blocks.map(b => ({ id: b.id, style: b.style })));
+        console.log('- 現在のブロック文字列:', currentBlocksString);
+        console.log('- 前回のブロック文字列:', lastBlocksRef.current);
+        console.log('- 文字列一致:', currentBlocksString === lastBlocksRef.current);
+        console.log('- プレビューHTML存在:', previewHtml !== '');
         
         if (currentBlocksString === lastBlocksRef.current && previewHtml !== '') {
           console.log('ブロックに変更がないため、プレビュー生成をスキップ');

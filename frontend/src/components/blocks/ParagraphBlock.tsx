@@ -19,7 +19,9 @@ export const ParagraphBlock: React.FC<CommonBlockProps> = (props) => {
   useEffect(() => {
     if (isEditing && textareaRef.current) {
       textareaRef.current.focus();
-      textareaRef.current.select();
+      // カーソルをテキスト末端に移動
+      const length = textareaRef.current.value.length;
+      textareaRef.current.setSelectionRange(length, length);
       // 高さを自動調整
       adjustTextareaHeight();
     }
@@ -33,6 +35,11 @@ export const ParagraphBlock: React.FC<CommonBlockProps> = (props) => {
   };
 
   const handleDoubleClick = () => {
+    setIsEditing(true);
+  };
+
+  const handleClick = () => {
+    // シングルクリックで編集モードに入り、カーソルをテキスト末端に移動
     setIsEditing(true);
   };
 
@@ -69,6 +76,8 @@ export const ParagraphBlock: React.FC<CommonBlockProps> = (props) => {
         <p 
           className="block-paragraph"
           onDoubleClick={handleDoubleClick}
+          onClick={handleClick}
+          style={{ cursor: 'text' }}
         >
           {block.content || 'ここに段落テキストを入力してください'}
         </p>

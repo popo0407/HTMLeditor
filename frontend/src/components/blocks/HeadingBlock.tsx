@@ -19,11 +19,18 @@ export const HeadingBlock: React.FC<CommonBlockProps> = (props) => {
   useEffect(() => {
     if (isEditing && inputRef.current) {
       inputRef.current.focus();
-      inputRef.current.select();
+      // カーソルをテキスト末端に移動
+      const length = inputRef.current.value.length;
+      inputRef.current.setSelectionRange(length, length);
     }
   }, [isEditing]);
 
   const handleDoubleClick = () => {
+    setIsEditing(true);
+  };
+
+  const handleClick = () => {
+    // シングルクリックで編集モードに入り、カーソルをテキスト末端に移動
     setIsEditing(true);
   };
 
@@ -61,6 +68,8 @@ export const HeadingBlock: React.FC<CommonBlockProps> = (props) => {
     const commonProps = {
       className,
       onDoubleClick: handleDoubleClick,
+      onClick: handleClick,
+      style: { cursor: 'text' }
     };
 
     switch (block.type) {

@@ -7,12 +7,13 @@
  * - セル内容の編集
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { CommonBlockProps, TableData } from '../../types';
 import { BlockBase } from './BlockBase';
 
 export const TableBlock: React.FC<CommonBlockProps> = (props) => {
   const { block, onUpdate } = props;
+  const tableRef = useRef<HTMLTableElement>(null);
   
   // テーブルデータを初期化
   const [tableData, setTableData] = useState<TableData>(() => {
@@ -127,6 +128,22 @@ export const TableBlock: React.FC<CommonBlockProps> = (props) => {
   const isHeaderCell = (rowIndex: number, colIndex: number) => {
     return (tableData.hasHeaderRow && rowIndex === 0) || 
            (tableData.hasHeaderColumn && colIndex === 0);
+  };
+
+  // シングルクリックで先頭セルにフォーカス
+  const handleTableClick = () => {
+    if (tableRef.current && tableData.rows.length > 0 && tableData.rows[0].length > 0) {
+      const firstCell = tableRef.current.querySelector('td, th') as HTMLTableCellElement;
+      if (firstCell) {
+        const input = firstCell.querySelector('input') as HTMLInputElement;
+        if (input) {
+          input.focus();
+          // カーソルをテキスト末端に移動
+          const length = input.value.length;
+          input.setSelectionRange(length, length);
+        }
+      }
+    }
   };
 
   return (
@@ -262,11 +279,16 @@ export const TableBlock: React.FC<CommonBlockProps> = (props) => {
           )}
           
           {/* テーブル本体 */}
-          <table style={{ 
-            width: '100%', 
-            borderCollapse: 'collapse', 
-            border: '1px solid var(--border-color)' 
-          }}>
+          <table 
+            ref={tableRef}
+            onClick={handleTableClick}
+            style={{ 
+              width: '100%', 
+              borderCollapse: 'collapse', 
+              border: '1px solid var(--border-color)',
+              cursor: 'text'
+            }}
+          >
             <tbody>
               {tableData.rows.map((row, rowIndex) => (
                 <tr key={rowIndex}>

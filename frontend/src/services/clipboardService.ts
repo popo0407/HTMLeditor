@@ -984,7 +984,8 @@ ${htmlParts.join('\n')}
       const baseBlock = {
         id: b.id, 
         type: b.type, 
-        content: b.content
+        content: b.content,
+        style: b.style // スタイルも含める
       };
       
       // カレンダーブロック以外の場合のみcalendarDataを含める

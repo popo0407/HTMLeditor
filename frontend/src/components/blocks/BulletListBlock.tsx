@@ -19,7 +19,9 @@ export const BulletListBlock: React.FC<CommonBlockProps> = (props) => {
   useEffect(() => {
     if (isEditing && textareaRef.current) {
       textareaRef.current.focus();
-      textareaRef.current.select();
+      // カーソルをテキスト末端に移動
+      const length = textareaRef.current.value.length;
+      textareaRef.current.setSelectionRange(length, length);
       adjustTextareaHeight();
     }
   }, [isEditing]);
@@ -32,6 +34,11 @@ export const BulletListBlock: React.FC<CommonBlockProps> = (props) => {
   };
 
   const handleDoubleClick = () => {
+    setIsEditing(true);
+  };
+
+  const handleClick = () => {
+    // シングルクリックで編集モードに入り、カーソルをテキスト末端に移動
     setIsEditing(true);
   };
 
@@ -57,7 +64,12 @@ export const BulletListBlock: React.FC<CommonBlockProps> = (props) => {
     const items = (block.content || '新しいリスト項目').split('\n').filter(item => item.trim());
     
     return (
-      <ul className="block-bullet-list" onDoubleClick={handleDoubleClick}>
+      <ul 
+        className="block-bullet-list" 
+        onDoubleClick={handleDoubleClick}
+        onClick={handleClick}
+        style={{ cursor: 'text' }}
+      >
         {items.map((item, index) => (
           <li key={index}>{item.replace(/^[•\-*]\s*/, '')}</li>
         ))}
