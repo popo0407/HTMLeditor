@@ -30,13 +30,22 @@ class ClipboardService {
         if (item.types.includes('text/html')) {
           const htmlBlob = await item.getType('text/html');
           const htmlText = await htmlBlob.text();
+          console.log('クリップボードからHTMLを読み取り:', htmlText.substring(0, 200));
           return this.parseHtmlToBlocks(htmlText);
         }
       }
       
       // HTMLがない場合はプレーンテキストにフォールバック
       const text = await navigator.clipboard.readText();
+      console.log('クリップボードからテキストを読み取り:', text.substring(0, 200));
+      
       if (text.trim()) {
+        // コンソールログのような内容の場合は警告
+        if (text.includes('App.tsx:') || text.includes('clipboardService.ts:') || text.includes('console.log')) {
+          console.warn('クリップボードにコンソールログが含まれています。HTMLをコピーしてください。');
+          throw new Error('クリップボードにコンソールログが含まれています。HTMLをコピーしてください。');
+        }
+        
         return this.parseTextToBlocks(text);
       }
       
@@ -77,18 +86,101 @@ class ClipboardService {
    * HTMLテキストをブロック構造に変換
    */
   private parseHtmlToBlocks(html: string): Block[] {
+    // コンソールログのような内容の場合は警告
+    if (html.includes('App.tsx:') || html.includes('clipboardService.ts:') || html.includes('console.log')) {
+      console.warn('HTMLにコンソールログが含まれています。正しいHTMLをコピーしてください。');
+      throw new Error('HTMLにコンソールログが含まれています。正しいHTMLをコピーしてください。');
+    }
+    
     const parser = new DOMParser();
-    const doc = parser.parseFromString(html, 'text/html');
     const blocks: Block[] = [];
 
+    console.log('HTML解析開始:', html.substring(0, 200) + '...');
+
+    // HTMLの前処理：エスケープされた文字列を修正
+    let processedHtml = html;
+    if (html.includes('\\"')) {
+      console.log('エスケープされた引用符を検出しました。修正します。');
+      processedHtml = html.replace(/\\"/g, '"');
+      console.log('修正後のHTML（最初の200文字）:', processedHtml.substring(0, 200));
+    }
+
     // スケジュールデータを自動検出（<script>タグ内のJSONを含む）
-    const scheduleEvents = this.extractScheduleData(html);
+    const scheduleEvents = this.extractScheduleData(processedHtml);
+    console.log('検出されたスケジュールイベント数:', scheduleEvents.length);
     
-    // 既存のブロック構造を持つHTMLかチェック（data-block-type属性の存在）
-    const existingBlocks = doc.querySelectorAll('[data-block-type]');
+    // HTMLがテキストとして読み取られた場合の処理
+    let doc: Document;
+    let existingBlocks: NodeListOf<Element>;
+    
+    if (processedHtml.includes('data-block-type')) {
+      console.log('data-block-type属性を含むHTMLを検出しました。');
+      console.log('HTMLの長さ:', processedHtml.length);
+      console.log('HTMLの内容（最初の500文字）:', processedHtml.substring(0, 500));
+      
+      // HTMLがテキストとして読み取られた場合、より正確な解析を試行
+      if (processedHtml.includes('<') && processedHtml.includes('>')) {
+        console.log('HTMLタグを検出しました。正規表現で要素を抽出します。');
+        
+        // 複数のパターンでHTML要素を抽出
+        let htmlElements = processedHtml.match(/<[^>]*data-block-type="[^"]*"[^>]*>(?:.*?<\/[^>]*>|)/g);
+        console.log('パターン1の結果:', htmlElements ? htmlElements.length : 0);
+        
+        // 最初のパターンで見つからない場合、より緩いパターンを試行
+        if (!htmlElements || htmlElements.length === 0) {
+          htmlElements = processedHtml.match(/<[^>]*data-block-type="[^"]*"[^>]*>.*?<\/[^>]*>/g);
+          console.log('パターン2の結果:', htmlElements ? htmlElements.length : 0);
+        }
+        
+        // まだ見つからない場合、最も緩いパターンを試行
+        if (!htmlElements || htmlElements.length === 0) {
+          htmlElements = processedHtml.match(/<[^>]*data-block-type="[^"]*"[^>]*>/g);
+          console.log('パターン3の結果:', htmlElements ? htmlElements.length : 0);
+        }
+        
+        // さらに緩いパターンを試行（エスケープされた文字列に対応）
+        if (!htmlElements || htmlElements.length === 0) {
+          htmlElements = processedHtml.match(/<[^>]*data-block-type="[^"]*"[^>]*>.*?<\/[^>]*>/g);
+          console.log('パターン4の結果:', htmlElements ? htmlElements.length : 0);
+        }
+        
+        if (htmlElements && htmlElements.length > 0) {
+          console.log('抽出されたHTML要素数:', htmlElements.length);
+          console.log('最初の要素:', htmlElements[0]);
+          
+          // 抽出されたHTML要素を結合して完全なHTMLドキュメントを作成
+          const completeHtml = `<!DOCTYPE html><html><body>${htmlElements.join('')}</body></html>`;
+          doc = parser.parseFromString(completeHtml, 'text/html');
+          existingBlocks = doc.querySelectorAll('[data-block-type]');
+          console.log('再解析後のブロック要素数:', existingBlocks.length);
+        } else {
+          console.log('正規表現で要素を抽出できませんでした。通常のHTML解析を試行します。');
+          // 通常のHTML解析を試行
+          doc = parser.parseFromString(processedHtml, 'text/html');
+          existingBlocks = doc.querySelectorAll('[data-block-type]');
+        }
+      } else {
+        // 通常のHTML解析
+        doc = parser.parseFromString(processedHtml, 'text/html');
+        existingBlocks = doc.querySelectorAll('[data-block-type]');
+      }
+    } else {
+      // 通常のHTML解析
+      doc = parser.parseFromString(processedHtml, 'text/html');
+      existingBlocks = doc.querySelectorAll('[data-block-type]');
+    }
+    
+    console.log('既存のブロック構造要素数:', existingBlocks.length);
+    console.log('HTML全体:', doc.body.innerHTML.substring(0, 500));
+    console.log('data-block-type属性を持つ要素:', Array.from(existingBlocks).map(el => ({
+      tagName: el.tagName,
+      blockType: el.getAttribute('data-block-type'),
+      content: el.textContent?.substring(0, 50)
+    })));
     
     if (existingBlocks.length > 0) {
       // 既存のブロック構造から復元
+      console.log('既存のブロック構造から復元');
       existingBlocks.forEach((element, index) => {
         const blockType = element.getAttribute('data-block-type') as BlockType;
         const blockId = element.getAttribute('data-block-id') || `restored-${Date.now()}-${index}`;
@@ -108,10 +200,17 @@ class ClipboardService {
         }
         
         blocks.push(block);
+        console.log(`ブロック ${index + 1} 作成:`, blockType, block.content.substring(0, 50) + '...');
       });
     } else {
       // 通常のHTMLから変換
+      console.log('通常のHTMLから変換開始');
+      console.log('body要素の直接の子要素:', Array.from(doc.body.children).map(child => child.tagName));
       this.parseHtmlElements(doc.body, blocks);
+      console.log('変換完了、ブロック数:', blocks.length);
+      blocks.forEach((block, index) => {
+        console.log(`ブロック ${index + 1}:`, block.type, block.content.substring(0, 100));
+      });
     }
 
     // スケジュールデータが見つかった場合、カレンダーブロックを自動追加
@@ -141,13 +240,29 @@ class ClipboardService {
    * HTML要素を再帰的に解析してブロックに変換
    */
   private parseHtmlElements(element: Element, blocks: Block[]): void {
-    Array.from(element.children).forEach(child => {
+    // 直接の子要素のみを処理（再帰的処理を避ける）
+    const directChildren = Array.from(element.children);
+    console.log('直接の子要素数:', directChildren.length);
+    
+    directChildren.forEach((child, index) => {
+      console.log(`子要素 ${index + 1}:`, child.tagName, child.textContent?.substring(0, 50));
+      
       const block = this.elementToBlock(child);
       if (block) {
+        console.log(`ブロック作成:`, block.type, block.content.substring(0, 50));
         blocks.push(block);
       } else {
-        // 認識できない要素の場合、子要素を再帰的に処理
-        this.parseHtmlElements(child, blocks);
+        // 認識できない要素の場合、テキストコンテンツがあれば段落として扱う
+        if (child.textContent && child.textContent.trim()) {
+          const id = `block-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+          const paragraphBlock = {
+            id,
+            type: 'paragraph' as BlockType,
+            content: child.textContent.trim()
+          };
+          console.log(`段落ブロック作成:`, paragraphBlock.content.substring(0, 50));
+          blocks.push(paragraphBlock);
+        }
       }
     });
   }
@@ -164,6 +279,11 @@ class ClipboardService {
       case 'h2':
         return { id, type: 'heading2', content: element.textContent || '' };
       case 'h3':
+        return { id, type: 'heading3', content: element.textContent || '' };
+      case 'h4':
+      case 'h5':
+      case 'h6':
+        // h4-h6も見出しとして扱う（h3と同じ）
         return { id, type: 'heading3', content: element.textContent || '' };
       case 'p':
         // 段落の内容をより詳細に処理（HTMLタグを含む）
@@ -189,6 +309,15 @@ class ClipboardService {
           type: 'table', 
           content: this.extractTableContent(element as HTMLTableElement)
         };
+      case 'div':
+      case 'span':
+      case 'section':
+      case 'article':
+        // コンテナ要素でもテキストコンテンツがあれば段落として扱う
+        if (element.textContent && element.textContent.trim()) {
+          return { id, type: 'paragraph', content: element.textContent.trim() };
+        }
+        return null;
       default:
         // 不明な要素は段落として扱う
         if (element.textContent && element.textContent.trim()) {
@@ -202,6 +331,13 @@ class ClipboardService {
    * プレーンテキストをブロック構造に変換
    */
   private parseTextToBlocks(text: string): Block[] {
+    // HTMLが含まれている場合はHTML解析を試行
+    if (text.includes('<') && text.includes('>')) {
+      console.log('テキストにHTMLタグが含まれています。HTML解析を試行します。');
+      return this.parseHtmlToBlocks(text);
+    }
+    
+    // 通常のテキスト処理
     const lines = text.split('\n').filter(line => line.trim());
     const blocks: Block[] = [];
 
