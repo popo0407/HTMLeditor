@@ -371,8 +371,6 @@ function App() {
             onAddBlock={handleAddBlock}
             onImportFromClipboard={handleImportFromClipboard}
             onImportFromText={handleImportFromText}
-            onSendMail={handleSendMail}
-            onManageAddressBook={handleManageAddressBook}
           />
         }
       >

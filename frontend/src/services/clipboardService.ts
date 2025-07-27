@@ -753,23 +753,7 @@ ${htmlParts.join('\n')}
       border-radius: 4px;
     }
     
-    /* ガントチャート用スタイル */
-    .gantt-chart {
-      margin: 20px 0;
-      border: 1px solid #ddd;
-      border-radius: 4px;
-      overflow: auto;
-    }
-    .gantt-image {
-      margin: 20px 0;
-      text-align: center;
-    }
-    .gantt-image img {
-      max-width: 100%;
-      height: auto;
-      border: 1px solid #ddd;
-      border-radius: 4px;
-    }
+
   </style>
 </head>
 <body>
@@ -943,42 +927,34 @@ ${htmlParts.join('\n')}`;
         
         return `<table ${attrs}${classAttr}>${tableHtml}</table>`;
       case 'calendar':
-        // カレンダーブロックはガントチャートHTMLと画像を出力
+        // カレンダーブロックはガントチャートHTMLのみを出力
         if (block.calendarData && block.calendarData.events && block.calendarData.events.length > 0) {
           try {
             // ガントチャート生成を試行
             const { ganttService } = await import('./ganttService');
-            const result = await ganttService.generateGanttChart(block.calendarData.events);
-            
-            // HTMLと画像の両方を表示
-            const htmlContent = result.html;
-            let imageSection = '';
-            
-            if (result.image && result.image.length > 0) {
-              const imageHtml = ganttService.generateImageHtml(result.image, 'スケジュールガントチャート');
-              imageSection = `
-                <div style="width: 100%; text-align: center; margin-top: 20px;">
-                  <h4 style="margin-bottom: 10px; color: #666;">ガントチャート画像版</h4>
-                  ${imageHtml}
-                </div>
-              `;
-            } else {
-              imageSection = `
-                <div style="width: 100%; text-align: center; margin-top: 20px;">
-                  <p style="color: #999; font-style: italic;">画像生成に失敗しました</p>
-                </div>
-              `;
-            }
+            // CalendarEventをGanttRequestの形式に変換
+            const events = block.calendarData.events.map(event => ({
+              id: event.id,
+              title: event.title,
+              start: event.start,
+              end: event.end || event.start, // endが未定義の場合はstartを使用
+              color: event.color || '#3498db' // colorが未定義の場合はデフォルト色を使用
+            }));
+            console.log('ガントチャート生成開始:', events);
+            const htmlContent = await ganttService.generateGanttChart(events);
+            console.log('ガントチャート生成成功');
             
             return `<div ${attrs}${classAttr} style="width: 100%;">
-              <div style="width: 100%; height: 600px; overflow: auto; margin-bottom: 20px;">${htmlContent}</div>
-              ${imageSection}
+              <div style="width: 100%; height: 600px; overflow: auto;">${htmlContent}</div>
             </div>`;
           } catch (error) {
-            console.warn('ガントチャート生成に失敗、JSON形式で表示:', error);
+            console.error('ガントチャート生成に失敗:', error);
             // フォールバック: JSON形式で表示
             const jsonData = JSON.stringify(block.calendarData, null, 2);
-            return `<pre ${attrs}${classAttr} style="background: #f8f9fa; padding: 15px; border-radius: 4px; overflow-x: auto; font-family: 'Courier New', monospace; font-size: 12px;">${this.escapeHtml(jsonData)}</pre>`;
+            return `<pre ${attrs}${classAttr} style="background: #f8f9fa; padding: 15px; border-radius: 4px; overflow-x: auto; font-family: 'Courier New', monospace; font-size: 12px;">
+エラー: ${error instanceof Error ? error.message : '不明なエラー'}
+データ: ${this.escapeHtml(jsonData)}
+            </pre>`;
           }
         } else {
           return `<div ${attrs}${classAttr}>スケジュールデータがありません</div>`;

@@ -15,16 +15,12 @@ interface SidebarProps {
   onAddBlock: (blockType: BlockType) => void;
   onImportFromClipboard: () => void;
   onImportFromText: (htmlText: string) => void;
-  onSendMail: () => void;
-  onManageAddressBook: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
   onAddBlock,
   onImportFromClipboard,
-  onImportFromText,
-  onSendMail,
-  onManageAddressBook
+  onImportFromText
 }) => {
   const [showTextInput, setShowTextInput] = useState(false);
   const [htmlText, setHtmlText] = useState('');
@@ -115,23 +111,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
       </div>
 
-      <div className="sidebar-section">
-        <h3 className="sidebar-title">メール送信</h3>
-        
-        <button 
-          className="btn btn-primary sidebar-button"
-          onClick={onManageAddressBook}
-        >
-          📝 アドレス帳管理
-        </button>
-        
-        <button 
-          className="btn btn-primary sidebar-button"
-          onClick={onSendMail}
-        >
-          📧 メール送信
-        </button>
-      </div>
+
     </div>
   );
 };
