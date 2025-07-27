@@ -27,7 +27,19 @@ npm run build
 次に、本番サーバーに必要な**「バックエンドのソースコード」**と**「フロントエンドの完成品(`build`フォルダ)」**だけを抜き出して、一つの ZIP ファイルにまとめます。
 以下の PowerShell スクリプトを実行してください。
 
-create-deploy-package.ps1
+# 1. PowerShell を管理者として実行
+
+# 2. プロジェクトディレクトリに移動
+
+cd C:\Users\user\Downloads\HTMLEditer
+
+# 3. 現在のセッションでのみ実行ポリシーを変更
+
+Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process -Force
+
+# 4. スクリプトを実行
+
+.\create-deploy-package.ps1
 
 ---
 
@@ -46,22 +58,21 @@ create-deploy-package.ps1
 1.  **[Rewrite](https://www.iis.net/downloads/microsoft/url-rewrite)** をインストールします。
 2.  **[Application Request Routing (ARR)](https://www.iis.net/downloads/microsoft/application-request-routing)** をインストールします。
 
-
 #### プロキシの設定 🔐
-設定＞ネットワークとインターネット＞プロキシ＞プロキシサーバーを使う＞　サーバーIPを;区切りで追加
+
+設定＞ネットワークとインターネット＞プロキシ＞プロキシサーバーを使う＞　サーバー IP を;区切りで追加
 
 ### 2-3. 自動デプロイスクリプトの実行
 
 **スクリプトの実行**:
-Powershellを管理者で開いて以下のコードを実行します。処理内容は後述
-    ```
-    PowerShell.exe -ExecutionPolicy Bypass -File "C:\webapp\HTMLEditor\deploy-to-iis.ps1"
-    ```
+Powershell を管理者で開いて以下のコードを実行します。処理内容は後述
+`    PowerShell.exe -ExecutionPolicy Bypass -File "C:\webapp\HTMLEditor\deploy-to-iis.ps1"
+   `
 
 > **Note** > `deploy-to-iis.ps1`は、バックエンドを**NSSM (Non-Sucking Service Manager)** というツールで Windows サービス化しようと試みます。
-NSSM が見つからない場合、手動での起動を促すメッセージが表示されます。
-安定運用のために、[NSSM 公式サイト](https://nssm.cc/download)からダウンロードし、
-`nssm.exe`を環境変数 PATH の通ったフォルダに配置しておくことを強く推奨します。
+> NSSM が見つからない場合、手動での起動を促すメッセージが表示されます。
+> 安定運用のために、[NSSM 公式サイト](https://nssm.cc/download)からダウンロードし、
+> `nssm.exe`を環境変数 PATH の通ったフォルダに配置しておくことを強く推奨します。
 
 ---
 
@@ -76,13 +87,14 @@ NSSM が見つからない場合、手動での起動を促すメッセージが
 1. `backend/.env.example` をコピーして `backend/.env` を作成
 2. `.env` ファイルにサーバーの IP アドレスを設定:
 
-# IIS環境用設定（例: サーバーIP = 192.168.1.10）
+# IIS 環境用設定（例: サーバー IP = 192.168.1.10）
+
 ```
 CORS_ORIGINS=http://192.168.1.10,http://192.168.1.10:3000,http://localhost:3000,http://localhost:82
 ```
 
-
 ---
+
 ## ✅ 最終確認とアクセス
 
 ### **他の PC からのアクセス**
@@ -130,31 +142,31 @@ HTTPS（暗号化）でのアクセス（Part 5 実施後）:
 - **API エラーが出る場合**: FastAPI サービスが正常に起動しているか確認してください (`nssm status HTMLEditorAPI` や、`backend`フォルダで`.\.venv\Scripts\Activate.ps1`を実行後に`python main.py`を手動実行してエラーが出ないか確認）。
 - **権限エラーが出る場合**: `backend`フォルダや`*.db`ファイルに、IIS の実行ユーザー（`IIS_IUSRS`）の書き込み権限が付与されているか確認してください。
 
-
 ---
+
 ## ＜参考＞バックエンドの起動 🔐
+
 cd C:\webapp\HTMLEditor\backend
 
-python -m uvicorn main:app --host 0.0.0.0 --port 8002
----
+## python -m uvicorn main:app --host 0.0.0.0 --port 8002
 
 ## deploy-to-iis.ps1`スクリプトが行う設定の詳細
 
 手動で確認・変更する場合の参考にしてください。
 
------
+---
 
 ### \#\# 1. 事前準備
 
-1.  **管理者として実行**: これから行うすべての操作（コマンドプロンプト、IISマネージャーなど）は、管理者権限で実行してください。
+1.  **管理者として実行**: これから行うすべての操作（コマンドプロンプト、IIS マネージャーなど）は、管理者権限で実行してください。
 2.  **ファイルの配置**: スクリプトの前提通り、ビルド済みのファイルが以下の場所に配置されていることを確認します。
-      * フロントエンド: `C:\webapp\HTMLEditor\frontend`
-      * バックエンド: `C:\webapp\HTMLEditor\backend`
+    - フロントエンド: `C:\webapp\HTMLEditor\frontend`
+    - バックエンド: `C:\webapp\HTMLEditor\backend`
 3.  **ツールのインストール**:
-      * **Python**: PCにインストールされていることを確認します。
-      * **NSSM**: バックエンドをサービスとして登録するために、`nssm.exe`をダウンロードし、環境変数PATHが通った場所に配置しておきます。
+    - **Python**: PC にインストールされていることを確認します。
+    - **NSSM**: バックエンドをサービスとして登録するために、`nssm.exe`をダウンロードし、環境変数 PATH が通った場所に配置しておきます。
 
------
+---
 
 ### \#\# 2. バックエンド (Python) の環境設定
 
@@ -163,57 +175,57 @@ python -m uvicorn main:app --host 0.0.0.0 --port 8002
     ```cmd
     cd C:\webapp\HTMLEditor\backend
     ```
-3.  **Python仮想環境の作成**: 仮想環境 `.venv` を作成します。
+3.  **Python 仮想環境の作成**: 仮想環境 `.venv` を作成します。
     ```cmd
     python -m venv .venv
     ```
-4.  **ライブラリのインストール**: 仮想環境内のpipを使い、必要なライブラリをインストールします。
+4.  **ライブラリのインストール**: 仮想環境内の pip を使い、必要なライブラリをインストールします。
     ```cmd
     .\.venv\Scripts\pip.exe install -r requirements.txt
     ```
 
------
+---
 
-### \#\# 3. IISの設定
+### \#\# 3. IIS の設定
 
-1.  **IISマネージャーを開く**: スタートメニューから「インターネット インフォメーション サービス (IIS) マネージャー」を開きます。
+1.  **IIS マネージャーを開く**: スタートメニューから「インターネット インフォメーション サービス (IIS) マネージャー」を開きます。
 
 2.  **アプリケーションプールの作成**:
 
-      * 左側のツリーでサーバー名の下にある「アプリケーション プール」をクリックします。
-      * 右側の「操作」ペインで「アプリケーション プールの追加」をクリックします。
-      * **名前**: `HTMLEditor-Pool` と入力します。
-      * **.NET CLR バージョン**: \*\*「マネージド コードなし」\*\*を選択します。
-      * 「OK」をクリックして作成します。
+    - 左側のツリーでサーバー名の下にある「アプリケーション プール」をクリックします。
+    - 右側の「操作」ペインで「アプリケーション プールの追加」をクリックします。
+    - **名前**: `HTMLEditor-Pool` と入力します。
+    - **.NET CLR バージョン**: \*\*「マネージド コードなし」\*\*を選択します。
+    - 「OK」をクリックして作成します。
 
-3.  **Webサイトの作成**:
+3.  **Web サイトの作成**:
 
-      * 既存のサイトがあれば削除します。左側ツリーの「サイト」フォルダ内に `HTMLEditor-Frontend` があれば、右クリックして「削除」します。
-      * 「サイト」フォルダを右クリックし、「Web サイトの追加」を選択します。
-      * **サイト名**: `HTMLEditor-Frontend`
-      * **物理パス**: `C:\webapp\HTMLEditor\frontend`
-      * **ポート**: `82`
-      * **アプリケーション プール**: 「選択」ボタンを押し、先ほど作成した `HTMLEditor-Pool` を選びます。
-      * 「OK」をクリックしてサイトを作成します。
+    - 既存のサイトがあれば削除します。左側ツリーの「サイト」フォルダ内に `HTMLEditor-Frontend` があれば、右クリックして「削除」します。
+    - 「サイト」フォルダを右クリックし、「Web サイトの追加」を選択します。
+    - **サイト名**: `HTMLEditor-Frontend`
+    - **物理パス**: `C:\webapp\HTMLEditor\frontend`
+    - **ポート**: `82`
+    - **アプリケーション プール**: 「選択」ボタンを押し、先ほど作成した `HTMLEditor-Pool` を選びます。
+    - 「OK」をクリックしてサイトを作成します。
 
------
+---
 
 ### \#\# 4. ファイル権限の設定
 
 1.  **エクスプローラーを開く**: `C:\webapp` を開きます。
 2.  **全体フォルダの権限設定**:
-      * `HTMLEditor` フォルダを右クリックし、「プロパティ」を選択します。
-      * 「セキュリティ」タブを開き、「編集」ボタンをクリックします。
-      * 「追加」ボタンをクリックし、`IIS_IUSRS` と入力して「名前の確認」を押し、「OK」をクリックします。
-      * `IIS_IUSRS` を選択した状態で、下のアクセス許可欄で\*\*「読み取りと実行」\*\*にチェックが入っていることを確認します。
-      * 「OK」をクリックします。
+    - `HTMLEditor` フォルダを右クリックし、「プロパティ」を選択します。
+    - 「セキュリティ」タブを開き、「編集」ボタンをクリックします。
+    - 「追加」ボタンをクリックし、`IIS_IUSRS` と入力して「名前の確認」を押し、「OK」をクリックします。
+    - `IIS_IUSRS` を選択した状態で、下のアクセス許可欄で\*\*「読み取りと実行」\*\*にチェックが入っていることを確認します。
+    - 「OK」をクリックします。
 3.  **バックエンドフォルダの権限設定**:
-      * `C:\webapp\HTMLEditor\backend` フォルダを右クリックし、「プロパティ」を選択します。
-      * 「セキュリティ」タブを開き、「編集」ボタンをクリックします。
-      * 一覧から `IIS_IUSRS` を選択し、下のアクセス許可欄で\*\*「フル コントロール」\*\*の「許可」にチェックを入れます。
-      * 「OK」をクリックして閉じます。
+    - `C:\webapp\HTMLEditor\backend` フォルダを右クリックし、「プロパティ」を選択します。
+    - 「セキュリティ」タブを開き、「編集」ボタンをクリックします。
+    - 一覧から `IIS_IUSRS` を選択し、下のアクセス許可欄で\*\*「フル コントロール」\*\*の「許可」にチェックを入れます。
+    - 「OK」をクリックして閉じます。
 
------
+---
 
 ### \#\# 5. バックエンドサービスの登録 (NSSM)
 
@@ -223,18 +235,18 @@ python -m uvicorn main:app --host 0.0.0.0 --port 8002
     sc stop HTMLEditorAPI
     sc delete HTMLEditorAPI
     ```
-3.  **NSSMのGUIを開く**: 以下のコマンドを実行すると、NSSMの設定画面が開きます。
+3.  **NSSM の GUI を開く**: 以下のコマンドを実行すると、NSSM の設定画面が開きます。
     ```cmd
     nssm install HTMLEditorAPI
     ```
 4.  **サービスの設定**:
-      * **`Application` タブ**:
-          * **Path**: `C:\webapp\HTMLEditor\backend\.venv\Scripts\python.exe`
-          * **Startup directory**: `C:\webapp\HTMLEditor\backend`
-          * **Arguments**: `-m uvicorn main:app --host 127.0.0.1 --port 8002`
-      * **`Details` タブ**:
-          * **Display name**: `HTML Editor API Service`
-          * **Startup type**: `Automatic`
+    - **`Application` タブ**:
+      - **Path**: `C:\webapp\HTMLEditor\backend\.venv\Scripts\python.exe`
+      - **Startup directory**: `C:\webapp\HTMLEditor\backend`
+      - **Arguments**: `-m uvicorn main:app --host 127.0.0.1 --port 8002`
+    - **`Details` タブ**:
+      - **Display name**: `HTML Editor API Service`
+      - **Startup type**: `Automatic`
 5.  **サービスのインストール**: 「Install service」ボタンをクリックします。
 6.  **サービスの開始**: コマンドプロンプトでサービスを開始します。
     ```cmd
