@@ -4,11 +4,11 @@
  */
 
 .block-editor {
-  height: 100%;
-  overflow-y: auto;
-  background-color: white;
+  height: auto;
+  overflow: visible;
+  background-color: transparent;
   border-radius: 8px;
-  border: 1px solid var(--border-color);
+  border: none;
 }
 
 .editor-content {
