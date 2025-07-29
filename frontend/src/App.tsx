@@ -45,6 +45,8 @@ function App() {
     isPreviewMode: false,
   });
 
+
+
   // ブロック追加ハンドラー（F-001-2対応）
   const handleAddBlock = (blockType: BlockType, insertAfter?: string) => {
     const newBlock: Block = {
@@ -698,14 +700,15 @@ const PreviewContent: React.FC<{ blocks: Block[] }> = ({ blocks }) => {
       
       // スクリプトタグを実行
       const scripts = previewRef.current.querySelectorAll('script');
-      scripts.forEach(script => {
+      scripts.forEach((script: Element) => {
+        const scriptElement = script as HTMLScriptElement;
         const newScript = document.createElement('script');
-        if (script.src) {
-          newScript.src = script.src;
+        if (scriptElement.src) {
+          newScript.src = scriptElement.src;
         } else {
-          newScript.textContent = script.textContent || '';
+          newScript.textContent = scriptElement.textContent || '';
         }
-        script.parentNode?.replaceChild(newScript, script);
+        scriptElement.parentNode?.replaceChild(newScript, scriptElement);
       });
     }
   }, [previewHtml]);

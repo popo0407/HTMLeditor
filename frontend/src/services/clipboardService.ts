@@ -11,7 +11,6 @@
  */
 
 import { Block, BlockType, CalendarData, TableData } from '../types';
-import { calendarExporter } from './calendarExporter';
 import { calendarService } from './calendarService';
 
 class ClipboardService {

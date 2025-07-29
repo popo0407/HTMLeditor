@@ -27,7 +27,7 @@
 .layout-body {
   flex: 1;
   display: flex;
-  overflow: hidden;
+  overflow: visible;
 }
 
 /* 要件 F-007-1: 左側にサイドバーを配置 */
@@ -36,7 +36,7 @@
   background-color: var(--background-light);
   border-right: 1px solid var(--border-color);
   padding: 20px;
-  overflow-y: auto;
+  overflow: visible;
   min-height: 0;
 }
 
@@ -44,7 +44,7 @@
   flex: 1;
   background-color: #ffffff;
   padding: 20px;
-  overflow-y: auto;
+  overflow: visible;
   min-height: 0;
 }
 

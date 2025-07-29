@@ -42,7 +42,7 @@ const CalendarBlock: React.FC<CalendarBlockProps> = ({
       calendarData: { events }
     };
     onUpdate(block.id, JSON.stringify(updatedBlock));
-  }, [events, block.id]); // onUpdateを依存配列から削除
+  }, [events, block.id, onUpdate]);
 
   useEffect(() => {
     if (isAddingEvent && eventInputRef.current) {

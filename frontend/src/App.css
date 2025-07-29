@@ -58,16 +58,21 @@
   color: white;
 }
 
+
+
 .main-content {
   height: calc(100vh - 70px);
   display: flex;
   flex-direction: column;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 /* 分割ビューのスタイル */
 .split-view {
   flex-direction: row;
   gap: 16px;
+  min-height: fit-content;
 }
 
 .editor-pane,
@@ -78,8 +83,9 @@
   background-color: white;
   border-radius: 8px;
   border: 1px solid var(--border-color);
-  overflow: hidden;
+  overflow: visible;
   min-width: 0;
+  height: auto;
 }
 
 .pane-header {
@@ -98,23 +104,21 @@
 
 .pane-content {
   flex: 1;
-  overflow-y: auto;
-  overflow-x: auto;
+  overflow: visible;
   padding: 16px;
   min-width: 0;
-  min-height: 0;
+  min-height: auto;
 }
 
 /* プレビューペイン専用のスタイル */
 .preview-pane .pane-content {
   background-color: #fafafa;
-  overflow-x: auto;
-  overflow-y: auto;
+  overflow: visible;
 }
 
 .preview-area {
-  height: 100%;
-  overflow-y: auto;
+  height: auto;
+  overflow: visible;
   padding: 20px;
   background-color: white;
   border-radius: 8px;
@@ -129,14 +133,14 @@
 }
 
 .preview-content {
-  min-height: 400px;
-  height: 100%;
+  min-height: auto;
+  height: auto;
   line-height: var(--line-height);
   word-wrap: break-word;
   overflow-wrap: break-word;
   max-width: none;
   width: 100%;
-  overflow-y: auto;
+  overflow: visible;
 }
 
 /* プレビュー内のコンテンツは既存のテーマCSSを使用 */
