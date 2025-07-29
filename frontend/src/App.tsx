@@ -636,7 +636,8 @@ const PreviewContent: React.FC<{ blocks: Block[] }> = ({ blocks }) => {
         
         const html = await clipboardService.blocksToPreviewHtml(blocks);
         console.log('プレビューHTML長さ:', html.length);
-        console.log('プレビューHTMLサンプル:', html.substring(0, 200));
+        console.log('プレビューHTML全体:', html);
+        console.log('プレビューHTMLに.preview-contentクラスが含まれているか:', html.includes('preview-content'));
         
         if (!html || html.trim() === '') {
           console.warn('プレビューHTMLが空です');
@@ -675,7 +676,7 @@ const PreviewContent: React.FC<{ blocks: Block[] }> = ({ blocks }) => {
             }
           }).join('');
           
-          setPreviewHtml(fallbackHtml);
+          setPreviewHtml(`<div class="preview-content">${fallbackHtml}</div>`);
         } catch (fallbackError) {
           console.error('フォールバックHTML生成エラー:', fallbackError);
           setError(error instanceof Error ? error.message : 'Unknown error');
@@ -733,12 +734,11 @@ const PreviewContent: React.FC<{ blocks: Block[] }> = ({ blocks }) => {
   return (
     <div 
       ref={previewRef}
-      className="preview-content"
     >
       {previewHtml ? (
         <div dangerouslySetInnerHTML={{ __html: previewHtml }} />
       ) : (
-        <div>
+        <div className="preview-content">
           <p>プレビューコンテンツがありません</p>
           <p>ブロック数: {blocks.length}</p>
           <p>ローディング状態: {isLoading ? '読み込み中' : '完了'}</p>

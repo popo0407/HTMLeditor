@@ -1052,8 +1052,57 @@ ${htmlParts.join('\n')}
       background-color: #f8f9fa; 
       font-weight: bold; 
     }
-    </style>
-${htmlParts.join('\n')}`;
+    img { max-width: 100%; height: auto; border-radius: 4px; }
+    
+    /* 特別なブロックスタイル */
+    .action-item {
+      background-color: #d4edda;
+      border-left: 4px solid #28a745;
+      padding: 15px;
+      margin: 15px 0;
+      border-radius: 4px;
+    }
+    .important {
+      background-color: #fff3cd;
+      border-left: 4px solid #ffc107;
+      padding: 15px;
+      margin: 15px 0;
+      border-radius: 4px;
+    }
+    
+    /* 強調表示時のテーブルヘッダースタイル */
+    table.important th {
+      background-color: rgba(255, 193, 7, 0.3) !important;
+      border-bottom: 2px solid #ffc107 !important;
+      font-weight: bold;
+    }
+    table.action-item th {
+      background-color: rgba(40, 167, 69, 0.2) !important;
+      border-bottom: 2px solid #28a745 !important;
+      font-weight: bold;
+    }
+    
+    /* 強調表示テーブル全体のスタイル */
+    table.important {
+      background-color: #fff3cd;
+      border-left: 4px solid #ffc107;
+      padding: 15px;
+      margin: 15px 0;
+      border-radius: 4px;
+    }
+    table.action-item {
+      background-color: #d4edda;
+      border-left: 4px solid #28a745;
+      padding: 15px;
+      margin: 15px 0;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+${htmlParts.join('\n')}
+</body>
+</html>`;
   }
 
   /**
@@ -1243,7 +1292,8 @@ ${htmlParts.join('\n')}`;
    */
   async copyHtmlToClipboard(blocks: Block[]): Promise<boolean> {
     try {
-      const html = this.blocksToHtml(blocks);
+      // プレビューと同じHTMLを生成
+      const html = await this.generatePreviewHtml(blocks);
       await navigator.clipboard.writeText(html);
       console.log('HTMLをクリップボードにコピーしました');
       return true;
@@ -1258,7 +1308,8 @@ ${htmlParts.join('\n')}`;
    */
   async downloadHtmlFile(blocks: Block[], filename: string = 'document.html'): Promise<boolean> {
     try {
-      const html = this.blocksToHtml(blocks);
+      // プレビューと同じHTMLを生成
+      const html = await this.generatePreviewHtml(blocks);
       const blob = new Blob([html], { type: 'text/html' });
       const url = URL.createObjectURL(blob);
       
@@ -1285,14 +1336,92 @@ ${htmlParts.join('\n')}`;
     try {
       // プレビュー用のシンプルなHTMLを生成（完全なHTMLドキュメントではなく、コンテンツのみ）
       const htmlParts = await Promise.all(blocks.map(async block => {
-        const html = await this.blockToHtml(block);
+        const html = await this.blockToPreviewHtml(block);
         return html;
       }));
       
-      return htmlParts.join('\n');
+      const result = `<div class="preview-content">${htmlParts.join('\n')}</div>`;
+      console.log('clipboardService.blocksToPreviewHtml 生成結果:', result);
+      console.log('preview-contentクラスが含まれているか:', result.includes('preview-content'));
+      return result;
     } catch (error) {
       console.error('プレビューHTML生成に失敗:', error);
-      return '<p>プレビューの生成に失敗しました</p>';
+      return '<div class="preview-content"><p>プレビューの生成に失敗しました</p></div>';
+    }
+  }
+
+  /**
+   * 単一ブロックをプレビュー用HTMLに変換
+   */
+  private async blockToPreviewHtml(block: Block): Promise<string> {
+    const attrs = `data-block-type="${block.type}" data-block-id="${block.id}"`;
+    const classAttr = block.style && block.style !== 'normal' ? ` class="${block.style}"` : '';
+    
+    switch (block.type) {
+      case 'heading1':
+        return `<h1 ${attrs}${classAttr}>${this.escapeHtml(block.content)}</h1>`;
+      case 'heading2':
+        return `<h2 ${attrs}${classAttr}>${this.escapeHtml(block.content)}</h2>`;
+      case 'heading3':
+        return `<h3 ${attrs}${classAttr}>${this.escapeHtml(block.content)}</h3>`;
+      case 'paragraph':
+        return `<p ${attrs}${classAttr}>${this.escapeHtml(block.content)}</p>`;
+      case 'bulletList':
+        const items = block.content.split('\n')
+          .filter(item => item.trim())
+          .map(item => `<li>${this.escapeHtml(item)}</li>`)
+          .join('\n');
+        return `<ul ${attrs}${classAttr}>\n${items}\n</ul>`;
+      case 'horizontalRule':
+        return `<hr ${attrs}${classAttr} />`;
+      case 'image':
+        return `<img ${attrs}${classAttr} src="${block.src || ''}" alt="${this.escapeHtml(block.content)}" />`;
+      case 'table':
+        const tableRows = block.tableData?.rows || [['セル1', 'セル2'], ['セル3', 'セル4']];
+        const hasHeaderRow = block.tableData?.hasHeaderRow || false;
+        const hasHeaderColumn = block.tableData?.hasHeaderColumn || false;
+        
+        let tableHtml = '';
+        if (hasHeaderRow && tableRows.length > 0) {
+          // ヘッダー行
+          const headerCells = tableRows[0].map((cell, colIndex) => {
+            const tag = hasHeaderColumn && colIndex === 0 ? 'th' : (colIndex === 0 ? 'th' : 'th');
+            return `<${tag}>${this.escapeHtml(cell)}</${tag}>`;
+          }).join('');
+          tableHtml += `<thead><tr>${headerCells}</tr></thead>`;
+          
+          // データ行
+          if (tableRows.length > 1) {
+            const bodyRows = tableRows.slice(1).map(row => {
+              const cells = row.map((cell, colIndex) => {
+                const tag = hasHeaderColumn && colIndex === 0 ? 'th' : 'td';
+                return `<${tag}>${this.escapeHtml(cell)}</${tag}>`;
+              }).join('');
+              return `<tr>${cells}</tr>`;
+            }).join('\n');
+            tableHtml += `<tbody>${bodyRows}</tbody>`;
+          }
+        } else {
+          // ヘッダー行なし
+          const bodyRows = tableRows.map(row => {
+            const cells = row.map((cell, colIndex) => {
+              const tag = hasHeaderColumn && colIndex === 0 ? 'th' : 'td';
+              return `<${tag}>${this.escapeHtml(cell)}</${tag}>`;
+            }).join('');
+            return `<tr>${cells}</tr>`;
+          }).join('\n');
+          tableHtml += `<tbody>${bodyRows}</tbody>`;
+        }
+        
+        return `<table ${attrs}${classAttr}>\n${tableHtml}\n</table>`;
+      case 'calendar':
+        // カレンダーは特別な処理が必要
+        if (block.calendarData) {
+          return `<div ${attrs}${classAttr}>カレンダー: ${this.escapeHtml(block.content)}</div>`;
+        }
+        return `<div ${attrs}${classAttr}>カレンダー: ${this.escapeHtml(block.content)}</div>`;
+      default:
+        return `<p ${attrs}${classAttr}>${this.escapeHtml(block.content)}</p>`;
     }
   }
 }

@@ -137,30 +137,64 @@
   color: var(--secondary-color);
 }
 
+.preview-content h1 {
+  font-size: 24px;
+  font-weight: 700;
+  margin: 28px 0 28px 0 !important;
+}
+
+.preview-content h2 {
+  font-size: 20px;
+  font-weight: 600;
+  margin: 28px 0 28px 0 !important;
+}
+
+.preview-content h3 {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 25px 0 25px 0 !important;
+}
+
+.preview-content {
+  padding: 0px 8px 8px 8px;
+}
+
+/* プレビュー内の段落スタイル */
+div[ref] .preview-content p,
+div[ref] div .preview-content p,
 .preview-content p {
   color: var(--primary-color);
   line-height: var(--line-height);
   word-wrap: break-word;
   overflow-wrap: break-word;
-  margin: 12px 0;
+  margin: 25px 0 !important;
 }
 
+/* プレビュー内のリストスタイル */
+div[ref] .preview-content ul,
+div[ref] div .preview-content ul,
 .preview-content ul {
   color: var(--primary-color);
   word-wrap: break-word;
   overflow-wrap: break-word;
+  margin: 25px 0 !important;
 }
 
+div[ref] .preview-content li,
+div[ref] div .preview-content li,
 .preview-content li {
   word-wrap: break-word;
   overflow-wrap: break-word;
-  margin: 5px 0;
+  margin: 5px 0 !important;
 }
 
+/* プレビュー内のテーブルスタイル */
+div[ref] .preview-content table,
+div[ref] div .preview-content table,
 .preview-content table {
   border-collapse: collapse;
   width: 100%;
-  margin: 15px 0;
+  margin: 30px 0 !important;
   min-width: 300px;
   table-layout: auto;
 }

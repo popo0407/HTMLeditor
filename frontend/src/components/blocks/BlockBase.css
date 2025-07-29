@@ -13,11 +13,13 @@
   cursor: pointer;
   transition: all 0.15s ease;
   font-family: var(--primary-font);
+  z-index: 1;
 }
 
 .block-base:hover {
   border-color: var(--border-color);
   background-color: var(--background-light);
+  z-index: 1;
 }
 
 .block-selected {
@@ -34,7 +36,7 @@
   position: absolute;
   top: -20px;
   right: -8px;
-  z-index: 10;
+  z-index: 100;
   transform: translateY(-50%);
 }
 
@@ -104,6 +106,10 @@
   color: #374151;
   margin: 2px 0;
   padding-left: 20px;
+}
+
+.block-bullet-list li {
+  margin: 5px 0;
 }
 
 .block-horizontal-rule {
