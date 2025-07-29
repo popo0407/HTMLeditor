@@ -625,9 +625,11 @@ const PreviewContent: React.FC<{ blocks: Block[] }> = ({ blocks }) => {
         console.log('ブロック数:', blocks.length);
         console.log('ブロックID一覧:', blocks.map(b => b.id));
         console.log('ブロックタイプ一覧:', blocks.map(b => b.type));
+        console.log('ブロック内容サンプル:', blocks.slice(0, 2).map(b => ({ id: b.id, type: b.type, content: b.content.substring(0, 50) })));
         
         const html = await clipboardService.blocksToPreviewHtml(blocks);
         console.log('プレビューHTML長さ:', html.length);
+        console.log('プレビューHTMLサンプル:', html.substring(0, 200));
         
         if (!html || html.trim() === '') {
           console.warn('プレビューHTMLが空です');
@@ -724,6 +726,17 @@ const PreviewContent: React.FC<{ blocks: Block[] }> = ({ blocks }) => {
     <div 
       ref={previewRef}
       className="preview-content"
-    />
+    >
+      {previewHtml ? (
+        <div dangerouslySetInnerHTML={{ __html: previewHtml }} />
+      ) : (
+        <div>
+          <p>プレビューコンテンツがありません</p>
+          <p>ブロック数: {blocks.length}</p>
+          <p>ローディング状態: {isLoading ? '読み込み中' : '完了'}</p>
+          <p>エラー: {error || 'なし'}</p>
+        </div>
+      )}
+    </div>
   );
 };

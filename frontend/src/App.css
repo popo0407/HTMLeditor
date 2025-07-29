@@ -130,11 +130,13 @@
 
 .preview-content {
   min-height: 400px;
+  height: 100%;
   line-height: var(--line-height);
   word-wrap: break-word;
   overflow-wrap: break-word;
   max-width: none;
   width: 100%;
+  overflow-y: auto;
 }
 
 /* プレビュー内のコンテンツは既存のテーマCSSを使用 */

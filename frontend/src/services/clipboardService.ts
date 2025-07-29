@@ -33,7 +33,7 @@ class ClipboardService {
           const htmlBlob = await item.getType('text/html');
           const htmlText = await htmlBlob.text();
           console.log('クリップボードからHTMLを読み取り:', htmlText.substring(0, 200));
-          return this.parseHtmlToBlocks(htmlText);
+          return this.parseHtmlWithFallback(htmlText);
         }
       }
       
@@ -69,11 +69,11 @@ class ClipboardService {
         throw new Error('サンプルHTMLファイルが見つかりません');
       }
       const htmlText = await response.text();
-      return this.parseHtmlToBlocks(htmlText);
+      return this.parseHtmlWithFallback(htmlText);
     } catch (error) {
       console.error('サンプルHTML読み込みエラー:', error);
       // フォールバック：ハードコードされたサンプルHTML
-      return this.parseHtmlToBlocks(this.getHardcodedSampleHtml());
+      return this.parseHtmlWithFallback(this.getHardcodedSampleHtml());
     }
   }
 
@@ -99,86 +99,62 @@ class ClipboardService {
 
     console.log('HTML解析開始:', html.substring(0, 200) + '...');
 
-    // HTMLの前処理：エスケープされた文字列を修正
-    let processedHtml = html;
-    if (html.includes('\\"')) {
-      console.log('エスケープされた引用符を検出しました。修正します。');
-      processedHtml = html.replace(/\\"/g, '"');
-      console.log('修正後のHTML（最初の200文字）:', processedHtml.substring(0, 200));
-    }
+    // HTMLの正規化処理
+    const processedHtml = this.normalizeHtml(html);
+    console.log('正規化後のHTML（最初の200文字）:', processedHtml.substring(0, 200));
 
     // スケジュールデータを自動検出（<script>タグ内のJSONを含む）
     const scheduleEvents = this.extractScheduleData(processedHtml);
     console.log('検出されたスケジュールイベント数:', scheduleEvents.length);
     
-    // HTMLがテキストとして読み取られた場合の処理
-    let doc: Document;
-    let existingBlocks: NodeListOf<Element>;
-    
-    if (processedHtml.includes('data-block-type')) {
-      console.log('data-block-type属性を含むHTMLを検出しました。');
-      console.log('HTMLの長さ:', processedHtml.length);
-      console.log('HTMLの内容（最初の500文字）:', processedHtml.substring(0, 500));
-      
-      // HTMLがテキストとして読み取られた場合、より正確な解析を試行
-      if (processedHtml.includes('<') && processedHtml.includes('>')) {
-        console.log('HTMLタグを検出しました。正規表現で要素を抽出します。');
-        
-        // 複数のパターンでHTML要素を抽出
-        let htmlElements = processedHtml.match(/<[^>]*data-block-type="[^"]*"[^>]*>(?:.*?<\/[^>]*>|)/g);
-        console.log('パターン1の結果:', htmlElements ? htmlElements.length : 0);
-        
-        // 最初のパターンで見つからない場合、より緩いパターンを試行
-        if (!htmlElements || htmlElements.length === 0) {
-          htmlElements = processedHtml.match(/<[^>]*data-block-type="[^"]*"[^>]*>.*?<\/[^>]*>/g);
-          console.log('パターン2の結果:', htmlElements ? htmlElements.length : 0);
-        }
-        
-        // まだ見つからない場合、最も緩いパターンを試行
-        if (!htmlElements || htmlElements.length === 0) {
-          htmlElements = processedHtml.match(/<[^>]*data-block-type="[^"]*"[^>]*>/g);
-          console.log('パターン3の結果:', htmlElements ? htmlElements.length : 0);
-        }
-        
-        // さらに緩いパターンを試行（エスケープされた文字列に対応）
-        if (!htmlElements || htmlElements.length === 0) {
-          htmlElements = processedHtml.match(/<[^>]*data-block-type="[^"]*"[^>]*>.*?<\/[^>]*>/g);
-          console.log('パターン4の結果:', htmlElements ? htmlElements.length : 0);
-        }
-        
-        if (htmlElements && htmlElements.length > 0) {
-          console.log('抽出されたHTML要素数:', htmlElements.length);
-          console.log('最初の要素:', htmlElements[0]);
-          
-          // 抽出されたHTML要素を結合して完全なHTMLドキュメントを作成
-          const completeHtml = `<!DOCTYPE html><html><body>${htmlElements.join('')}</body></html>`;
-          doc = parser.parseFromString(completeHtml, 'text/html');
-          existingBlocks = doc.querySelectorAll('[data-block-type]');
-          console.log('再解析後のブロック要素数:', existingBlocks.length);
-        } else {
-          console.log('正規表現で要素を抽出できませんでした。通常のHTML解析を試行します。');
-          // 通常のHTML解析を試行
-          doc = parser.parseFromString(processedHtml, 'text/html');
-          existingBlocks = doc.querySelectorAll('[data-block-type]');
-        }
-      } else {
-        // 通常のHTML解析
+    // data-block-type属性の検出を改善
+    const hasDataBlockType = processedHtml.includes('data-block-type');
+    console.log('data-block-type属性の検出:', hasDataBlockType);
+
+    let doc: Document | null = null;
+    let existingBlocks: NodeListOf<Element> = document.querySelectorAll(''); // 空のNodeList
+
+    if (hasDataBlockType) {
+      // まず通常のHTML解析を試行
+      try {
         doc = parser.parseFromString(processedHtml, 'text/html');
         existingBlocks = doc.querySelectorAll('[data-block-type]');
+        console.log('通常のHTML解析結果 - ブロック要素数:', existingBlocks.length);
+        
+        if (existingBlocks.length === 0) {
+          // 正規表現による抽出を試行
+          const htmlElements = this.extractHtmlElementsWithRegex(processedHtml);
+          if (htmlElements && htmlElements.length > 0) {
+            const completeHtml = `<!DOCTYPE html><html><body>${htmlElements.join('')}</body></html>`;
+            doc = parser.parseFromString(completeHtml, 'text/html');
+            existingBlocks = doc.querySelectorAll('[data-block-type]');
+            console.log('正規表現抽出後のブロック要素数:', existingBlocks.length);
+          }
+        }
+      } catch (error) {
+        console.warn('HTML解析に失敗しました:', error);
+        existingBlocks = document.querySelectorAll(''); // 空のNodeList
       }
     } else {
       // 通常のHTML解析
-      doc = parser.parseFromString(processedHtml, 'text/html');
-      existingBlocks = doc.querySelectorAll('[data-block-type]');
+      try {
+        doc = parser.parseFromString(processedHtml, 'text/html');
+        existingBlocks = doc.querySelectorAll('[data-block-type]');
+      } catch (error) {
+        console.warn('通常のHTML解析に失敗しました:', error);
+        existingBlocks = document.querySelectorAll(''); // 空のNodeList
+      }
     }
     
     console.log('既存のブロック構造要素数:', existingBlocks.length);
-    console.log('HTML全体:', doc.body.innerHTML.substring(0, 500));
-    console.log('data-block-type属性を持つ要素:', Array.from(existingBlocks).map(el => ({
-      tagName: el.tagName,
-      blockType: el.getAttribute('data-block-type'),
-      content: el.textContent?.substring(0, 50)
-    })));
+    if (existingBlocks.length > 0 && doc) {
+      console.log('HTML全体:', doc.body.innerHTML.substring(0, 500));
+      console.log('data-block-type属性を持つ要素:', Array.from(existingBlocks).map(el => ({
+        tagName: el.tagName,
+        blockType: el.getAttribute('data-block-type'),
+        content: el.textContent?.substring(0, 50)
+      })));
+    }
     
     if (existingBlocks.length > 0) {
       // 既存のブロック構造から復元
@@ -186,33 +162,41 @@ class ClipboardService {
       existingBlocks.forEach((element, index) => {
         const blockType = element.getAttribute('data-block-type') as BlockType;
         const blockId = element.getAttribute('data-block-id') || `restored-${Date.now()}-${index}`;
-        
-        let block: Block = {
-          id: blockId,
-          type: blockType,
-          content: this.extractContentFromElement(element, blockType),
-          src: element.getAttribute('src') || undefined,
-        };
 
-        // テーブルの場合、より詳細にパース
-        if (blockType === 'table') {
-          const tableData = this.parseTableElement(element as HTMLTableElement);
-          block.tableData = tableData;
-          block.content = this.extractTableContent(element as HTMLTableElement);
+        // 段落で<br>タグが含まれている場合は分割
+        if (blockType === 'paragraph' && element.innerHTML.includes('<br')) {
+          console.log(`段落ブロック ${index + 1} に<br>タグを検出。分割します。`);
+          const paragraphBlocks = this.extractParagraphBlocks(element);
+          blocks.push(...paragraphBlocks);
+          console.log(`分割結果: ${paragraphBlocks.length}個のブロック`);
+        } else {
+          let block: Block = {
+            id: blockId,
+            type: blockType,
+            content: this.extractContentFromElement(element, blockType),
+            src: element.getAttribute('src') || undefined,
+          };
+          // テーブルの場合、より詳細にパース
+          if (blockType === 'table') {
+            const tableData = this.parseTableElement(element as HTMLTableElement);
+            block.tableData = tableData;
+            block.content = this.extractTableContent(element as HTMLTableElement);
+          }
+          blocks.push(block);
+          console.log(`ブロック ${index + 1} 作成:`, blockType, block.content.substring(0, 50) + '...');
         }
-        
-        blocks.push(block);
-        console.log(`ブロック ${index + 1} 作成:`, blockType, block.content.substring(0, 50) + '...');
       });
     } else {
       // 通常のHTMLから変換
       console.log('通常のHTMLから変換開始');
-      console.log('body要素の直接の子要素:', Array.from(doc.body.children).map(child => child.tagName));
-      this.parseHtmlElements(doc.body, blocks);
-      console.log('変換完了、ブロック数:', blocks.length);
-      blocks.forEach((block, index) => {
-        console.log(`ブロック ${index + 1}:`, block.type, block.content.substring(0, 100));
-      });
+      if (doc) {
+        console.log('body要素の直接の子要素:', Array.from(doc.body.children).map(child => child.tagName));
+        this.parseHtmlElements(doc.body, blocks);
+        console.log('変換完了、ブロック数:', blocks.length);
+        blocks.forEach((block, index) => {
+          console.log(`ブロック ${index + 1}:`, block.type, block.content.substring(0, 100));
+        });
+      }
     }
 
     // スケジュールデータが見つかった場合、カレンダーブロックを自動追加
@@ -236,6 +220,213 @@ class ClipboardService {
     }
 
     return blocks.length > 0 ? blocks : this.createDefaultBlocks();
+  }
+
+  /**
+   * HTMLの正規化処理
+   */
+  private normalizeHtml(html: string): string {
+    let normalized = html;
+    
+    // エスケープされた引用符を修正
+    if (html.includes('\\"')) {
+      console.log('エスケープされた引用符を検出しました。修正します。');
+      normalized = html.replace(/\\"/g, '"');
+    }
+    
+    // 前後の空白を削除
+    normalized = normalized.trim();
+    
+    // 自己終了タグの正規化
+    normalized = normalized.replace(/<br\s*\/?>/gi, '<br />');
+    
+    return normalized;
+  }
+
+  /**
+   * HTMLエンティティをデコード
+   */
+  private decodeHtmlEntities(text: string): string {
+    if (!text) return '';
+    const textarea = document.createElement('textarea');
+    textarea.innerHTML = text;
+    return textarea.value;
+  }
+
+  /**
+   * 正規表現によるHTML要素抽出
+   */
+  private extractHtmlElementsWithRegex(html: string): string[] | null {
+    // 複数のパターンでHTML要素を抽出
+    let htmlElements = html.match(/<[^>]*data-block-type="[^"]*"[^>]*>(?:.*?<\/[^>]*>|)/g);
+    console.log('パターン1の結果:', htmlElements ? htmlElements.length : 0);
+    
+    // 最初のパターンで見つからない場合、より緩いパターンを試行
+    if (!htmlElements || htmlElements.length === 0) {
+      htmlElements = html.match(/<[^>]*data-block-type="[^"]*"[^>]*>.*?<\/[^>]*>/g);
+      console.log('パターン2の結果:', htmlElements ? htmlElements.length : 0);
+    }
+    
+    // さらに緩いパターンを試行
+    if (!htmlElements || htmlElements.length === 0) {
+      htmlElements = html.match(/<[^>]*data-block-type="[^"]*"[^>]*>/g);
+      console.log('パターン3の結果:', htmlElements ? htmlElements.length : 0);
+    }
+    
+    // さらに緩いパターンを試行（エスケープされた文字列に対応）
+    if (!htmlElements || htmlElements.length === 0) {
+      htmlElements = html.match(/<[^>]*data-block-type="[^"]*"[^>]*>.*?<\/[^>]*>/g);
+      console.log('パターン4の結果:', htmlElements ? htmlElements.length : 0);
+    }
+    
+    return htmlElements;
+  }
+
+  /**
+   * 段落要素を<br>タグで分割して複数のブロックに変換
+   */
+  private extractParagraphBlocks(element: Element): Block[] {
+    let content = element.innerHTML || '';
+    
+    // <br>タグを改行文字に変換
+    content = content.replace(/<br\s*\/?>/gi, '\n');
+    
+    // HTMLタグを除去してテキストのみを取得
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = content;
+    let text = tempDiv.textContent || tempDiv.innerText || '';
+    
+    // HTMLエンティティをデコード
+    text = this.decodeHtmlEntities(text);
+    
+    // 前後の空白を削除
+    text = text.trim();
+    
+    // 改行で分割
+    const lines = text.split('\n').filter(line => line.trim());
+    
+    // 各行を個別のブロックとして作成
+    const blocks: Block[] = [];
+    lines.forEach((line, index) => {
+      const cleanLine = line.trim();
+      if (cleanLine.length > 0) {
+        blocks.push({
+          id: `paragraph-${Date.now()}-${index}`,
+          type: 'paragraph',
+          content: cleanLine
+        });
+      }
+    });
+    
+    return blocks;
+  }
+
+  /**
+   * フォールバック機能付きHTML解析
+   */
+  private parseHtmlWithFallback(html: string): Block[] {
+    try {
+      return this.parseHtmlToBlocks(html);
+    } catch (error) {
+      console.warn('DOMParserでの解析に失敗:', error);
+    }
+    try {
+      return this.parseWithRegex(html);
+    } catch (error) {
+      console.warn('正規表現での解析に失敗:', error);
+    }
+    try {
+      return this.parseAsPlainText(html);
+    } catch (error) {
+      console.warn('プレーンテキストとしての解析に失敗:', error);
+    }
+    console.warn('すべてのパース方法が失敗しました。デフォルトブロックを返します。');
+    return this.createDefaultBlocks();
+  }
+
+  /**
+   * 正規表現によるHTML解析
+   */
+  private parseWithRegex(html: string): Block[] {
+    const normalizedHtml = this.normalizeHtml(html);
+    const blocks: Block[] = [];
+    
+    // bulletListの抽出
+    const listMatches = normalizedHtml.match(/<ul[^>]*data-block-type="bulletList"[^>]*>(.*?)<\/ul>/gs);
+    if (listMatches) {
+      listMatches.forEach((match, index) => {
+        const listItems = match.match(/<li[^>]*>(.*?)<\/li>/gs);
+        if (listItems) {
+          const content = listItems
+            .map(item => {
+              let text = item.replace(/<li[^>]*>/, '').replace(/<\/li>/, '');
+              text = this.decodeHtmlEntities(text);
+              text = text.trim();
+              text = text.replace(/\s+/g, ' ');
+              return text;
+            })
+            .filter(text => text.length > 0)
+            .join('\n');
+          
+          blocks.push({
+            id: `bulletList-${Date.now()}-${index}`,
+            type: 'bulletList',
+            content: content
+          });
+        }
+      });
+    }
+    
+    // paragraphの抽出
+    const paragraphMatches = normalizedHtml.match(/<p[^>]*data-block-type="paragraph"[^>]*>(.*?)<\/p>/gs);
+    if (paragraphMatches) {
+      paragraphMatches.forEach((match, index) => {
+        let content = match.replace(/<p[^>]*data-block-type="paragraph"[^>]*>/, '').replace(/<\/p>/, '');
+        content = content.replace(/<br\s*\/?>/gi, '\n');
+        content = this.decodeHtmlEntities(content);
+        content = content.trim();
+        
+        // <br>タグで分割
+        const lines = content.split('\n').filter(line => line.trim());
+        lines.forEach((line, lineIndex) => {
+          const cleanLine = line.trim();
+          if (cleanLine.length > 0) {
+            blocks.push({
+              id: `paragraph-${Date.now()}-${index}-${lineIndex}`,
+              type: 'paragraph',
+              content: cleanLine
+            });
+          }
+        });
+      });
+    }
+    
+    return blocks;
+  }
+
+  /**
+   * プレーンテキストとしての解析
+   */
+  private parseAsPlainText(html: string): Block[] {
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = html;
+    const text = tempDiv.textContent || tempDiv.innerText || '';
+    
+    const lines = text.split('\n').filter(line => line.trim());
+    const blocks: Block[] = [];
+    
+    lines.forEach((line, index) => {
+      const cleanLine = line.trim();
+      if (cleanLine.length > 0) {
+        blocks.push({
+          id: `paragraph-${Date.now()}-${index}`,
+          type: 'paragraph',
+          content: cleanLine
+        });
+      }
+    });
+    
+    return blocks;
   }
 
   /**
@@ -277,32 +468,29 @@ class ClipboardService {
     
     switch (element.tagName.toLowerCase()) {
       case 'h1':
-        return { id, type: 'heading1', content: element.textContent || '' };
+        return { id, type: 'heading1', content: this.decodeHtmlEntities(element.textContent || '') };
       case 'h2':
-        return { id, type: 'heading2', content: element.textContent || '' };
+        return { id, type: 'heading2', content: this.decodeHtmlEntities(element.textContent || '') };
       case 'h3':
-        return { id, type: 'heading3', content: element.textContent || '' };
+        return { id, type: 'heading3', content: this.decodeHtmlEntities(element.textContent || '') };
       case 'h4':
       case 'h5':
       case 'h6':
         // h4-h6も見出しとして扱う（h3と同じ）
-        return { id, type: 'heading3', content: element.textContent || '' };
+        return { id, type: 'heading3', content: this.decodeHtmlEntities(element.textContent || '') };
       case 'p':
         // 段落の内容をより詳細に処理（HTMLタグを含む）
         return { id, type: 'paragraph', content: this.extractParagraphContent(element) };
       case 'ul':
       case 'ol':
-        const listItems = Array.from(element.querySelectorAll('li'))
-          .map(li => li.textContent || '')
-          .join('\n');
-        return { id, type: 'bulletList', content: listItems };
+        return { id, type: 'bulletList', content: this.extractListContent(element) };
       case 'hr':
         return { id, type: 'horizontalRule', content: '' };
       case 'img':
         return { 
           id, 
           type: 'image', 
-          content: element.getAttribute('alt') || '',
+          content: this.decodeHtmlEntities(element.getAttribute('alt') || ''),
           src: element.getAttribute('src') || undefined
         };
       case 'table':
@@ -317,13 +505,13 @@ class ClipboardService {
       case 'article':
         // コンテナ要素でもテキストコンテンツがあれば段落として扱う
         if (element.textContent && element.textContent.trim()) {
-          return { id, type: 'paragraph', content: element.textContent.trim() };
+          return { id, type: 'paragraph', content: this.extractParagraphContent(element) };
         }
         return null;
       default:
         // 不明な要素は段落として扱う
         if (element.textContent && element.textContent.trim()) {
-          return { id, type: 'paragraph', content: element.textContent.trim() };
+          return { id, type: 'paragraph', content: this.decodeHtmlEntities(element.textContent.trim()) };
         }
         return null;
     }
@@ -369,10 +557,7 @@ class ClipboardService {
   private extractContentFromElement(element: Element, blockType: BlockType): string {
     switch (blockType) {
       case 'bulletList':
-        const listItems = Array.from(element.querySelectorAll('li'))
-          .map(li => li.textContent || '')
-          .join('\n');
-        return listItems;
+        return this.extractListContent(element);
       case 'table':
         return this.extractTableContent(element as HTMLTableElement);
       case 'paragraph':
@@ -380,7 +565,7 @@ class ClipboardService {
         return this.extractParagraphContent(element);
       default:
         // 見出しやその他の要素はテキストコンテンツを返す
-        return element.textContent || '';
+        return this.decodeHtmlEntities(element.textContent || '');
     }
   }
 
@@ -521,19 +706,36 @@ class ClipboardService {
   /**
    * 段落要素から内容を抽出（太字などの書式を保持）
    */
+  /**
+   * リスト要素からコンテンツを抽出
+   */
+  private extractListContent(element: Element): string {
+    const listItems = Array.from(element.querySelectorAll('li'))
+      .map(li => {
+        let text = li.textContent || '';
+        text = this.decodeHtmlEntities(text); // HTMLエンティティをデコード
+        text = text.trim();
+        text = text.replace(/\s+/g, ' '); // 連続する空白を単一の空白に置換
+        return text;
+      })
+      .filter(text => text.length > 0)
+      .join('\n');
+    return listItems;
+  }
+
+  /**
+   * 段落要素からコンテンツを抽出
+   */
   private extractParagraphContent(element: Element): string {
-    // HTMLの書式を保持しつつテキストコンテンツを抽出
-    // 将来的にはHTML書式（<strong>, <em>等）を保持できるように拡張可能
-    const content = element.innerHTML || element.textContent || '';
-    
-    // 基本的なHTML書式をテキストに変換
-    return content
-      .replace(/<strong>/g, '**')
-      .replace(/<\/strong>/g, '**')
-      .replace(/<em>/g, '*')
-      .replace(/<\/em>/g, '*')
-      .replace(/<br\s*\/?>/g, '\n')
-      .replace(/<[^>]*>/g, ''); // その他のHTMLタグを除去
+    let content = element.innerHTML || '';
+    content = content.replace(/<br\s*\/?>/gi, '\n');
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = content;
+    let text = tempDiv.textContent || tempDiv.innerText || '';
+    text = this.decodeHtmlEntities(text);
+    text = text.trim();
+    text = text.replace(/\n{3,}/g, '\n\n');
+    return text;
   }
 
   /**
@@ -769,12 +971,12 @@ ${htmlParts.join('\n')}
     /* 強調表示時のテーブルヘッダースタイル */
     table.important th {
       background-color: rgba(255, 193, 7, 0.3) !important;
-      border-bottom: 2px solid #ffc107;
+      border-bottom: 2px solid #ffc107 !important;
       font-weight: bold;
     }
     table.action-item th {
       background-color: rgba(40, 167, 69, 0.2) !important;
-      border-bottom: 2px solid #28a745;
+      border-bottom: 2px solid #28a745 !important;
       font-weight: bold;
     }
     
@@ -847,243 +1049,12 @@ ${htmlParts.join('\n')}
       padding: 12px; 
       text-align: left; 
     }
-    th { background-color: #f8f9fa; font-weight: bold; }
-    img { max-width: 100%; height: auto; border-radius: 4px; }
-    
-    /* 特別なブロックスタイル */
-    .action-item {
-      background-color: #d4edda;
-      border-left: 4px solid #28a745;
-      padding: 15px;
-      margin: 15px 0;
-      border-radius: 4px;
-    }
-    .important {
-      background-color: #fff3cd;
-      border-left: 4px solid #ffc107;
-      padding: 15px;
-      margin: 15px 0;
-      border-radius: 4px;
-    }
-    
-    /* 強調表示時のテーブルヘッダースタイル */
-    table.important th {
-      background-color: rgba(255, 193, 7, 0.3) !important;
-      border-bottom: 2px solid #ffc107;
-      font-weight: bold;
-    }
-    table.action-item th {
-      background-color: rgba(40, 167, 69, 0.2) !important;
-      border-bottom: 2px solid #28a745;
-      font-weight: bold;
-    }
-    
-    /* 強調表示テーブル全体のスタイル */
-    table.important {
-      background-color: #fff3cd;
-      border-left: 4px solid #ffc107;
-      padding: 15px;
-      margin: 15px 0;
-      border-radius: 4px;
-    }
-    table.action-item {
-      background-color: #d4edda;
-      border-left: 4px solid #28a745;
-      padding: 15px;
-      margin: 15px 0;
-      border-radius: 4px;
-    }
-    
-
-  </style>
-</head>
-<body>
-${htmlParts.join('\n')}
-</body>
-</html>`;
-  }
-
-  /**
-   * HTMLをクリップボードにコピー
-   */
-  async copyHtmlToClipboard(blocks: Block[]): Promise<boolean> {
-    try {
-      const html = await this.generatePreviewHtml(blocks);
-      await navigator.clipboard.writeText(html);
-      return true;
-    } catch (error) {
-      console.error('HTMLコピーエラー:', error);
-      return false;
-    }
-  }
-
-  /**
-   * HTMLをファイルとしてダウンロード
-   */
-  async downloadHtmlFile(blocks: Block[], filename: string = 'document.html'): Promise<boolean> {
-    try {
-      const html = await this.generatePreviewHtml(blocks);
-      const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
-      const url = URL.createObjectURL(blob);
-      
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = filename;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      
-      URL.revokeObjectURL(url);
-      return true;
-    } catch (error) {
-      console.error('HTMLダウンロードエラー:', error);
-      return false;
-    }
-  }
-
-  /**
-   * プレビュー用にブロック構造からスタイル付きHTMLコンテンツを生成
-   */
-  async blocksToPreviewHtml(blocks: Block[]): Promise<string> {
-    console.log('=== blocksToPreviewHtml 開始 ===');
-    console.log('処理対象ブロック数:', blocks.length);
-    console.log('ブロックID一覧:', blocks.map(b => b.id));
-    console.log('ブロックタイプ一覧:', blocks.map(b => b.type));
-    
-    if (blocks.length === 0) {
-      console.log('ブロックが0個のため、空のプレビューを返します');
-      return '<div class="preview-content"><p>ブロックがありません</p></div>';
-    }
-    
-    // スケジュール変更の検出
-    const calendarBlocks = blocks.filter(b => b.type === 'calendar');
-    const currentCalendarDataKey = JSON.stringify(calendarBlocks.map(b => b.calendarData));
-    // 最初の実行時はlastCalendarDataKeyが空文字列のため、初期化が必要
-    const isScheduleChanged = this.lastCalendarDataKey === '' ? false : currentCalendarDataKey !== this.lastCalendarDataKey;
-    
-    console.log('スケジュール変更検出デバッグ:');
-    console.log('- カレンダーブロック数:', calendarBlocks.length);
-    console.log('- 現在のカレンダーデータキー:', currentCalendarDataKey);
-    console.log('- 前回のカレンダーデータキー:', this.lastCalendarDataKey);
-    console.log('- スケジュール変更あり:', isScheduleChanged);
-    console.log('- 初回実行か:', this.lastCalendarDataKey === '');
-    
-    if (isScheduleChanged) {
-      console.log('スケジュール変更を検出しました');
-      this.lastCalendarDataKey = currentCalendarDataKey;
-    } else {
-      console.log('スケジュール変更なし');
-      // 初回実行時またはスケジュール変更がない場合は、現在のキーを保存
-      if (this.lastCalendarDataKey === '') {
-        this.lastCalendarDataKey = currentCalendarDataKey;
-      }
-    }
-    
-    // ブロックセットのキーを生成（カレンダーデータを除く）
-    const blocksKey = JSON.stringify(blocks.map(b => {
-      const baseBlock = {
-        id: b.id, 
-        type: b.type, 
-        content: b.content,
-        style: b.style // スタイルも含める
-      };
-      
-      // カレンダーブロック以外の場合のみcalendarDataを含める
-      if (b.type !== 'calendar' && b.calendarData) {
-        return { ...baseBlock, calendarData: b.calendarData };
-      }
-      
-      return baseBlock;
-    }));
-    
-    console.log('ブロックキーデバッグ:');
-    console.log('- 現在のブロックキー:', blocksKey);
-    console.log('- 前回のブロックキー:', this.lastBlocksKey);
-    console.log('- ブロックキー一致:', blocksKey === this.lastBlocksKey);
-    console.log('- キャッシュ存在:', this.previewCache.has(blocksKey));
-    
-    // キャッシュをチェック（スケジュール変更がない場合のみ）
-    if (!isScheduleChanged && blocksKey === this.lastBlocksKey && this.previewCache.has(blocksKey)) {
-      console.log('キャッシュからプレビューを取得（スケジュール変更なし）');
-      const cachedResult = this.previewCache.get(blocksKey);
-      if (cachedResult) {
-        return cachedResult;
-      }
-    }
-    
-    console.log('新しいプレビューを生成');
-    if (isScheduleChanged) {
-      console.log('スケジュール変更によりガントチャートを再生成します');
-    } else {
-      console.log('スケジュール変更なしのため、ガントチャート生成をスキップします');
-    }
-    this.lastBlocksKey = blocksKey;
-    
-    // スケジュール変更フラグを設定
-    (this as any).isScheduleChanged = isScheduleChanged;
-    
-    const htmlParts = await Promise.all(blocks.map(async (block, index) => {
-      console.log(`ブロック ${index + 1}/${blocks.length} 処理中:`, block.id, block.type);
-      const html = await this.blockToHtml(block);
-      console.log(`ブロック ${block.id} (${block.type}) HTML長さ:`, html.length);
-      return html;
-    }));
-    
-    console.log('生成されたHTMLパーツ数:', htmlParts.length);
-    
-    const result = `<style>
-    /* 特別なブロックスタイル */
-    .action-item {
-      background-color: #d4edda;
-      border-left: 4px solid #28a745;
-      padding: 15px;
-      margin: 15px 0;
-      border-radius: 4px;
-    }
-    .important {
-      background-color: #fff3cd;
-      border-left: 4px solid #ffc107;
-      padding: 15px;
-      margin: 15px 0;
-      border-radius: 4px;
-    }
-    
-    /* 強調表示時のテーブルヘッダースタイル */
-    .important table th {
-      background-color: rgba(255, 193, 7, 0.3) !important;
-      border-bottom: 2px solid #ffc107 !important;
-      font-weight: bold;
-    }
-    .action-item table th {
-      background-color: rgba(40, 167, 69, 0.2) !important;
-      border-bottom: 2px solid #28a745 !important;
-      font-weight: bold;
-    }
-    
-    table { 
-      width: 100%; 
-      border-collapse: collapse; 
-      margin: 15px 0; 
-    }
-    th, td { 
-      border: 1px solid #ddd; 
-      padding: 12px; 
-      text-align: left; 
-    }
     th { 
       background-color: #f8f9fa; 
       font-weight: bold; 
     }
     </style>
 ${htmlParts.join('\n')}`;
-
-    console.log('最終プレビューHTML長さ:', result.length);
-    console.log('=== blocksToPreviewHtml 完了 ===');
-    
-    // キャッシュに保存
-    this.previewCache.set(blocksKey, result);
-    
-    return result;
   }
 
   /**
@@ -1254,7 +1225,7 @@ ${htmlParts.join('\n')}`;
       console.log('入力テキスト長さ:', htmlText.length);
       console.log('入力テキストプレビュー:', htmlText.substring(0, 200));
       
-      const blocks = this.parseHtmlToBlocks(htmlText);
+      const blocks = this.parseHtmlWithFallback(htmlText);
       
       console.log('解析結果:', blocks.length, '個のブロック');
       blocks.forEach((block, index) => {
@@ -1265,6 +1236,64 @@ ${htmlParts.join('\n')}`;
     } catch (error) {
       console.error('テキスト読み込みエラー:', error);
       throw new Error('テキストの読み込みに失敗しました。');
+    }
+  }
+
+  /**
+   * HTMLをクリップボードにコピー
+   */
+  async copyHtmlToClipboard(blocks: Block[]): Promise<boolean> {
+    try {
+      const html = this.blocksToHtml(blocks);
+      await navigator.clipboard.writeText(html);
+      console.log('HTMLをクリップボードにコピーしました');
+      return true;
+    } catch (error) {
+      console.error('クリップボードへのコピーに失敗:', error);
+      return false;
+    }
+  }
+
+  /**
+   * HTMLファイルをダウンロード
+   */
+  async downloadHtmlFile(blocks: Block[], filename: string = 'document.html'): Promise<boolean> {
+    try {
+      const html = this.blocksToHtml(blocks);
+      const blob = new Blob([html], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+      
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      URL.revokeObjectURL(url);
+      console.log('HTMLファイルをダウンロードしました:', filename);
+      return true;
+    } catch (error) {
+      console.error('HTMLファイルのダウンロードに失敗:', error);
+      return false;
+    }
+  }
+
+  /**
+   * ブロックをプレビュー用HTMLに変換
+   */
+  async blocksToPreviewHtml(blocks: Block[]): Promise<string> {
+    try {
+      // プレビュー用のシンプルなHTMLを生成（完全なHTMLドキュメントではなく、コンテンツのみ）
+      const htmlParts = await Promise.all(blocks.map(async block => {
+        const html = await this.blockToHtml(block);
+        return html;
+      }));
+      
+      return htmlParts.join('\n');
+    } catch (error) {
+      console.error('プレビューHTML生成に失敗:', error);
+      return '<p>プレビューの生成に失敗しました</p>';
     }
   }
 }
