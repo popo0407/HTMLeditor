@@ -69,7 +69,11 @@ function App() {
 
     setAppState(prev => {
       let newBlocks;
-      if (insertAfter) {
+      if (insertAfter === 'FIRST') {
+        // 最初の位置に追加
+        newBlocks = [newBlock, ...prev.blocks];
+      } else if (insertAfter) {
+        // 指定されたブロックの後に追加
         const insertIndex = prev.blocks.findIndex(b => b.id === insertAfter);
         newBlocks = [
           ...prev.blocks.slice(0, insertIndex + 1),
@@ -77,6 +81,7 @@ function App() {
           ...prev.blocks.slice(insertIndex + 1)
         ];
       } else {
+        // 最後に追加
         newBlocks = [...prev.blocks, newBlock];
       }
 

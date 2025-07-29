@@ -183,16 +183,21 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
           renderEmptyState()
         ) : (
           <>
-            {/* 最初のブロックの前の挿入ボタン */}
-            <BlockInsertButton index={-1} />
-            
             {blocks.map((block, index) => (
               <React.Fragment key={`${block.id}-fragment`}>
+                {/* 各ブロックの前の挿入ボタン */}
+                <BlockInsertButton 
+                  insertAfter={index === 0 ? 'FIRST' : blocks[index - 1].id} 
+                  index={index} 
+                />
                 {renderBlock(block, index)}
-                {/* 各ブロックの後の挿入ボタン */}
-                <BlockInsertButton insertAfter={block.id} index={index} />
               </React.Fragment>
             ))}
+            {/* 最後のブロックの後の挿入ボタン */}
+            <BlockInsertButton 
+              insertAfter={blocks.length > 0 ? blocks[blocks.length - 1].id : undefined} 
+              index={blocks.length} 
+            />
           </>
         )}
       </div>
