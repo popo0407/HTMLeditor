@@ -11,19 +11,34 @@ import { CommonBlockProps } from '../../types';
 import { BlockBase } from './BlockBase';
 
 export const ParagraphBlock: React.FC<CommonBlockProps> = (props) => {
-  const { block, onUpdate } = props;
+  const { block, onUpdate, isSelected } = props;
   const [isEditing, setIsEditing] = useState(false);
   const [content, setContent] = useState(block.content);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const lastFocusTimeRef = useRef<number>(0);
+  const isInitialFocusRef = useRef<boolean>(false);
+
+  // フォーカス状態が変更されたら編集モードに入る（ちらつき防止）
+  useEffect(() => {
+    const now = Date.now();
+    if (isSelected && !isEditing && (now - lastFocusTimeRef.current) > 50) {
+      lastFocusTimeRef.current = now;
+      setIsEditing(true);
+      isInitialFocusRef.current = true;
+    } else if (!isSelected && isEditing) {
+      setIsEditing(false);
+    }
+  }, [isSelected, isEditing]);
 
   useEffect(() => {
-    if (isEditing && textareaRef.current) {
+    if (isEditing && textareaRef.current && isInitialFocusRef.current) {
       textareaRef.current.focus();
       // カーソルをテキスト末端に移動
       const length = textareaRef.current.value.length;
       textareaRef.current.setSelectionRange(length, length);
       // 高さを自動調整
       adjustTextareaHeight();
+      isInitialFocusRef.current = false;
     }
   }, [isEditing]);
 
@@ -52,6 +67,15 @@ export const ParagraphBlock: React.FC<CommonBlockProps> = (props) => {
     if (e.key === 'Escape') {
       setContent(block.content);
       setIsEditing(false);
+    }
+    // 上下キーでブロック間移動（カーソル位置に関係なく）
+    if (e.key === 'ArrowUp' && props.onMoveUp) {
+      e.preventDefault();
+      props.onMoveUp(block.id);
+    }
+    if (e.key === 'ArrowDown' && props.onMoveDown) {
+      e.preventDefault();
+      props.onMoveDown(block.id);
     }
   };
 

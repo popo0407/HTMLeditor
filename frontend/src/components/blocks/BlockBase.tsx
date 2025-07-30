@@ -61,7 +61,7 @@ export const BlockBase: React.FC<BlockBaseProps> = ({
 
   // ブロックスタイルに応じたCSSクラスを適用
   const getBlockClasses = () => {
-    let classes = `block-base ${isSelected ? 'block-selected' : ''}`;
+    let classes = `block-content`;
     if (block.style && block.style !== 'normal') {
       classes += ` ${block.style}`;
     }
@@ -75,71 +75,7 @@ export const BlockBase: React.FC<BlockBaseProps> = ({
       data-block-type={block.type}
       data-block-id={block.id}
     >
-      <div className="block-content">
-        {children}
-      </div>
-      
-      {isSelected && (
-        <div className="block-controls">
-          <div className="block-actions">
-            {/* スタイル変更ボタン */}
-            {onStyleChange && (
-              <>
-                <button 
-                  className={`btn block-action-btn ${block.style === 'normal' || !block.style ? 'active' : ''}`}
-                  onClick={(e) => handleStyleChange(e, 'normal')}
-                  title="通常"
-                >
-                  📝
-                </button>
-                <button 
-                  className={`btn block-action-btn ${block.style === 'important' ? 'active' : ''}`}
-                  onClick={(e) => handleStyleChange(e, 'important')}
-                  title="重要"
-                >
-                  ⚠️
-                </button>
-                <button 
-                  className={`btn block-action-btn ${block.style === 'action-item' ? 'active' : ''}`}
-                  onClick={(e) => handleStyleChange(e, 'action-item')}
-                  title="アクション"
-                >
-                  ✅
-                </button>
-              </>
-            )}
-            
-            {/* 移動ボタン */}
-            {onMoveUp && (
-              <button 
-                className="btn block-action-btn move-btn" 
-                onClick={handleMoveUp}
-                title="上に移動"
-              >
-                ⬆️
-              </button>
-            )}
-            {onMoveDown && (
-              <button 
-                className="btn block-action-btn move-btn" 
-                onClick={handleMoveDown}
-                title="下に移動"
-              >
-                ⬇️
-              </button>
-            )}
-            
-            {/* 削除ボタン */}
-            <button 
-              className="btn block-action-btn block-delete-btn" 
-              onClick={handleDelete}
-              title="削除"
-            >
-              🗑️
-            </button>
-          </div>
-        </div>
-      )}
+      {children}
     </div>
   );
 };

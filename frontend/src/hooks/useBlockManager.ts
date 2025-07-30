@@ -14,14 +14,25 @@ import { Block, BlockType, BlockStyle } from '../types';
 
 export interface UseBlockManagerReturn {
   blocks: Block[];
-  selectedBlockId: string | null;
-  addBlock: (blockType: BlockType, insertAfter?: string) => void;
+  focusedBlockId: string | null;
+  addBlock: (blockType: BlockType, insertAfter?: string) => string;
   updateBlock: (blockId: string, content: string) => void;
   deleteBlock: (blockId: string) => void;
   moveBlock: (blockId: string, direction: 'up' | 'down') => void;
-  selectBlock: (blockId: string | null) => void;
+  focusBlock: (blockId: string | null) => void;
   changeBlockStyle: (blockId: string, style: BlockStyle) => void;
   setBlocks: (blocks: Block[]) => void;
+  // キーボードナビゲーション用の追加機能
+  navigateToNextBlock: () => void;
+  navigateToPreviousBlock: () => void;
+  createNewParagraph: () => void;
+  selectAllInBlock: (blockId: string) => void;
+  changeBlockType: (blockId: string, newType: BlockType) => void;
+  getCurrentBlockIndex: () => number;
+  // カーソル管理機能
+  focusBlockWithCursor: (blockId: string) => void;
+  focusNearestBlock: (clickPosition: { x: number; y: number }) => void;
+  focusNextBlockAfterDelete: (deletedBlockId: string) => void;
 }
 
 /**
@@ -49,12 +60,12 @@ const getDefaultContent = (blockType: BlockType): string => {
  */
 export const useBlockManager = (): UseBlockManagerReturn => {
   const [blocks, setBlocks] = useState<Block[]>([]);
-  const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
+  const [focusedBlockId, setFocusedBlockId] = useState<string | null>(null);
 
   /**
    * ブロックを追加
    */
-  const addBlock = useCallback((blockType: BlockType, insertAfter?: string) => {
+  const addBlock = useCallback((blockType: BlockType, insertAfter?: string): string => {
     const newBlock: Block = {
       id: `block-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       type: blockType,
@@ -95,7 +106,8 @@ export const useBlockManager = (): UseBlockManagerReturn => {
       return newBlocks;
     });
 
-    setSelectedBlockId(newBlock.id);
+    setFocusedBlockId(newBlock.id);
+    return newBlock.id; // 新しく作成されたブロックのIDを返す
   }, []);
 
   /**
@@ -137,7 +149,7 @@ export const useBlockManager = (): UseBlockManagerReturn => {
       return newBlocks;
     });
 
-    setSelectedBlockId(prev => prev === blockId ? null : prev);
+    setFocusedBlockId(prev => prev === blockId ? null : prev);
   }, [blocks.length]);
 
   /**
@@ -159,10 +171,10 @@ export const useBlockManager = (): UseBlockManagerReturn => {
   }, []);
 
   /**
-   * ブロックを選択
+   * ブロックをフォーカス
    */
-  const selectBlock = useCallback((blockId: string | null) => {
-    setSelectedBlockId(blockId);
+  const focusBlock = useCallback((blockId: string | null) => {
+    setFocusedBlockId(blockId);
   }, []);
 
   /**
@@ -178,15 +190,153 @@ export const useBlockManager = (): UseBlockManagerReturn => {
     );
   }, []);
 
+  /**
+   * 次のブロックに移動
+   */
+  const navigateToNextBlock = useCallback(() => {
+    if (!focusedBlockId) {
+      // フォーカスされていない場合は最初のブロックをフォーカス
+      if (blocks.length > 0) {
+        setFocusedBlockId(blocks[0].id);
+      }
+      return;
+    }
+
+    const currentIndex = blocks.findIndex(b => b.id === focusedBlockId);
+    if (currentIndex < blocks.length - 1) {
+      setFocusedBlockId(blocks[currentIndex + 1].id);
+    }
+  }, [blocks, focusedBlockId]);
+
+  /**
+   * 前のブロックに移動
+   */
+  const navigateToPreviousBlock = useCallback(() => {
+    if (!focusedBlockId) {
+      // フォーカスされていない場合は最後のブロックをフォーカス
+      if (blocks.length > 0) {
+        setFocusedBlockId(blocks[blocks.length - 1].id);
+      }
+      return;
+    }
+
+    const currentIndex = blocks.findIndex(b => b.id === focusedBlockId);
+    if (currentIndex > 0) {
+      setFocusedBlockId(blocks[currentIndex - 1].id);
+    }
+  }, [blocks, focusedBlockId]);
+
+  /**
+   * 新しい段落を作成
+   */
+  const createNewParagraph = useCallback(() => {
+    if (focusedBlockId) {
+      // 現在フォーカスされているブロックの後に新しい段落を追加
+      addBlock('paragraph', focusedBlockId);
+    } else {
+      // フォーカスされていない場合は最後に追加
+      addBlock('paragraph');
+    }
+  }, [focusedBlockId, addBlock]);
+
+  /**
+   * ブロック内の全選択（プレースホルダー）
+   */
+  const selectAllInBlock = useCallback((blockId: string) => {
+    // この機能は後で実装（DOM操作が必要）
+    console.log('ブロック内全選択:', blockId);
+  }, []);
+
+  /**
+   * ブロックタイプを変更
+   */
+  const changeBlockType = useCallback((blockId: string, newType: BlockType) => {
+    setBlocks(prevBlocks =>
+      prevBlocks.map(block =>
+        block.id === blockId
+          ? { ...block, type: newType, content: getDefaultContent(newType) }
+          : block
+      )
+    );
+  }, []);
+
+  /**
+   * 現在のブロックインデックスを取得
+   */
+  const getCurrentBlockIndex = useCallback(() => {
+    if (!focusedBlockId) return -1;
+    return blocks.findIndex(b => b.id === focusedBlockId);
+  }, [blocks, focusedBlockId]);
+
+  /**
+   * ブロックにフォーカスしてカーソルを移動
+   */
+  const focusBlockWithCursor = useCallback((blockId: string) => {
+    setFocusedBlockId(blockId);
+    
+    // DOM操作でカーソルを移動
+    setTimeout(() => {
+      const blockElement = document.querySelector(`[data-block-id="${blockId}"]`);
+      if (blockElement) {
+        const textarea = blockElement.querySelector('textarea');
+        if (textarea) {
+          textarea.focus();
+          const length = textarea.value.length;
+          textarea.setSelectionRange(length, length);
+        }
+      }
+    }, 10);
+  }, []);
+
+  /**
+   * クリック位置に最も近いブロックにフォーカス
+   */
+  const focusNearestBlock = useCallback((clickPosition: { x: number; y: number }) => {
+    // 最も近いブロックを計算（後で実装）
+    if (blocks.length > 0) {
+      // 仮実装：最初のブロックにフォーカス
+      setFocusedBlockId(blocks[0].id);
+    }
+  }, [blocks]);
+
+  /**
+   * ブロック削除後の次のブロックにフォーカス
+   */
+  const focusNextBlockAfterDelete = useCallback((deletedBlockId: string) => {
+    const deletedIndex = blocks.findIndex(b => b.id === deletedBlockId);
+    if (deletedIndex === -1) return;
+
+    // 削除されたブロックの前後のブロックのいずれかにフォーカス
+    if (deletedIndex > 0) {
+      // 前のブロックにフォーカス
+      setFocusedBlockId(blocks[deletedIndex - 1].id);
+    } else if (deletedIndex < blocks.length - 1) {
+      // 次のブロックにフォーカス
+      setFocusedBlockId(blocks[deletedIndex + 1].id);
+    } else {
+      // 最後のブロックが削除された場合、フォーカスをクリア
+      setFocusedBlockId(null);
+    }
+  }, [blocks]);
+
   return {
     blocks,
-    selectedBlockId,
+    focusedBlockId,
     addBlock,
     updateBlock,
     deleteBlock,
     moveBlock,
-    selectBlock,
+    focusBlock,
     changeBlockStyle,
     setBlocks,
+    navigateToNextBlock,
+    navigateToPreviousBlock,
+    createNewParagraph,
+    selectAllInBlock,
+    changeBlockType,
+    getCurrentBlockIndex,
+    focusBlockWithCursor,
+    focusNearestBlock,
+    focusNextBlockAfterDelete,
   };
 }; 

@@ -14,7 +14,6 @@ import { Block, BlockType, BlockStyle } from '../types';
 import {
   HeadingBlock,
   ParagraphBlock,
-  BulletListBlock,
   HorizontalRuleBlock,
   ImageBlock,
   TableBlock,
@@ -24,8 +23,8 @@ import './BlockEditor.css';
 
 interface BlockEditorProps {
   blocks: Block[];
-  selectedBlockId: string | null;
-  onBlockSelect: (blockId: string) => void;
+  focusedBlockId: string | null;
+  onBlockFocus: (blockId: string) => void;
   onBlockUpdate: (blockId: string, content: string) => void;
   onBlockDelete: (blockId: string) => void;
   onBlockAdd: (blockType: BlockType, insertAfter?: string) => void;
@@ -35,25 +34,39 @@ interface BlockEditorProps {
 
 export const BlockEditor: React.FC<BlockEditorProps> = ({
   blocks,
-  selectedBlockId,
-  onBlockSelect,
+  focusedBlockId,
+  onBlockFocus,
   onBlockUpdate,
   onBlockDelete,
   onBlockAdd,
   onBlockMove,
   onBlockStyleChange,
 }) => {
+  // エディタクリック時の処理
+  const handleEditorClick = (event: React.MouseEvent) => {
+    // クリックされた要素がブロック内でない場合
+    const target = event.target as HTMLElement;
+    if (!target.closest('.block-content')) {
+      // 最も近いブロックにフォーカス
+      const clickPosition = { x: event.clientX, y: event.clientY };
+      // 仮実装：最初のブロックにフォーカス
+      if (blocks.length > 0) {
+        onBlockFocus(blocks[0].id);
+      }
+    }
+  };
+
   // ブロックタイプに応じたコンポーネントを返す
   const renderBlock = (block: Block, index: number) => {
     const commonProps = {
       block,
-      isSelected: selectedBlockId === block.id,
-      onSelect: onBlockSelect,
+      isSelected: focusedBlockId === block.id, // 正しいフォーカス状態
+      onSelect: onBlockFocus,
       onUpdate: onBlockUpdate,
       onDelete: onBlockDelete,
       onStyleChange: onBlockStyleChange,
-      onMoveUp: index > 0 ? () => onBlockMove(block.id, 'up') : undefined,
-      onMoveDown: index < blocks.length - 1 ? () => onBlockMove(block.id, 'down') : undefined,
+      onMoveUp: index > 0 ? () => onBlockFocus(blocks[index - 1].id) : undefined,
+      onMoveDown: index < blocks.length - 1 ? () => onBlockFocus(blocks[index + 1].id) : undefined,
     };
 
     switch (block.type) {
@@ -64,9 +77,6 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
       
       case 'paragraph':
         return <ParagraphBlock key={block.id} {...commonProps} />;
-      
-      case 'bulletList':
-        return <BulletListBlock key={block.id} {...commonProps} />;
       
       case 'horizontalRule':
         return <HorizontalRuleBlock key={block.id} {...commonProps} />;
@@ -95,7 +105,6 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
       { type: 'heading2', label: '中見出し', icon: '📝' },
       { type: 'heading3', label: '小見出し', icon: '📝' },
       { type: 'paragraph', label: '段落', icon: '📄' },
-      { type: 'bulletList', label: '箇条書き', icon: '📋' },
       { type: 'image', label: '画像', icon: '🖼️' },
       { type: 'table', label: 'テーブル', icon: '📊' },
       { type: 'calendar', label: 'カレンダー', icon: '📅' },
@@ -177,7 +186,7 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
   );
 
   return (
-    <div className="block-editor">
+    <div className="block-editor" onClick={handleEditorClick}>
       <div className="editor-content">
         {blocks.length === 0 ? (
           renderEmptyState()
@@ -185,19 +194,9 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
           <>
             {blocks.map((block, index) => (
               <React.Fragment key={`${block.id}-fragment`}>
-                {/* 各ブロックの前の挿入ボタン */}
-                <BlockInsertButton 
-                  insertAfter={index === 0 ? 'FIRST' : blocks[index - 1].id} 
-                  index={index} 
-                />
                 {renderBlock(block, index)}
               </React.Fragment>
             ))}
-            {/* 最後のブロックの後の挿入ボタン */}
-            <BlockInsertButton 
-              insertAfter={blocks.length > 0 ? blocks[blocks.length - 1].id : undefined} 
-              index={blocks.length} 
-            />
           </>
         )}
       </div>

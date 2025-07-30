@@ -4,7 +4,7 @@
  * Snowsight風のスタイリングを適用
  */
 
-.block-base {
+.block-content {
   position: relative;
   margin-bottom: 2px;
   padding: 8px;
@@ -14,22 +14,14 @@
   transition: all 0.15s ease;
   font-family: var(--primary-font);
   z-index: 1;
+  min-height: 24px;
+  line-height: var(--line-height);
 }
 
-.block-base:hover {
+.block-content:hover {
   border-color: var(--border-color);
   background-color: var(--background-light);
   z-index: 1;
-}
-
-.block-selected {
-  border-color: var(--accent-color) !important;
-  background-color: #e6f3ff !important;
-}
-
-.block-content {
-  min-height: 24px;
-  line-height: var(--line-height);
 }
 
 .block-controls {
@@ -195,16 +187,19 @@
 }
 
 /* important/action-itemスタイル適用時のテーブル対応 */
-.block-base.important table,
-.block-base.action-item table {
-  background-color: inherit;
+.block-content.action-item table,
+.block-content.action-item table td,
+.block-content.action-item table th,
+.block-content.action-item table tr {
+  background-color: #fef3c7 !important;
+  border-color: #f59e0b !important;
 }
 
-.block-base.important table td,
-.block-base.important table th,
-.block-base.action-item table td,
-.block-base.action-item table th {
-  background-color: transparent !important;
+.block-content.action-item table td,
+.block-content.action-item table th,
+.block-content.action-item table tr {
+  background-color: #dbeafe !important;
+  border-color: #3b82f6 !important;
 }
 
 /* ブロック挿入ドロップダウン */

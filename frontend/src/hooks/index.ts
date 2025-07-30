@@ -8,6 +8,9 @@
 export { useBlockManager } from './useBlockManager';
 export { usePreviewManager } from './usePreviewManager';
 export { useAddressBookManager } from './useAddressBookManager';
+export { useKeyboardNavigation } from './useKeyboardNavigation';
+export { useUndoRedo } from './useUndoRedo';
+export { useSearchReplace } from './useSearchReplace';
 
 export type { UseBlockManagerReturn } from './useBlockManager';
 export type { UsePreviewManagerReturn } from './usePreviewManager';

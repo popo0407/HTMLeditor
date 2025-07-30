@@ -9,9 +9,12 @@ import './App.css';
 import { BlockEditor } from './components/BlockEditor';
 import { useBlockManager } from './hooks/useBlockManager';
 import { usePreviewManager } from './hooks/usePreviewManager';
+import { useKeyboardNavigation, KeyboardNavigationConfig, KeyboardNavigationHandlers } from './hooks/useKeyboardNavigation';
+import { useUndoRedo } from './hooks/useUndoRedo';
+import { useSearchReplace } from './hooks/useSearchReplace';
 import { OperationHandlerService } from './services/operationHandlerService';
 import { getEmailTemplates, sendMail, MailSendRequest } from './services/apiService';
-import { Block } from './types';
+import { Block, BlockType, BlockStyle } from './types';
 
 interface EmailTemplates {
   default_recipient: string;
@@ -29,9 +32,123 @@ function App() {
   const [customRecipient, setCustomRecipient] = useState<string>('');
   const [importText, setImportText] = useState('');
 
+  // アンドゥ/リドゥ機能
+  const undoRedo = useUndoRedo();
+
+  // 検索・置換機能
+  const searchReplace = useSearchReplace();
+
+  // キーボードナビゲーション設定
+  const keyboardConfig: KeyboardNavigationConfig = {
+    enableArrowKeys: true,
+    enableCtrlSpace: true,
+    enableShiftSpace: true,
+    enableContextMenu: true,
+  };
+
+  // キーボードナビゲーションハンドラー
+  const keyboardHandlers: KeyboardNavigationHandlers = {
+    onBlockMove: (direction: 'up' | 'down') => {
+      if (direction === 'up') {
+        blockManager.navigateToPreviousBlock();
+        // 移動後にカーソルを移動（少し遅延）
+        setTimeout(() => {
+          if (blockManager.focusedBlockId) {
+            blockManager.focusBlockWithCursor(blockManager.focusedBlockId);
+          }
+        }, 20);
+      } else {
+        blockManager.navigateToNextBlock();
+        // 移動後にカーソルを移動（少し遅延）
+        setTimeout(() => {
+          if (blockManager.focusedBlockId) {
+            blockManager.focusBlockWithCursor(blockManager.focusedBlockId);
+          }
+        }, 20);
+      }
+    },
+    onBlockCreate: (blockType: BlockType) => {
+      // 現在フォーカスされているブロックの後に新しいブロックを作成
+      if (blockManager.focusedBlockId) {
+        const newBlockId = blockManager.addBlock(blockType, blockManager.focusedBlockId);
+        // 新しく作成されたブロックにカーソルを移動
+        blockManager.focusBlockWithCursor(newBlockId);
+      } else {
+        // フォーカスされていない場合は最後に追加
+        const newBlockId = blockManager.addBlock(blockType);
+        // 新しく作成されたブロックにカーソルを移動
+        blockManager.focusBlockWithCursor(newBlockId);
+      }
+    },
+    onBlockTypeChange: (blockId: string, newType: BlockType) => {
+      blockManager.changeBlockType(blockId, newType);
+    },
+    onBlockStyleChange: (blockId: string, newStyle: BlockStyle) => {
+      blockManager.changeBlockStyle(blockId, newStyle);
+    },
+    onBlockDelete: (blockId: string) => {
+      blockManager.deleteBlock(blockId);
+    },
+    onBlockSelect: (blockId: string) => {
+      blockManager.focusBlock(blockId);
+    },
+    onSelectAll: (blockId: string) => {
+      blockManager.selectAllInBlock(blockId);
+    },
+    onUndo: () => {
+      undoRedo.undo();
+    },
+    onRedo: () => {
+      undoRedo.redo();
+    },
+    onSearch: () => {
+      // 検索UIを表示（後で実装）
+      console.log('検索機能を開始');
+    },
+    onReplace: () => {
+      // 置換UIを表示（後で実装）
+      console.log('置換機能を開始');
+    },
+  };
+
+  // キーボードナビゲーション
+  const keyboardNavigation = useKeyboardNavigation(keyboardConfig, keyboardHandlers);
+
+  // 現在のブロック情報を取得
+  const currentBlock = blockManager.blocks.find(b => b.id === blockManager.focusedBlockId);
+  const currentBlockType = currentBlock?.type;
+  const currentBlockStyle = currentBlock?.style || 'normal';
+
+  // キーボードナビゲーション（現在のブロック情報付き）
+  const keyboardNavigationWithBlockInfo = useKeyboardNavigation(
+    keyboardConfig, 
+    keyboardHandlers,
+    currentBlockType,
+    currentBlockStyle
+  );
+
   useEffect(() => {
     loadEmailTemplates();
   }, []);
+
+  // 初期フォーカスの設定
+  useEffect(() => {
+    if (blockManager.blocks.length > 0 && !blockManager.focusedBlockId) {
+      blockManager.focusBlockWithCursor(blockManager.blocks[0].id);
+    }
+  }, [blockManager.blocks, blockManager.focusedBlockId, blockManager.focusBlockWithCursor]);
+
+  // ブロック変更時にアンドゥ/リドゥの状態を保存
+  useEffect(() => {
+    if (blockManager.blocks.length > 0) {
+      undoRedo.saveState(blockManager.blocks, blockManager.focusedBlockId);
+    }
+  }, [blockManager.blocks, blockManager.focusedBlockId, undoRedo]);
+
+  // キーボードナビゲーションの現在ブロックIDを同期
+  useEffect(() => {
+    keyboardNavigationWithBlockInfo.setCurrentBlockId(blockManager.focusedBlockId);
+  }, [blockManager.focusedBlockId, keyboardNavigationWithBlockInfo]);
 
   const loadEmailTemplates = async () => {
     try {
@@ -161,8 +278,8 @@ function App() {
             onBlockAdd={blockManager.addBlock}
             onBlockDelete={blockManager.deleteBlock}
             onBlockMove={blockManager.moveBlock}
-            selectedBlockId={blockManager.selectedBlockId}
-            onBlockSelect={blockManager.selectBlock}
+            focusedBlockId={blockManager.focusedBlockId}
+            onBlockFocus={blockManager.focusBlock}
             onBlockStyleChange={blockManager.changeBlockStyle}
           />
         </div>
