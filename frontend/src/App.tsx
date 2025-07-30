@@ -17,6 +17,7 @@ import { AddressBookManager } from './components/AddressBookManager';
 import { BlockType } from './types';
 import { useBlockManager, usePreviewManager, useAddressBookManager } from './hooks';
 import { BlockOperationService, MailOperationService } from './services';
+import { ErrorHandlerService, ErrorCategory } from './services/errorHandlerService';
 import './App.css';
 
 function App() {
@@ -33,11 +34,12 @@ function App() {
       blockManager.selectBlock(importedBlocks.length > 0 ? importedBlocks[0].id : null);
 
       const message = BlockOperationService.generateImportMessage(importedBlocks);
-      console.log(message);
-      alert(message);
+      ErrorHandlerService.showInfo(message);
     } catch (error) {
-      console.error('クリップボードの読み込みに失敗しました:', error);
-      alert(`クリップボードの読み込みに失敗しました: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      ErrorHandlerService.handleError(
+        error instanceof Error ? error : new Error('クリップボードの読み込みに失敗しました'),
+        ErrorCategory.CLIPBOARD
+      );
     }
   };
 
@@ -49,11 +51,12 @@ function App() {
       blockManager.selectBlock(importedBlocks.length > 0 ? importedBlocks[0].id : null);
 
       const message = BlockOperationService.generateImportMessage(importedBlocks);
-      console.log(message);
-      alert(message);
+      ErrorHandlerService.showInfo(message);
     } catch (error) {
-      console.error('テキストの読み込みに失敗しました:', error);
-      alert(`テキストの読み込みに失敗しました: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      ErrorHandlerService.handleError(
+        error instanceof Error ? error : new Error('テキストの読み込みに失敗しました'),
+        ErrorCategory.VALIDATION
+      );
     }
   };
 
@@ -62,13 +65,18 @@ function App() {
     try {
       const success = await BlockOperationService.downloadHtmlFile(blockManager.blocks);
       if (success) {
-        alert('HTMLファイルがダウンロードされました');
+        ErrorHandlerService.showSuccess('HTMLファイルがダウンロードされました');
       } else {
-        alert('HTMLファイルのダウンロードに失敗しました');
+        ErrorHandlerService.handleError(
+          'HTMLファイルのダウンロードに失敗しました',
+          ErrorCategory.FILE_OPERATION
+        );
       }
     } catch (error) {
-      console.error('HTMLダウンロードエラー:', error);
-      alert('HTMLファイルのダウンロードに失敗しました');
+      ErrorHandlerService.handleError(
+        error instanceof Error ? error : new Error('HTMLファイルのダウンロードに失敗しました'),
+        ErrorCategory.FILE_OPERATION
+      );
     }
   };
 
@@ -77,13 +85,18 @@ function App() {
     try {
       const success = await BlockOperationService.copyHtmlToClipboard(blockManager.blocks);
       if (success) {
-        alert('HTMLがクリップボードにコピーされました');
+        ErrorHandlerService.showSuccess('HTMLがクリップボードにコピーされました');
       } else {
-        alert('HTMLのコピーに失敗しました');
+        ErrorHandlerService.handleError(
+          'HTMLのコピーに失敗しました',
+          ErrorCategory.CLIPBOARD
+        );
       }
     } catch (error) {
-      console.error('クリップボードへのコピーに失敗しました:', error);
-      alert('クリップボードへのコピーに失敗しました');
+      ErrorHandlerService.handleError(
+        error instanceof Error ? error : new Error('クリップボードへのコピーに失敗しました'),
+        ErrorCategory.CLIPBOARD
+      );
     }
   };
 
@@ -92,15 +105,18 @@ function App() {
     // 前提条件チェック
     const validation = MailOperationService.validateMailSendConditions(blockManager.blocks);
     if (!validation.isValid) {
-      alert(validation.error);
+      ErrorHandlerService.handleError(
+        validation.error || 'メール送信の前提条件を満たしていません',
+        ErrorCategory.VALIDATION
+      );
       return;
     }
 
     // メール送信の詳細設定
-    const subject = prompt('件名を入力してください:', 'HTML Editor - ドキュメント');
+    const subject = ErrorHandlerService.showPrompt('件名を入力してください:', 'HTML Editor - ドキュメント');
     if (!subject) return;
 
-    const additionalEmails = prompt('追加受信者のメールアドレスを入力してください（複数の場合はカンマ区切り）:');
+    const additionalEmails = ErrorHandlerService.showPrompt('追加受信者のメールアドレスを入力してください（複数の場合はカンマ区切り）:');
 
     try {
       const result = await MailOperationService.sendMail({
@@ -111,13 +127,18 @@ function App() {
       });
 
       if (result.success) {
-        alert(`メール送信が完了しました。\n送信先: ${result.recipients.join(', ')}`);
+        ErrorHandlerService.showSuccess(`メール送信が完了しました。\n送信先: ${result.recipients.join(', ')}`);
       } else {
-        alert(`メール送信に失敗しました: ${result.error}`);
+        ErrorHandlerService.handleError(
+          result.error || 'メール送信に失敗しました',
+          ErrorCategory.NETWORK
+        );
       }
     } catch (error) {
-      console.error('メール送信エラー:', error);
-      alert(`メール送信に失敗しました: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      ErrorHandlerService.handleError(
+        error instanceof Error ? error : new Error('メール送信に失敗しました'),
+        ErrorCategory.NETWORK
+      );
     }
   };
 

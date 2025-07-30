@@ -12,6 +12,8 @@
 import { Block } from '../types';
 import { apiService } from './apiService';
 import { clipboardService } from './clipboardService';
+import { ErrorHandlerService, ErrorCategory } from './errorHandlerService';
+import { ValidationService } from './validationService';
 
 export interface MailSendRequest {
   blocks: Block[];
@@ -35,6 +37,15 @@ export class MailOperationService {
    */
   static async sendMail(request: MailSendRequest): Promise<MailSendResult> {
     try {
+      // ブロックのバリデーション
+      const blockValidation = ValidationService.validateBlocks(request.blocks);
+      if (!blockValidation.isValid) {
+        ErrorHandlerService.handleError(
+          `メール送信するブロックに問題があります: ${blockValidation.errors.join(', ')}`,
+          ErrorCategory.VALIDATION
+        );
+      }
+
       // 共通IDの確認
       const commonId = await this.validateAndGetCommonId(request.commonId);
       
@@ -57,7 +68,11 @@ export class MailOperationService {
         recipients: result.recipients,
       };
     } catch (error) {
-      console.error('メール送信エラー:', error);
+      ErrorHandlerService.handleError(
+        error instanceof Error ? error : new Error('メール送信エラー'),
+        ErrorCategory.NETWORK
+      );
+      
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       return {
         success: false,
@@ -72,33 +87,43 @@ export class MailOperationService {
    */
   private static async validateAndGetCommonId(commonId?: string | null): Promise<string> {
     if (!commonId) {
-      const inputCommonId = prompt('メール送信用の共通IDを入力してください:');
+      const inputCommonId = ErrorHandlerService.showPrompt('メール送信用の共通IDを入力してください:');
       if (!inputCommonId) {
         throw new Error('共通IDが入力されませんでした');
       }
       commonId = inputCommonId;
     }
 
+    // 共通IDのバリデーション
+    const validation = ValidationService.validateCommonId(commonId);
+    if (!validation.isValid) {
+      ErrorHandlerService.handleError(
+        `共通IDに問題があります: ${validation.errors.join(', ')}`,
+        ErrorCategory.VALIDATION
+      );
+    }
+
     try {
       // 共通IDの存在確認
       const validation = await apiService.validateAddressBook({ common_id: commonId });
       if (!validation.exists) {
-        // eslint-disable-next-line no-restricted-globals
-        const create = confirm('指定された共通IDのアドレス帳が存在しません。新しく作成しますか？');
+        const create = ErrorHandlerService.showConfirm('指定された共通IDのアドレス帳が存在しません。新しく作成しますか？');
         if (!create) {
           throw new Error('アドレス帳の作成がキャンセルされました');
         }
         
         await apiService.createAddressBook(commonId);
-        alert('アドレス帳を作成しました。連絡先を追加してからメールを送信してください。');
+        ErrorHandlerService.showInfo('アドレス帳を作成しました。連絡先を追加してからメールを送信してください。');
         throw new Error('アドレス帳が新規作成されました。連絡先を追加してから再度送信してください。');
       }
       
       return commonId;
     } catch (error) {
-      console.error('共通ID確認エラー:', error);
-      const errorMessage = error instanceof Error ? error.message : '不明なエラー';
-      alert(`共通IDの確認に失敗しました。\n\nエラー詳細: ${errorMessage}\n\nバックエンドサーバーが起動していることを確認してください。`);
+      ErrorHandlerService.handleError(
+        error instanceof Error ? error : new Error('共通ID確認エラー'),
+        ErrorCategory.NETWORK,
+        { throwError: true }
+      );
       throw error;
     }
   }
@@ -107,13 +132,10 @@ export class MailOperationService {
    * メール送信の前提条件チェック
    */
   static validateMailSendConditions(blocks: Block[]): { isValid: boolean; error?: string } {
-    if (blocks.length === 0) {
-      return {
-        isValid: false,
-        error: '送信するコンテンツがありません'
-      };
-    }
-
-    return { isValid: true };
+    const validation = ValidationService.validateBlocks(blocks);
+    return {
+      isValid: validation.isValid,
+      error: validation.errors.length > 0 ? validation.errors.join(', ') : undefined
+    };
   }
 } 

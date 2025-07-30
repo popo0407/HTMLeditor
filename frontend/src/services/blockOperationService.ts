@@ -11,6 +11,8 @@
 
 import { Block, BlockType } from '../types';
 import { clipboardService } from './clipboardService';
+import { ErrorHandlerService, ErrorCategory } from './errorHandlerService';
+import { ValidationService } from './validationService';
 
 /**
  * ブロックタイプの表示名を取得
@@ -40,9 +42,23 @@ export class BlockOperationService {
   static async importFromClipboard(): Promise<Block[]> {
     try {
       const importedBlocks = await clipboardService.importFromClipboard();
+      
+      // バリデーション
+      const validation = ValidationService.validateBlocks(importedBlocks);
+      if (!validation.isValid) {
+        ErrorHandlerService.handleError(
+          `インポートされたブロックに問題があります: ${validation.errors.join(', ')}`,
+          ErrorCategory.VALIDATION
+        );
+      }
+      
       return importedBlocks;
     } catch (error) {
-      console.error('クリップボードの読み込みに失敗しました:', error);
+      ErrorHandlerService.handleError(
+        error instanceof Error ? error : new Error('クリップボードの読み込みに失敗しました'),
+        ErrorCategory.CLIPBOARD,
+        { throwError: true }
+      );
       throw error;
     }
   }
@@ -53,9 +69,23 @@ export class BlockOperationService {
   static importFromText(htmlText: string): Block[] {
     try {
       const importedBlocks = clipboardService.importFromText(htmlText);
+      
+      // バリデーション
+      const validation = ValidationService.validateBlocks(importedBlocks);
+      if (!validation.isValid) {
+        ErrorHandlerService.handleError(
+          `インポートされたブロックに問題があります: ${validation.errors.join(', ')}`,
+          ErrorCategory.VALIDATION
+        );
+      }
+      
       return importedBlocks;
     } catch (error) {
-      console.error('テキストの読み込みに失敗しました:', error);
+      ErrorHandlerService.handleError(
+        error instanceof Error ? error : new Error('テキストの読み込みに失敗しました'),
+        ErrorCategory.VALIDATION,
+        { throwError: true }
+      );
       throw error;
     }
   }
@@ -87,6 +117,15 @@ export class BlockOperationService {
    */
   static async downloadHtmlFile(blocks: Block[]): Promise<boolean> {
     try {
+      // バリデーション
+      const validation = ValidationService.validateBlocks(blocks);
+      if (!validation.isValid) {
+        ErrorHandlerService.handleError(
+          `ダウンロードするブロックに問題があります: ${validation.errors.join(', ')}`,
+          ErrorCategory.VALIDATION
+        );
+      }
+
       // ファイル名を生成
       let filename = 'document';
       
@@ -131,6 +170,15 @@ export class BlockOperationService {
         }
       }
       
+      // ファイル名のバリデーション
+      const filenameValidation = ValidationService.validateFilename(filename);
+      if (!filenameValidation.isValid) {
+        ErrorHandlerService.handleError(
+          `ファイル名に問題があります: ${filenameValidation.errors.join(', ')}`,
+          ErrorCategory.VALIDATION
+        );
+      }
+      
       // 年月日を追加
       const today = new Date();
       const dateStr = today.getFullYear().toString() +
@@ -142,7 +190,11 @@ export class BlockOperationService {
       const success = await clipboardService.downloadHtmlFile(blocks, finalFilename);
       return success;
     } catch (error) {
-      console.error('HTMLダウンロードエラー:', error);
+      ErrorHandlerService.handleError(
+        error instanceof Error ? error : new Error('HTMLダウンロードエラー'),
+        ErrorCategory.FILE_OPERATION,
+        { throwError: true }
+      );
       throw error;
     }
   }
@@ -152,10 +204,23 @@ export class BlockOperationService {
    */
   static async copyHtmlToClipboard(blocks: Block[]): Promise<boolean> {
     try {
+      // バリデーション
+      const validation = ValidationService.validateBlocks(blocks);
+      if (!validation.isValid) {
+        ErrorHandlerService.handleError(
+          `コピーするブロックに問題があります: ${validation.errors.join(', ')}`,
+          ErrorCategory.VALIDATION
+        );
+      }
+
       const success = await clipboardService.copyHtmlToClipboard(blocks);
       return success;
     } catch (error) {
-      console.error('クリップボードへのコピーに失敗しました:', error);
+      ErrorHandlerService.handleError(
+        error instanceof Error ? error : new Error('クリップボードへのコピーに失敗しました'),
+        ErrorCategory.CLIPBOARD,
+        { throwError: true }
+      );
       throw error;
     }
   }
