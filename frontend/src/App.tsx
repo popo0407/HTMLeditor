@@ -43,8 +43,36 @@ function App() {
     currentCommonId: null,
     contacts: [],
     isPreviewMode: false,
+    previewHtml: '',
   });
 
+  // プレビューHTMLの生成と更新
+  useEffect(() => {
+    const generatePreview = async () => {
+      if (appState.blocks.length > 0) {
+        try {
+          const previewHtml = await clipboardService.blocksToPreviewHtml(appState.blocks);
+          setAppState(prev => ({
+            ...prev,
+            previewHtml
+          }));
+        } catch (error) {
+          console.error('プレビューHTML生成エラー:', error);
+          setAppState(prev => ({
+            ...prev,
+            previewHtml: '<p>プレビューの生成に失敗しました</p>'
+          }));
+        }
+      } else {
+        setAppState(prev => ({
+          ...prev,
+          previewHtml: ''
+        }));
+      }
+    };
+
+    generatePreview();
+  }, [appState.blocks]);
 
 
   // ブロック追加ハンドラー（F-001-2対応）
@@ -467,109 +495,10 @@ function App() {
               <h3>👁 プレビューエリア</h3>
             </div>
             <div className="pane-content">
-              <style>
-                {`
-                  .preview-content {
-                    font-family: 'Hiragino Sans', 'Yu Gothic', 'Meiryo', sans-serif;
-                    line-height: 1.6;
-                    color: #333;
-                    padding: 16px;
-                    word-wrap: break-word;
-                    overflow-wrap: break-word;
-                    width: 100%;
-                    min-width: 0;
-                    box-sizing: border-box;
-                  }
-                  .preview-content h1, .preview-content h2, .preview-content h3 { 
-                    margin-top: 24px; 
-                    margin-bottom: 16px; 
-                  }
-                  .preview-content h2 { 
-                    color: #2c3e50; 
-                    border-bottom: 3px solid #3498db; 
-                    padding-bottom: 10px; 
-                    margin-top: 30px; 
-                  }
-                  .preview-content h3 { 
-                    color: #34495e; 
-                    margin-top: 25px; 
-                  }
-                  .preview-content p { 
-                    margin: 12px 0; 
-                  }
-                  .preview-content ul { 
-                    margin: 10px 0; 
-                    padding-left: 25px; 
-                  }
-                  .preview-content li { 
-                    margin: 5px 0; 
-                  }
-                  .preview-content hr { 
-                    margin: 24px 0; 
-                    border: none; 
-                    height: 2px; 
-                    background-color: #ddd; 
-                  }
-                  .preview-content table { 
-                    width: 100%; 
-                    border-collapse: collapse; 
-                    margin: 15px 0; 
-                  }
-                  .preview-content th, .preview-content td { 
-                    border: 1px solid #ddd; 
-                    padding: 12px; 
-                    text-align: left; 
-                  }
-                  .preview-content th { 
-                    background-color: #f8f9fa; 
-                    font-weight: bold; 
-                  }
-                  .preview-content img { 
-                    max-width: 100%; 
-                    height: auto; 
-                    border-radius: 4px; 
-                  }
-                  .preview-content table.important th {
-                    background-color: rgba(255, 193, 7, 0.3) !important;
-                    border-bottom: 2px solid #ffc107 !important;
-                    font-weight: bold;
-                  }
-                  .preview-content table.action-item th {
-                    background-color: rgba(40, 167, 69, 0.2) !important;
-                    border-bottom: 2px solid #28a745 !important;
-                    font-weight: bold;
-                  }
-                  .preview-content .important {
-                    background-color: #fff3cd;
-                    border-left: 4px solid #ffc107;
-                    padding: 15px;
-                    margin: 15px 0;
-                    border-radius: 4px;
-                  }
-                  .preview-content .action-item {
-                    background-color: #d4edda;
-                    border-left: 4px solid #28a745;
-                    padding: 15px;
-                    margin: 15px 0;
-                    border-radius: 4px;
-                  }
-                  .preview-content table.important {
-                    background-color: #fff3cd;
-                    border-left: 4px solid #ffc107;
-                    padding: 15px;
-                    margin: 15px 0;
-                    border-radius: 4px;
-                  }
-                  .preview-content table.action-item {
-                    background-color: #d4edda;
-                    border-left: 4px solid #28a745;
-                    padding: 15px;
-                    margin: 15px 0;
-                    border-radius: 4px;
-                  }
-                `}
-              </style>
-              <PreviewContent blocks={appState.blocks} />
+              <div 
+                className="preview-content"
+                dangerouslySetInnerHTML={{ __html: appState.previewHtml }}
+              />
             </div>
           </div>
         </div>
@@ -586,165 +515,3 @@ function App() {
 }
 
 export default App;
-
-// プレビューコンテンツ用の非同期コンポーネント
-const PreviewContent: React.FC<{ blocks: Block[] }> = ({ blocks }) => {
-  const [previewHtml, setPreviewHtml] = useState<string>('');
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
-  const previewRef = useRef<HTMLDivElement>(null);
-  const lastBlocksRef = useRef<string>('');
-
-  useEffect(() => {
-    const generatePreview = async () => {
-      try {
-        // ブロックの変更をチェック（より詳細な比較）
-        const currentBlocksString = JSON.stringify(blocks.map(b => ({ 
-          id: b.id, 
-          type: b.type, 
-          content: b.content,
-          style: b.style, // スタイルも含める
-          calendarData: b.calendarData // カレンダーデータも含める
-        })));
-        
-        console.log('ブロック変更検出デバッグ:');
-        console.log('- 現在のブロック数:', blocks.length);
-        console.log('- 現在のブロックスタイル:', blocks.map(b => ({ id: b.id, style: b.style })));
-        console.log('- 現在のブロック文字列:', currentBlocksString);
-        console.log('- 前回のブロック文字列:', lastBlocksRef.current);
-        console.log('- 文字列一致:', currentBlocksString === lastBlocksRef.current);
-        console.log('- プレビューHTML存在:', previewHtml !== '');
-        
-        if (currentBlocksString === lastBlocksRef.current && previewHtml !== '') {
-          console.log('ブロックに変更がないため、プレビュー生成をスキップ');
-          return;
-        }
-        
-        console.log('ブロックに変更を検知、プレビュー生成を実行');
-        console.log('前回のブロック:', lastBlocksRef.current);
-        console.log('現在のブロック:', currentBlocksString);
-        lastBlocksRef.current = currentBlocksString;
-        
-        setIsLoading(true);
-        setError(null);
-        
-        console.log('=== プレビュー生成開始 ===');
-        console.log('ブロック数:', blocks.length);
-        console.log('ブロックID一覧:', blocks.map(b => b.id));
-        console.log('ブロックタイプ一覧:', blocks.map(b => b.type));
-        console.log('ブロック内容サンプル:', blocks.slice(0, 2).map(b => ({ id: b.id, type: b.type, content: b.content.substring(0, 50) })));
-        
-        const html = await clipboardService.blocksToPreviewHtml(blocks);
-        console.log('プレビューHTML長さ:', html.length);
-        console.log('プレビューHTML全体:', html);
-        console.log('プレビューHTMLに.preview-contentクラスが含まれているか:', html.includes('preview-content'));
-        
-        if (!html || html.trim() === '') {
-          console.warn('プレビューHTMLが空です');
-          setPreviewHtml('<div class="preview-content"><p>プレビューコンテンツが空です</p><p>ブロック数: ' + blocks.length + '</p></div>');
-        } else {
-          console.log('プレビューHTML設定完了');
-          setPreviewHtml(html);
-        }
-      } catch (error) {
-        console.error('プレビューHTML生成エラー:', error);
-        
-        // フォールバック: シンプルなHTML生成
-        try {
-          const fallbackHtml = blocks.map(block => {
-            switch (block.type) {
-              case 'heading1':
-                return `<h1>${block.content}</h1>`;
-              case 'heading2':
-                return `<h2>${block.content}</h2>`;
-              case 'heading3':
-                return `<h3>${block.content}</h3>`;
-              case 'paragraph':
-                return `<p>${block.content}</p>`;
-              case 'bulletList':
-                const items = block.content.split('\n')
-                  .filter(item => item.trim())
-                  .map(item => `<li>${item}</li>`)
-                  .join('');
-                return `<ul>${items}</ul>`;
-              case 'table':
-                return `<p>テーブル: ${block.content}</p>`;
-              case 'calendar':
-                return `<p>カレンダー: ${block.content}</p>`;
-              default:
-                return `<p>${block.content}</p>`;
-            }
-          }).join('');
-          
-          setPreviewHtml(`<div class="preview-content">${fallbackHtml}</div>`);
-        } catch (fallbackError) {
-          console.error('フォールバックHTML生成エラー:', fallbackError);
-          setError(error instanceof Error ? error.message : 'Unknown error');
-        }
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    // ブロックが変更されたら即座にプレビューを更新
-    generatePreview();
-  }, [blocks]); // blocksの変更を監視
-
-  // HTMLを動的に挿入し、JavaScriptを実行
-  useEffect(() => {
-    if (previewRef.current && previewHtml) {
-      // 既存のコンテンツをクリア
-      previewRef.current.innerHTML = '';
-      
-      // 新しいHTMLを挿入
-      previewRef.current.innerHTML = previewHtml;
-      
-      // スクリプトタグを実行
-      const scripts = previewRef.current.querySelectorAll('script');
-      scripts.forEach((script: Element) => {
-        const scriptElement = script as HTMLScriptElement;
-        const newScript = document.createElement('script');
-        if (scriptElement.src) {
-          newScript.src = scriptElement.src;
-        } else {
-          newScript.textContent = scriptElement.textContent || '';
-        }
-        scriptElement.parentNode?.replaceChild(newScript, scriptElement);
-      });
-    }
-  }, [previewHtml]);
-
-  if (isLoading) {
-    return (
-      <div className="preview-content">
-        <p>プレビューを生成中...</p>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="preview-content">
-        <p>プレビューの生成中にエラーが発生しました: {error}</p>
-        <p>ブロック数: {blocks.length}</p>
-      </div>
-    );
-  }
-
-  return (
-    <div 
-      ref={previewRef}
-    >
-      {previewHtml ? (
-        <div dangerouslySetInnerHTML={{ __html: previewHtml }} />
-      ) : (
-        <div className="preview-content">
-          <p>プレビューコンテンツがありません</p>
-          <p>ブロック数: {blocks.length}</p>
-          <p>ローディング状態: {isLoading ? '読み込み中' : '完了'}</p>
-          <p>エラー: {error || 'なし'}</p>
-        </div>
-      )}
-    </div>
-  );
-};

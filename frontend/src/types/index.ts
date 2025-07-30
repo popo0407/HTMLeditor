@@ -117,4 +117,5 @@ export interface AppState {
   currentCommonId: string | null;
   contacts: Contact[];
   isPreviewMode: boolean;
+  previewHtml: string;
 }

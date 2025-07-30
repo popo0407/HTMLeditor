@@ -350,11 +350,11 @@ class ClipboardService {
     const normalizedHtml = this.normalizeHtml(html);
     const blocks: Block[] = [];
     
-    // bulletListの抽出
-    const listMatches = normalizedHtml.match(/<ul[^>]*data-block-type="bulletList"[^>]*>(.*?)<\/ul>/gs);
+    // bulletListの抽出（正規表現フラグを修正）
+    const listMatches = normalizedHtml.match(/<ul[^>]*data-block-type="bulletList"[^>]*>([\s\S]*?)<\/ul>/g);
     if (listMatches) {
       listMatches.forEach((match, index) => {
-        const listItems = match.match(/<li[^>]*>(.*?)<\/li>/gs);
+        const listItems = match.match(/<li[^>]*>([\s\S]*?)<\/li>/g);
         if (listItems) {
           const content = listItems
             .map(item => {
@@ -376,8 +376,8 @@ class ClipboardService {
       });
     }
     
-    // paragraphの抽出
-    const paragraphMatches = normalizedHtml.match(/<p[^>]*data-block-type="paragraph"[^>]*>(.*?)<\/p>/gs);
+    // paragraphの抽出（正規表現フラグを修正）
+    const paragraphMatches = normalizedHtml.match(/<p[^>]*data-block-type="paragraph"[^>]*>([\s\S]*?)<\/p>/g);
     if (paragraphMatches) {
       paragraphMatches.forEach((match, index) => {
         let content = match.replace(/<p[^>]*data-block-type="paragraph"[^>]*>/, '').replace(/<\/p>/, '');
@@ -749,6 +749,109 @@ class ClipboardService {
   }
 
   /**
+   * 共通のHTMLスタイルを生成
+   */
+  private generateCommonHtmlStyles(): string {
+    return `
+    body { 
+      font-family: 'Hiragino Sans', 'Yu Gothic', 'Meiryo', sans-serif; 
+      line-height: 1.6; 
+      color: #333;
+      max-width: 800px; 
+      margin: 0 auto; 
+      padding: 20px; 
+    }
+    h1, h2, h3 { margin-top: 24px; margin-bottom: 16px; }
+    h2 { 
+      color: #2c3e50; 
+      border-bottom: 3px solid #3498db; 
+      padding-bottom: 10px; 
+      margin-top: 30px; 
+    }
+    h3 { color: #34495e; margin-top: 25px; }
+    p { margin: 12px 0; }
+    ul { margin: 10px 0; padding-left: 25px; }
+    li { margin: 5px 0; }
+    hr { margin: 24px 0; border: none; height: 2px; background-color: #ddd; }
+    table { 
+      width: 100%; 
+      border-collapse: collapse; 
+      margin: 15px 0; 
+    }
+    th, td { 
+      border: 1px solid #ddd; 
+      padding: 12px; 
+      text-align: left; 
+    }
+    th { background-color: #f8f9fa; font-weight: bold; }
+    img { max-width: 100%; height: auto; border-radius: 4px; }
+    
+    /* 特別なブロックスタイル */
+    .action-item {
+      background-color: #d4edda;
+      border-left: 4px solid #28a745;
+      padding: 15px;
+      margin: 15px 0;
+      border-radius: 4px;
+    }
+    .important {
+      background-color: #fff3cd;
+      border-left: 4px solid #ffc107;
+      padding: 15px;
+      margin: 15px 0;
+      border-radius: 4px;
+    }
+    
+    /* 強調表示時のテーブルヘッダースタイル */
+    table.important th {
+      background-color: rgba(255, 193, 7, 0.3) !important;
+      border-bottom: 2px solid #ffc107 !important;
+      font-weight: bold;
+    }
+    table.action-item th {
+      background-color: rgba(40, 167, 69, 0.2) !important;
+      border-bottom: 2px solid #28a745 !important;
+      font-weight: bold;
+    }
+    
+    /* 強調表示テーブル全体のスタイル */
+    table.important {
+      background-color: #fff3cd;
+      border-left: 4px solid #ffc107;
+      padding: 15px;
+      margin: 15px 0;
+      border-radius: 4px;
+    }
+    table.action-item {
+      background-color: #d4edda;
+      border-left: 4px solid #28a745;
+      padding: 15px;
+      margin: 15px 0;
+      border-radius: 4px;
+    }`;
+  }
+
+  /**
+   * 共通のHTMLテンプレートを生成
+   */
+  private generateHtmlTemplate(htmlParts: string[], title: string = 'HTMLエディタで作成されたドキュメント'): string {
+    return `<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${title}</title>
+  <style>
+${this.generateCommonHtmlStyles()}
+  </style>
+</head>
+<body>
+${htmlParts.join('\n')}
+</body>
+</html>`;
+  }
+
+  /**
    * Teams向けメール用HTMLを生成（最適化されたスタイル）
    */
   blocksToTeamsHtml(blocks: Block[]): string {
@@ -908,98 +1011,12 @@ ${htmlParts.join('\n')}
   /**
    * ブロック構造からHTMLを生成（F-001-5, F-003-1対応）
    */
-  blocksToHtml(blocks: Block[]): string {
-    const htmlParts = blocks.map(block => this.blockToHtml(block));
-    
-    return `<!DOCTYPE html>
-<html lang="ja">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>HTMLエディタで作成されたドキュメント</title>
-  <style>
-    body { 
-      font-family: 'Hiragino Sans', 'Yu Gothic', 'Meiryo', sans-serif; 
-      line-height: 1.6; 
-      color: #333;
-      max-width: 800px; 
-      margin: 0 auto; 
-      padding: 20px; 
-    }
-    h1, h2, h3 { margin-top: 24px; margin-bottom: 16px; }
-    h2 { 
-      color: #2c3e50; 
-      border-bottom: 3px solid #3498db; 
-      padding-bottom: 10px; 
-      margin-top: 30px; 
-    }
-    h3 { color: #34495e; margin-top: 25px; }
-    p { margin: 12px 0; }
-    ul { margin: 10px 0; padding-left: 25px; }
-    li { margin: 5px 0; }
-    hr { margin: 24px 0; border: none; height: 2px; background-color: #ddd; }
-    table { 
-      width: 100%; 
-      border-collapse: collapse; 
-      margin: 15px 0; 
-    }
-    th, td { 
-      border: 1px solid #ddd; 
-      padding: 12px; 
-      text-align: left; 
-    }
-    th { background-color: #f8f9fa; font-weight: bold; }
-    img { max-width: 100%; height: auto; border-radius: 4px; }
-    
-    /* 特別なブロックスタイル */
-    .action-item {
-      background-color: #d4edda;
-      border-left: 4px solid #28a745;
-      padding: 15px;
-      margin: 15px 0;
-      border-radius: 4px;
-    }
-    .important {
-      background-color: #fff3cd;
-      border-left: 4px solid #ffc107;
-      padding: 15px;
-      margin: 15px 0;
-      border-radius: 4px;
-    }
-    
-    /* 強調表示時のテーブルヘッダースタイル */
-    table.important th {
-      background-color: rgba(255, 193, 7, 0.3) !important;
-      border-bottom: 2px solid #ffc107 !important;
-      font-weight: bold;
-    }
-    table.action-item th {
-      background-color: rgba(40, 167, 69, 0.2) !important;
-      border-bottom: 2px solid #28a745 !important;
-      font-weight: bold;
-    }
-    
-    /* 強調表示テーブル全体のスタイル */
-    table.important {
-      background-color: #fff3cd;
-      border-left: 4px solid #ffc107;
-      padding: 15px;
-      margin: 15px 0;
-      border-radius: 4px;
-    }
-    table.action-item {
-      background-color: #d4edda;
-      border-left: 4px solid #28a745;
-      padding: 15px;
-      margin: 15px 0;
-      border-radius: 4px;
-    }
-  </style>
-</head>
-<body>
-${htmlParts.join('\n')}
-</body>
-</html>`;
+  async blocksToHtml(blocks: Block[]): Promise<string> {
+    const htmlParts = await Promise.all(blocks.map(async block => {
+      const html = await this.blockToHtml(block);
+      return html;
+    }));
+    return this.generateHtmlTemplate(htmlParts);
   }
 
   /**
@@ -1011,98 +1028,7 @@ ${htmlParts.join('\n')}
       return html;
     }));
     
-    return `<!DOCTYPE html>
-<html lang="ja">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>HTMLエディタで作成されたドキュメント</title>
-  <style>
-    body { 
-      font-family: 'Hiragino Sans', 'Yu Gothic', 'Meiryo', sans-serif; 
-      line-height: 1.6; 
-      color: #333;
-      max-width: 800px; 
-      margin: 0 auto; 
-      padding: 20px; 
-    }
-    h1, h2, h3 { margin-top: 24px; margin-bottom: 16px; }
-    h2 { 
-      color: #2c3e50; 
-      border-bottom: 3px solid #3498db; 
-      padding-bottom: 10px; 
-      margin-top: 30px; 
-    }
-    h3 { color: #34495e; margin-top: 25px; }
-    p { margin: 12px 0; }
-    ul { margin: 10px 0; padding-left: 25px; }
-    li { margin: 5px 0; }
-    hr { margin: 24px 0; border: none; height: 2px; background-color: #ddd; }
-    table { 
-      width: 100%; 
-      border-collapse: collapse; 
-      margin: 15px 0; 
-    }
-    th, td { 
-      border: 1px solid #ddd; 
-      padding: 12px; 
-      text-align: left; 
-    }
-    th { 
-      background-color: #f8f9fa; 
-      font-weight: bold; 
-    }
-    img { max-width: 100%; height: auto; border-radius: 4px; }
-    
-    /* 特別なブロックスタイル */
-    .action-item {
-      background-color: #d4edda;
-      border-left: 4px solid #28a745;
-      padding: 15px;
-      margin: 15px 0;
-      border-radius: 4px;
-    }
-    .important {
-      background-color: #fff3cd;
-      border-left: 4px solid #ffc107;
-      padding: 15px;
-      margin: 15px 0;
-      border-radius: 4px;
-    }
-    
-    /* 強調表示時のテーブルヘッダースタイル */
-    table.important th {
-      background-color: rgba(255, 193, 7, 0.3) !important;
-      border-bottom: 2px solid #ffc107 !important;
-      font-weight: bold;
-    }
-    table.action-item th {
-      background-color: rgba(40, 167, 69, 0.2) !important;
-      border-bottom: 2px solid #28a745 !important;
-      font-weight: bold;
-    }
-    
-    /* 強調表示テーブル全体のスタイル */
-    table.important {
-      background-color: #fff3cd;
-      border-left: 4px solid #ffc107;
-      padding: 15px;
-      margin: 15px 0;
-      border-radius: 4px;
-    }
-    table.action-item {
-      background-color: #d4edda;
-      border-left: 4px solid #28a745;
-      padding: 15px;
-      margin: 15px 0;
-      border-radius: 4px;
-    }
-  </style>
-</head>
-<body>
-${htmlParts.join('\n')}
-</body>
-</html>`;
+    return this.generateHtmlTemplate(htmlParts);
   }
 
   /**
