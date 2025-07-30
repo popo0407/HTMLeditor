@@ -10,24 +10,39 @@ React + TypeScript + FastAPI で構築されたモダンなブロックベース
 - **高度なテーブル編集**: 行・列の追加・削除、セル編集、ヘッダー行・列の設定
 - **HTML エクスポート**: 作成した文書を HTML ファイルとして保存
 - **クリップボード連携**: HTML コンテンツのインポート・エクスポート
+- **カレンダー機能**: スケジュール管理とカレンダー表示
+- **ガントチャート生成**: プロジェクト管理用のガントチャート作成
+- **メール送信機能**: アドレス帳連携による HTML メール送信
+- **画像管理**: クリップボード画像貼り付け、ドラッグ&ドロップ対応
 - **Snowsight 風 UI**: 洗練されたモダンなユーザーインターフェース
+- **本番環境対応**: IIS での運用とチーム共有機能
 
 ## 🛠 技術スタック
 
 ### フロントエンド
 
 - React 18
-- TypeScript
+- TypeScript 4.9.5
 - CSS3 (Snowsight 風デザイン)
 - カスタムブロックエディタ
+- カレンダー・ガントチャート機能
 
 ### バックエンド
 
-- FastAPI (Python)
-- SQLAlchemy
+- FastAPI 0.104.1
+- SQLAlchemy 2.0.23
 - SQLite
-- Pydantic
+- Pydantic 2.10.1+
+- Plotly 5.17.0 (ガントチャート生成)
+- Pandas 2.1.4 (データ処理)
 - 3-Tier アーキテクチャ
+
+### 開発・運用
+
+- Python 3.8+
+- Node.js 16+
+- IIS (本番環境)
+- NSSM (Windows サービス化)
 
 ## 📦 セットアップ
 
@@ -37,7 +52,7 @@ React + TypeScript + FastAPI で構築されたモダンなブロックベース
 - Python 3.8 以上
 - npm または yarn
 
-### インストール手順
+### 開発環境セットアップ
 
 1. **リポジトリのクローン**
 
@@ -60,7 +75,15 @@ React + TypeScript + FastAPI で構築されたモダンなブロックベース
    pip install -r requirements.txt
    ```
 
-4. **開発サーバーの起動**
+4. **環境変数の設定**
+
+   ```bash
+   # backend/.env ファイルを作成
+   cp backend/.env.example backend/.env
+   # 必要に応じて設定を編集
+   ```
+
+5. **開発サーバーの起動**
 
    バックエンド:
 
@@ -76,9 +99,23 @@ React + TypeScript + FastAPI で構築されたモダンなブロックベース
    npm start
    ```
 
-5. **アプリケーションへのアクセス**
+6. **アプリケーションへのアクセス**
    - フロントエンド: http://localhost:3000
    - バックエンド API: http://localhost:8002
+
+### 本番環境セットアップ
+
+詳細な本番環境構築手順は `CORS_SETUP_GUIDE.md` を参照してください。
+
+#### クイックデプロイ
+
+```powershell
+# 開発PCでパッケージ作成
+.\create-deploy-package.ps1
+
+# 本番サーバーでデプロイ
+.\deploy-to-iis.ps1
+```
 
 ## 📝 使用方法
 
@@ -131,6 +168,34 @@ HTML エディタで以前に出力された HTML や、構造化された HTML 
 - **重要**: 黄色の背景で重要な内容を強調（テーブルヘッダーも黄色系）
 - **アクションアイテム**: 緑色の背景でアクションアイテムを強調（テーブルヘッダーも緑色系）
 
+### カレンダー機能
+
+- **月間カレンダー表示**: イベントを含む月間カレンダー
+- **イベント管理**: 日付、タイトル、期間の設定
+- **HTML エクスポート**: 自己完結型のカレンダー HTML ファイル生成
+- **スケジュール読み込み**: 既存のスケジュールデータの復元
+
+### ガントチャート機能
+
+- **プロジェクト管理**: タスクの開始・終了日設定
+- **視覚的表示**: 期間と依存関係の可視化
+- **土日強調**: 週末の背景色変更
+- **HTML 出力**: インタラクティブなガントチャート HTML 生成
+
+### メール機能
+
+- **アドレス帳連携**: 共通 ID による連絡先管理
+- **HTML メール送信**: 作成した文書をメールで送信
+- **ファイル添付**: HTML ファイルの自動添付
+- **複数宛先対応**: アドレス帳 + 追加メールアドレス
+
+### 画像機能
+
+- **クリップボード貼り付け**: Ctrl+V で画像を直接貼り付け
+- **ドラッグ&ドロップ**: 画像ファイルのドラッグ&ドロップ対応
+- **ファイル選択**: ファイル選択ダイアログによる画像アップロード
+- **自動リサイズ**: 適切なサイズへの自動調整
+
 ## 🧪 テスト
 
 ```bash
@@ -145,10 +210,18 @@ npm test
 ```
 HTMLEditer/
 ├── backend/                    # FastAPI バックエンド
-│   ├── models/                 # データベースモデル
-│   ├── repositories/           # データアクセス層
-│   ├── routes/                 # API層
-│   ├── services/               # ビジネスロジック層
+│   ├── app/
+│   │   ├── config/             # 設定管理
+│   │   ├── models/             # データベースモデル
+│   │   ├── repositories/       # データアクセス層
+│   │   ├── routes/             # API層
+│   │   │   ├── address_book_routes.py
+│   │   │   ├── mail_routes.py
+│   │   │   └── gantt_routes.py
+│   │   └── services/           # ビジネスロジック層
+│   ├── services/               # 外部サービス
+│   │   └── mail_service.py
+│   ├── static/                 # 静的ファイル（ガントチャート画像等）
 │   ├── main.py                 # エントリーポイント
 │   └── requirements.txt
 ├── frontend/                   # React フロントエンド
@@ -157,6 +230,10 @@ HTMLEditer/
 │   │   │   ├── blocks/         # ブロック系コンポーネント
 │   │   │   └── layout/         # レイアウト系コンポーネント
 │   │   ├── services/           # API通信・ビジネスロジック
+│   │   │   ├── apiService.ts
+│   │   │   ├── calendarService.ts
+│   │   │   ├── ganttService.ts
+│   │   │   └── mailOperationService.ts
 │   │   ├── styles/             # CSS・テーマファイル
 │   │   └── types/              # TypeScript型定義
 │   └── package.json
@@ -165,6 +242,9 @@ HTMLEditer/
 ├── 実装方針.md                  # 実装方針
 ├── 実装計画.md                  # 実装計画
 ├── TESTING_GUIDE.md            # テスト手順書
+├── CORS_SETUP_GUIDE.md         # 本番環境構築ガイド
+├── create-deploy-package.ps1   # デプロイパッケージ作成スクリプト
+├── deploy-to-iis.ps1           # IIS デプロイスクリプト
 └── README.md                   # このファイル
 ```
 
@@ -204,11 +284,31 @@ HTMLEditer/
 - [x] アドレス帳連携メール送信
 - [x] HTML ファイル添付機能
 
+### ✅ Phase 5: カレンダー・ガントチャート機能
+
+- [x] カレンダーブロック実装
+- [x] イベント管理機能
+- [x] カレンダー HTML エクスポート
+- [x] スケジュールデータ読み込み
+- [x] ガントチャート生成 API
+- [x] プロジェクト管理機能
+- [x] 土日強調表示
+
+### ✅ Phase 6: 本番環境対応
+
+- [x] IIS デプロイ対応
+- [x] Windows サービス化
+- [x] CORS 設定の環境変数化
+- [x] 自動デプロイスクリプト
+- [x] チーム共有機能
+
 ### 🚧 今後の機能拡張
 
 - [ ] より高度なテーブル操作
 - [ ] 画像編集機能（リサイズ、トリミング）
 - [ ] テンプレート機能
+- [ ] リアルタイム共同編集
+- [ ] バージョン管理機能
 
 ## 🔧 開発者向け情報
 
@@ -217,23 +317,69 @@ HTMLEditer/
 - **BlockEditor**: メインエディタコンポーネント
 - **BlockBase**: 各ブロックの共通基底コンポーネント
 - **TableBlock**: テーブル編集専用コンポーネント
+- **CalendarBlock**: カレンダー表示・編集コンポーネント
 - **ClipboardService**: クリップボード操作サービス
+- **CalendarService**: カレンダー機能サービス
+- **GanttService**: ガントチャート生成サービス
 
 ### API エンドポイント
+
+#### アドレス帳管理
 
 - `POST /api/address-books/validate` - 共通 ID 検証
 - `POST /api/address-books` - アドレス帳作成
 - `POST /api/address-books/{common_id}/contacts` - 連絡先追加
 - `GET /api/address-books/{common_id}/contacts` - 連絡先取得
 
+#### メール送信
+
+- `POST /api/mail/send` - HTML メール送信
+- `GET /api/mail/test-connection` - メールサーバー接続テスト
+
+#### ガントチャート
+
+- `POST /api/gantt/generate-gantt` - ガントチャート生成
+
+### 設定管理
+
+開発憲章の「設定とロジックの分離」原則に従い、以下の設定ファイルで管理：
+
+- `backend/.env` - 環境変数設定
+- `backend/app/config/settings.py` - 設定クラス
+- `frontend/.env` - フロントエンド環境変数
+
+### デプロイメント
+
+#### 開発環境
+
+```bash
+# バックエンド
+cd backend && uvicorn main:app --reload --port 8002
+
+# フロントエンド
+cd frontend && npm start
+```
+
+#### 本番環境
+
+```powershell
+# パッケージ作成
+.\create-deploy-package.ps1
+
+# IIS デプロイ
+.\deploy-to-iis.ps1
+```
+
 ## 💡 開発理念
 
 このプロジェクトは以下の開発憲章に基づいて構築されています：
 
 - **単一責任の原則**: 各コンポーネントは明確な責務を持つ
+- **関心の分離**: プレゼンテーション層、ビジネスロジック層、データアクセス層の明確な分離
 - **設定とロジックの分離**: 設定とビジネスロジックを明確に分離
 - **型安全性の重視**: TypeScript による厳密な型チェック
 - **保守性の優先**: 理解しやすく変更しやすいコード構造
+- **段階的移行**: 既存機能を保護しながらの機能追加
 
 詳細は各設計ドキュメントを参照してください。
 
