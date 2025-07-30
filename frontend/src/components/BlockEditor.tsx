@@ -70,6 +70,7 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
       onTypeChange: onBlockTypeChange,
       onMoveUp: index > 0 ? () => onBlockFocus(blocks[index - 1].id) : undefined,
       onMoveDown: index < blocks.length - 1 ? () => onBlockFocus(blocks[index + 1].id) : undefined,
+      onAddBlock: onBlockAdd,
     };
 
     switch (block.type) {

@@ -30,6 +30,7 @@ export interface CommonBlockProps {
   onTypeChange?: (blockId: string, type: BlockType) => void;
   onMoveUp?: (blockId: string) => void;
   onMoveDown?: (blockId: string) => void;
+  onAddBlock?: (blockType: BlockType, insertAfter?: string) => void;
 }
 
 // テーブルデータ構造

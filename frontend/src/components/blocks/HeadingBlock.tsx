@@ -15,6 +15,7 @@ export const HeadingBlock: React.FC<CommonBlockProps> = (props) => {
   const { block, onUpdate, isSelected } = props;
   const [isEditing, setIsEditing] = useState(false);
   const [content, setContent] = useState(block.content);
+  const [isTypeChanging, setIsTypeChanging] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const lastFocusTimeRef = useRef<number>(0);
   const isInitialFocusRef = useRef<boolean>(false);
@@ -30,6 +31,25 @@ export const HeadingBlock: React.FC<CommonBlockProps> = (props) => {
       setIsEditing(false);
     }
   }, [isSelected, isEditing]);
+
+  // block.contentが変更された時にcontentの状態を更新
+  useEffect(() => {
+    setContent(block.content);
+  }, [block.content]);
+
+  // ブロックタイプが変更された時に編集モードを維持
+  useEffect(() => {
+    if (isEditing && isSelected) {
+      // 編集モードを維持し、フォーカスを保持
+      setTimeout(() => {
+        if (inputRef.current) {
+          inputRef.current.focus();
+          const length = inputRef.current.value.length;
+          inputRef.current.setSelectionRange(length, length);
+        }
+      }, 10);
+    }
+  }, [block.type, isEditing, isSelected]);
 
   useEffect(() => {
     if (isEditing && inputRef.current && isInitialFocusRef.current) {
@@ -80,6 +100,9 @@ export const HeadingBlock: React.FC<CommonBlockProps> = (props) => {
       const currentIndex = blockTypeOrder.indexOf(block.type);
       const nextIndex = (currentIndex + 1) % blockTypeOrder.length;
       const nextType = blockTypeOrder[nextIndex];
+      // 視覚的フィードバックを表示
+      setIsTypeChanging(true);
+      setTimeout(() => setIsTypeChanging(false), 300);
       // ブロックタイプ変更のコールバックを呼ぶ（コンテンツは保持）
       if (props.onTypeChange) {
         props.onTypeChange(block.id, nextType);
@@ -114,7 +137,7 @@ export const HeadingBlock: React.FC<CommonBlockProps> = (props) => {
           onChange={(e) => setContent(e.target.value)}
           onBlur={handleSubmit}
           onKeyDown={handleKeyDown}
-          className={`block-editable ${className}`}
+          className={`block-editable ${className} ${isTypeChanging ? 'type-changing' : ''}`}
         />
       );
     }

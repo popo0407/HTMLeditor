@@ -89,9 +89,9 @@ export const useKeyboardNavigation = (
 
     const { key, ctrlKey, shiftKey, altKey } = event;
 
-    // 入力フィールド内での操作は除外（Enterキーは除く）
+    // 入力フィールド内での操作は除外
     const target = event.target as HTMLElement;
-    if ((target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.contentEditable === 'true') && key !== 'Enter') {
+    if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.contentEditable === 'true') {
       return;
     }
 

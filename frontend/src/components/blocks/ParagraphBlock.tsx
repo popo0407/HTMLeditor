@@ -31,6 +31,11 @@ export const ParagraphBlock: React.FC<CommonBlockProps> = (props) => {
     }
   }, [isSelected, isEditing]);
 
+  // block.contentが変更された時にcontentの状態を更新
+  useEffect(() => {
+    setContent(block.content);
+  }, [block.content]);
+
   useEffect(() => {
     if (isEditing && textareaRef.current && isInitialFocusRef.current) {
       textareaRef.current.focus();
@@ -68,6 +73,17 @@ export const ParagraphBlock: React.FC<CommonBlockProps> = (props) => {
     if (e.key === 'Escape') {
       setContent(block.content);
       setIsEditing(false);
+    }
+    // Enter: 現在の内容を保存して新しい段落ブロックを作成
+    if (e.key === 'Enter' && !e.ctrlKey && !e.shiftKey) {
+      e.preventDefault();
+      e.stopPropagation();
+      // 現在の内容を保存
+      onUpdate(block.id, content);
+      // 新しい段落ブロックを作成
+      if (props.onAddBlock) {
+        props.onAddBlock('paragraph', block.id);
+      }
     }
     // 上下キーでブロック間移動（カーソル位置に関係なく）
     if (e.key === 'ArrowUp' && props.onMoveUp) {
