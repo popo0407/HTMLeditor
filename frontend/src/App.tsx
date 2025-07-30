@@ -281,6 +281,7 @@ function App() {
             focusedBlockId={blockManager.focusedBlockId}
             onBlockFocus={blockManager.focusBlock}
             onBlockStyleChange={blockManager.changeBlockStyle}
+            onBlockTypeChange={blockManager.changeBlockType}
           />
         </div>
       </main>

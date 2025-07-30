@@ -30,6 +30,7 @@ interface BlockEditorProps {
   onBlockAdd: (blockType: BlockType, insertAfter?: string) => void;
   onBlockMove: (blockId: string, direction: 'up' | 'down') => void;
   onBlockStyleChange: (blockId: string, style: BlockStyle) => void;
+  onBlockTypeChange: (blockId: string, type: BlockType) => void;
 }
 
 export const BlockEditor: React.FC<BlockEditorProps> = ({
@@ -41,6 +42,7 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
   onBlockAdd,
   onBlockMove,
   onBlockStyleChange,
+  onBlockTypeChange,
 }) => {
   // エディタクリック時の処理
   const handleEditorClick = (event: React.MouseEvent) => {
@@ -65,6 +67,7 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
       onUpdate: onBlockUpdate,
       onDelete: onBlockDelete,
       onStyleChange: onBlockStyleChange,
+      onTypeChange: onBlockTypeChange,
       onMoveUp: index > 0 ? () => onBlockFocus(blocks[index - 1].id) : undefined,
       onMoveDown: index < blocks.length - 1 ? () => onBlockFocus(blocks[index + 1].id) : undefined,
     };
@@ -171,8 +174,6 @@ export const BlockEditor: React.FC<BlockEditorProps> = ({
   const renderEmptyState = () => (
     <div className="editor-empty-state">
       <div className="empty-state-content">
-        <h3>コンテンツを作成しましょう</h3>
-        <p>サイドバーからブロックを追加するか、クリップボードからHTMLを読み込んでください。</p>
         <div className="empty-state-actions">
           <button 
             className="btn btn-primary"

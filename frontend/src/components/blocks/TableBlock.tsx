@@ -7,17 +7,34 @@
  * - セル内容の編集
  */
 
-import React, { useRef } from 'react';
+import React, { useRef, useEffect } from 'react';
 import { CommonBlockProps, TableData } from '../../types';
 import { BlockBase } from './BlockBase';
 import { useTableInitializer } from '../../hooks/useTableInitializer';
+import { BlockType, BlockStyle } from '../../types';
 
 export const TableBlock: React.FC<CommonBlockProps> = (props) => {
-  const { block, onUpdate } = props;
+  const { block, onUpdate, isSelected } = props;
   const tableRef = useRef<HTMLTableElement>(null);
+  const lastFocusTimeRef = useRef<number>(0);
   
   // テーブル初期化ロジックをカスタムフックに分離
   const { tableData, setTableData } = useTableInitializer(block, onUpdate);
+
+  // フォーカス状態が変更されたら編集モードに入る
+  useEffect(() => {
+    const now = Date.now();
+    if (isSelected && (now - lastFocusTimeRef.current) > 50) {
+      lastFocusTimeRef.current = now;
+      // テーブルにフォーカスを設定
+      if (tableRef.current) {
+        const firstCell = tableRef.current.querySelector('td input, th input') as HTMLInputElement;
+        if (firstCell) {
+          firstCell.focus();
+        }
+      }
+    }
+  }, [isSelected]);
 
   // 行追加
   const addRow = () => {
@@ -83,9 +100,37 @@ export const TableBlock: React.FC<CommonBlockProps> = (props) => {
     });
   };
 
+  // キーボードイベントハンドラー
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    // 上下キーでブロック間移動（カーソル位置に関係なく）
+    if (e.key === 'ArrowUp' && props.onMoveUp) {
+      e.preventDefault();
+      props.onMoveUp(block.id);
+    }
+    if (e.key === 'ArrowDown' && props.onMoveDown) {
+      e.preventDefault();
+      props.onMoveDown(block.id);
+    }
+    // Shift+Space: 強調切り替え
+    if (e.shiftKey && e.key === ' ') {
+      e.preventDefault();
+      e.stopPropagation();
+      // 現在の強調状態を取得して次の状態に切り替え
+      const blockStyleOrder: BlockStyle[] = ['normal', 'important', 'action-item'];
+      const currentStyle = block.style || 'normal';
+      const currentIndex = blockStyleOrder.indexOf(currentStyle);
+      const nextIndex = (currentIndex + 1) % blockStyleOrder.length;
+      const nextStyle = blockStyleOrder[nextIndex];
+      // 強調変更のコールバックを呼ぶ
+      if (props.onStyleChange) {
+        props.onStyleChange(block.id, nextStyle);
+      }
+    }
+  };
+
   return (
     <BlockBase {...props}>
-      <div className="table-block">
+      <div className="table-block" onKeyDown={handleKeyDown} tabIndex={0}>
         <div className="table-controls">
           <button onClick={addRow} className="table-control-btn">+行</button>
           <button onClick={addColumn} className="table-control-btn">+列</button>

@@ -27,6 +27,7 @@ export interface CommonBlockProps {
   onUpdate: (blockId: string, content: string) => void;
   onDelete: (blockId: string) => void;
   onStyleChange?: (blockId: string, style: BlockStyle) => void;
+  onTypeChange?: (blockId: string, type: BlockType) => void;
   onMoveUp?: (blockId: string) => void;
   onMoveDown?: (blockId: string) => void;
 }

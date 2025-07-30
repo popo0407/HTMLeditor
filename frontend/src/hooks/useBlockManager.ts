@@ -40,9 +40,9 @@ export interface UseBlockManagerReturn {
  */
 const getDefaultContent = (blockType: BlockType): string => {
   switch (blockType) {
-    case 'heading1': return '大見出し';
-    case 'heading2': return '中見出し';
-    case 'heading3': return '小見出し';
+    case 'heading1': return '';
+    case 'heading2': return '';
+    case 'heading3': return '';
     case 'paragraph': return '';
     case 'table': return 'テーブルセル';
     case 'horizontalRule': return '';
@@ -69,7 +69,7 @@ export const useBlockManager = (): UseBlockManagerReturn => {
     const newBlock: Block = {
       id: `block-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       type: blockType,
-      content: getDefaultContent(blockType),
+      content: '', // デフォルトコンテンツを空文字列に
       ...(blockType === 'table' && {
         tableData: {
           rows: [['ヘッダー1', 'ヘッダー2'], ['セル1', 'セル2']],
@@ -254,7 +254,7 @@ export const useBlockManager = (): UseBlockManagerReturn => {
     setBlocks(prevBlocks =>
       prevBlocks.map(block =>
         block.id === blockId
-          ? { ...block, type: newType, content: getDefaultContent(newType) }
+          ? { ...block, type: newType } // コンテンツを保持
           : block
       )
     );

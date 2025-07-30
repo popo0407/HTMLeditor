@@ -9,6 +9,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { CommonBlockProps } from '../../types';
 import { BlockBase } from './BlockBase';
+import { BlockType, BlockStyle } from '../../types';
 
 export const ParagraphBlock: React.FC<CommonBlockProps> = (props) => {
   const { block, onUpdate, isSelected } = props;
@@ -77,6 +78,35 @@ export const ParagraphBlock: React.FC<CommonBlockProps> = (props) => {
       e.preventDefault();
       props.onMoveDown(block.id);
     }
+    // Ctrl+Space: ブロックタイプ切り替え
+    if (e.ctrlKey && e.key === ' ') {
+      e.preventDefault();
+      e.stopPropagation();
+      // 現在のブロックタイプを取得して次のタイプに切り替え
+      const blockTypeOrder: BlockType[] = ['heading1', 'heading2', 'heading3', 'paragraph'];
+      const currentIndex = blockTypeOrder.indexOf(block.type);
+      const nextIndex = (currentIndex + 1) % blockTypeOrder.length;
+      const nextType = blockTypeOrder[nextIndex];
+      // ブロックタイプ変更のコールバックを呼ぶ（コンテンツは保持）
+      if (props.onTypeChange) {
+        props.onTypeChange(block.id, nextType);
+      }
+    }
+    // Shift+Space: 強調切り替え
+    if (e.shiftKey && e.key === ' ') {
+      e.preventDefault();
+      e.stopPropagation();
+      // 現在の強調状態を取得して次の状態に切り替え
+      const blockStyleOrder: BlockStyle[] = ['normal', 'important', 'action-item'];
+      const currentStyle = block.style || 'normal';
+      const currentIndex = blockStyleOrder.indexOf(currentStyle);
+      const nextIndex = (currentIndex + 1) % blockStyleOrder.length;
+      const nextStyle = blockStyleOrder[nextIndex];
+      // 強調変更のコールバックを呼ぶ
+      if (props.onStyleChange) {
+        props.onStyleChange(block.id, nextStyle);
+      }
+    }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -103,7 +133,7 @@ export const ParagraphBlock: React.FC<CommonBlockProps> = (props) => {
           onClick={handleClick}
           style={{ cursor: 'text' }}
         >
-          {block.content || 'ここに段落テキストを入力してください'}
+          {block.content}
         </p>
       )}
     </BlockBase>
