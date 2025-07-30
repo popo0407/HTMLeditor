@@ -51,6 +51,12 @@ class Settings(BaseSettings):
     SENDER_EMAIL: str = ""
     SENDER_NAME: str = "HTML Editor"
     
+    # === メール送信設定 ===
+    DEFAULT_RECIPIENT_EMAIL: str = ""
+    EMAIL_SUBJECT_TEMPLATES: str = ""
+    EMAIL_SUBJECT_DEFAULT: str = "HTML Editor からの送信"
+    EMAIL_BODY_TEMPLATES: str = ""  # 本文冒頭文のテンプレート（カンマ区切り）
+    
     # === 静的ファイル設定 ===
     STATIC_DIR: str = "static"
     
@@ -116,6 +122,28 @@ class Settings(BaseSettings):
             'password': self.SMTP_PASSWORD,
             'sender_email': self.SENDER_EMAIL,
             'sender_name': self.SENDER_NAME,
+        }
+    
+    def get_email_templates(self) -> dict:
+        """
+        メールテンプレート設定を取得
+        
+        Returns:
+            メールテンプレート設定の辞書
+        """
+        subject_templates = []
+        if self.EMAIL_SUBJECT_TEMPLATES:
+            subject_templates = [template.strip() for template in self.EMAIL_SUBJECT_TEMPLATES.split(",") if template.strip()]
+        
+        body_templates = []
+        if self.EMAIL_BODY_TEMPLATES:
+            body_templates = [template.strip() for template in self.EMAIL_BODY_TEMPLATES.split(",") if template.strip()]
+        
+        return {
+            'default_recipient': self.DEFAULT_RECIPIENT_EMAIL,
+            'subject_templates': subject_templates,
+            'default_subject': self.EMAIL_SUBJECT_DEFAULT,
+            'body_templates': body_templates,
         }
     
     def is_development(self) -> bool:

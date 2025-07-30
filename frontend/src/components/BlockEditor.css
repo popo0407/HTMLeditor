@@ -4,8 +4,8 @@
  */
 
 .block-editor {
-  height: auto;
-  overflow: visible;
+  height: 100%;
+  overflow-y: auto;
   background-color: transparent;
   border-radius: 8px;
   border: none;

@@ -1,153 +1,75 @@
 /**
- * バックエンドAPIとの通信を担当するサービス
+ * API通信サービス
  * 
- * 責務:
- * - HTTPリクエストの送信
- * - レスポンスの型安全な処理
- * - エラーハンドリング
+ * 開発憲章の「設定とロジックを分離」原則に従い、
+ * 設定ファイルベースのシンプルなメール送信を実装
  */
 
-import { 
-  AddressBookValidationRequest, 
-  AddressBookValidation, 
-  ContactCreateRequest, 
-  Contact,
-  CommonID
-} from '../types';
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8002';
 
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8002/api';
+export interface MailSendRequest {
+  subject: string;
+  html_content: string;
+  recipient_email?: string;
+}
 
-class ApiService {
-  /**
-   * 共通IDの存在チェック
-   */
-  async validateAddressBook(request: AddressBookValidationRequest): Promise<AddressBookValidation> {
-    try {
-      const response = await fetch(`${API_BASE_URL}/address-books/validate`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(request),
-      });
+export interface MailSendResponse {
+  success: boolean;
+  message: string;
+}
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`API Error: ${response.status} ${response.statusText} - ${errorText}`);
-      }
+export interface EmailTemplatesResponse {
+  default_recipient: string;
+  subject_templates: string[];
+  default_subject: string;
+  body_templates: string[];
+}
 
-      return await response.json();
-    } catch (error) {
-      if (error instanceof TypeError && error.message.includes('fetch')) {
-        throw new Error('バックエンドサーバーに接続できません。サーバーが起動していることを確認してください。');
-      }
-      throw error;
+/**
+ * メールテンプレート設定を取得
+ */
+export const getEmailTemplates = async (): Promise<EmailTemplatesResponse> => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/mail/templates`);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
+    return await response.json();
+  } catch (error) {
+    console.error('メールテンプレート取得エラー:', error);
+    throw error;
   }
+};
 
-  /**
-   * 新しいアドレス帳（共通ID）を作成
-   */
-  async createAddressBook(commonId: string): Promise<CommonID> {
-    try {
-      const response = await fetch(`${API_BASE_URL}/address-books`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ common_id: commonId }),
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`API Error: ${response.status} ${response.statusText} - ${errorText}`);
-      }
-
-      return await response.json();
-    } catch (error) {
-      if (error instanceof TypeError && error.message.includes('fetch')) {
-        throw new Error('バックエンドサーバーに接続できません。サーバーが起動していることを確認してください。');
-      }
-      throw error;
-    }
-  }
-
-  /**
-   * 連絡先を追加
-   */
-  async addContact(commonId: string, contact: ContactCreateRequest): Promise<Contact> {
-    const response = await fetch(`${API_BASE_URL}/address-books/${commonId}/contacts`, {
+/**
+ * HTMLメールを送信
+ */
+export const sendMail = async (request: MailSendRequest): Promise<MailSendResponse> => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/mail/send`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(contact),
-    });
-
-    if (!response.ok) {
-      throw new Error(`API Error: ${response.status} ${response.statusText}`);
-    }
-
-    return await response.json();
-  }
-
-  /**
-   * 連絡先リストを取得
-   */
-  async getContacts(commonId: string): Promise<Contact[]> {
-    const response = await fetch(`${API_BASE_URL}/address-books/${commonId}/contacts`);
-
-    if (!response.ok) {
-      throw new Error(`API Error: ${response.status} ${response.statusText}`);
-    }
-
-    return await response.json();
-  }
-
-  /**
-   * メール送信
-   */
-  async sendMail(data: {
-    commonId: string;
-    subject: string;
-    htmlContent: string;
-    recipientEmails?: string;
-  }): Promise<{ success: boolean; message: string; recipients: string[] }> {
-    const formData = new FormData();
-    formData.append('common_id', data.commonId);
-    formData.append('subject', data.subject);
-    formData.append('html_content', data.htmlContent);
-    if (data.recipientEmails) {
-      formData.append('recipient_emails', data.recipientEmails);
-    }
-
-    const response = await fetch(`${API_BASE_URL}/mail/send`, {
-      method: 'POST',
-      body: formData,
+      body: JSON.stringify(request),
     });
 
     if (!response.ok) {
       const errorData = await response.json();
-      throw new Error(errorData.detail || `API Error: ${response.status} ${response.statusText}`);
+      throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
     }
 
     return await response.json();
+  } catch (error) {
+    console.error('メール送信エラー:', error);
+    throw error;
   }
+};
 
-  /**
-   * メールサーバー接続テスト
-   */
-  async testMailConnection(): Promise<{ success: boolean; message: string }> {
-    const response = await fetch(`${API_BASE_URL}/mail/test-connection`);
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.detail || `API Error: ${response.status} ${response.statusText}`);
-    }
-
-    return await response.json();
-  }
-}
-
-// シングルトンインスタンスをエクスポート
-export const apiService = new ApiService();
+/**
+ * APIサービスオブジェクト
+ */
+export const apiService = {
+  getEmailTemplates,
+  sendMail,
+};

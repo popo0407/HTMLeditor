@@ -1,223 +1,213 @@
 /**
- * メインアプリケーションコンポーネント
+ * HTMLエディタアプリケーション
  * 
- * 責務:
- * - アプリケーション全体のレイアウト統合
- * - 各カスタムフックとサービスの統合
- * - UIイベントの統括
- * 
- * 開発憲章の「関心の分離」に従い、状態管理はカスタムフックに委譲
+ * 開発憲章の「関心の分離」に従い、UIの状態管理をコンポーネントに閉じてカプセル化
  */
 
-import React from 'react';
-import { Layout } from './components/Layout';
-import { Sidebar } from './components/Sidebar';
-import { BlockEditor } from './components/BlockEditor';
-import { AddressBookManager } from './components/AddressBookManager';
-import { BlockType } from './types';
-import { useBlockManager, usePreviewManager, useAddressBookManager } from './hooks';
-import { BlockOperationService, MailOperationService } from './services';
-import { ErrorHandlerService, ErrorCategory } from './services/errorHandlerService';
+import React, { useState, useEffect } from 'react';
 import './App.css';
+import { BlockEditor } from './components/BlockEditor';
+import { useBlockManager } from './hooks/useBlockManager';
+import { usePreviewManager } from './hooks/usePreviewManager';
+import { OperationHandlerService } from './services/operationHandlerService';
+import { getEmailTemplates, sendMail, MailSendRequest } from './services/apiService';
+import { Block } from './types';
+
+interface EmailTemplates {
+  default_recipient: string;
+  subject_templates: string[];
+  default_subject: string;
+  body_templates: string[];
+}
 
 function App() {
-  // カスタムフックによる状態管理（開発憲章の「関心の分離」に従う）
   const blockManager = useBlockManager();
-  const previewManager = usePreviewManager(blockManager.blocks);
-  const addressBookManager = useAddressBookManager();
+  const previewManager = usePreviewManager();
+  const [emailTemplates, setEmailTemplates] = useState<EmailTemplates | null>(null);
+  const [selectedSubject, setSelectedSubject] = useState<string>('');
+  const [selectedBodyTemplate, setSelectedBodyTemplate] = useState<string>('');
+  const [customRecipient, setCustomRecipient] = useState<string>('');
+  const [importText, setImportText] = useState('');
 
-  // クリップボード読み込みハンドラー
-  const handleImportFromClipboard = async () => {
+  useEffect(() => {
+    loadEmailTemplates();
+  }, []);
+
+  const loadEmailTemplates = async () => {
     try {
-      const importedBlocks = await BlockOperationService.importFromClipboard();
-      blockManager.setBlocks(importedBlocks);
-      blockManager.selectBlock(importedBlocks.length > 0 ? importedBlocks[0].id : null);
-
-      const message = BlockOperationService.generateImportMessage(importedBlocks);
-      ErrorHandlerService.showInfo(message);
+      const templates = await getEmailTemplates();
+      setEmailTemplates(templates);
+      if (templates.subject_templates.length > 0) {
+        setSelectedSubject(templates.subject_templates[0]);
+      }
+      if (templates.body_templates.length > 0) {
+        setSelectedBodyTemplate(templates.body_templates[0]);
+      }
     } catch (error) {
-      ErrorHandlerService.handleError(
-        error instanceof Error ? error : new Error('クリップボードの読み込みに失敗しました'),
-        ErrorCategory.CLIPBOARD
-      );
+      console.error('メールテンプレート読み込みエラー:', error);
     }
   };
 
-  // テキストボックス読み込みハンドラー
-  const handleImportFromText = (htmlText: string) => {
-    try {
-      const importedBlocks = BlockOperationService.importFromText(htmlText);
-      blockManager.setBlocks(importedBlocks);
-      blockManager.selectBlock(importedBlocks.length > 0 ? importedBlocks[0].id : null);
-
-      const message = BlockOperationService.generateImportMessage(importedBlocks);
-      ErrorHandlerService.showInfo(message);
-    } catch (error) {
-      ErrorHandlerService.handleError(
-        error instanceof Error ? error : new Error('テキストの読み込みに失敗しました'),
-        ErrorCategory.VALIDATION
-      );
+  const handleImportFromTextBox = async () => {
+    if (!importText.trim()) {
+      alert('テキストを入力してください');
+      return;
+    }
+    const result = await OperationHandlerService.handleImportFromText(importText);
+    if (result.success && result.data) {
+      blockManager.setBlocks(result.data);
+      setImportText(''); // 読み込み後クリア
+    } else {
+      alert('テキストの読み込みに失敗しました');
     }
   };
 
-  // HTML出力ハンドラー
+  const handleImportFromText = async () => {
+    const htmlText = prompt('HTMLテキストを入力してください:');
+    if (htmlText) {
+      const result = await OperationHandlerService.handleImportFromText(htmlText);
+      if (result.success && result.data) {
+        blockManager.setBlocks(result.data);
+      }
+    }
+  };
+
   const handleDownloadHtml = async () => {
-    try {
-      const success = await BlockOperationService.downloadHtmlFile(blockManager.blocks);
-      if (success) {
-        ErrorHandlerService.showSuccess('HTMLファイルがダウンロードされました');
-      } else {
-        ErrorHandlerService.handleError(
-          'HTMLファイルのダウンロードに失敗しました',
-          ErrorCategory.FILE_OPERATION
-        );
-      }
-    } catch (error) {
-      ErrorHandlerService.handleError(
-        error instanceof Error ? error : new Error('HTMLファイルのダウンロードに失敗しました'),
-        ErrorCategory.FILE_OPERATION
-      );
+    const filename = prompt('ファイル名を入力してください:', 'document.html');
+    if (filename) {
+      await OperationHandlerService.handleDownloadHtml(blockManager.blocks, filename);
     }
   };
 
-  // クリップボードにHTMLコピー
   const handleCopyToClipboard = async () => {
-    try {
-      const success = await BlockOperationService.copyHtmlToClipboard(blockManager.blocks);
-      if (success) {
-        ErrorHandlerService.showSuccess('HTMLがクリップボードにコピーされました');
-      } else {
-        ErrorHandlerService.handleError(
-          'HTMLのコピーに失敗しました',
-          ErrorCategory.CLIPBOARD
-        );
-      }
-    } catch (error) {
-      ErrorHandlerService.handleError(
-        error instanceof Error ? error : new Error('クリップボードへのコピーに失敗しました'),
-        ErrorCategory.CLIPBOARD
-      );
-    }
+    await OperationHandlerService.handleCopyToClipboard(blockManager.blocks);
   };
 
-  // メール送信ハンドラー
   const handleSendMail = async () => {
-    // 前提条件チェック
-    const validation = MailOperationService.validateMailSendConditions(blockManager.blocks);
-    if (!validation.isValid) {
-      ErrorHandlerService.handleError(
-        validation.error || 'メール送信の前提条件を満たしていません',
-        ErrorCategory.VALIDATION
-      );
+    if (!emailTemplates) {
+      alert('メールテンプレートが読み込まれていません');
       return;
     }
 
-    // メール送信の詳細設定
-    const subject = ErrorHandlerService.showPrompt('件名を入力してください:', 'HTML Editor - ドキュメント');
-    if (!subject) return;
+    const recipient = customRecipient || emailTemplates.default_recipient;
+    if (!recipient) {
+      alert('宛先メールアドレスが設定されていません');
+      return;
+    }
 
-    const additionalEmails = ErrorHandlerService.showPrompt('追加受信者のメールアドレスを入力してください（複数の場合はカンマ区切り）:');
-
+    const subject = selectedSubject || emailTemplates.default_subject;
+    
+    // 本文に選択されたテンプレートを追加
+    let htmlContent = await previewManager.generatePreview(blockManager.blocks);
+    if (selectedBodyTemplate) {
+      htmlContent = `<p>${selectedBodyTemplate}</p>\n${htmlContent}`;
+    }
+    
     try {
-      const result = await MailOperationService.sendMail({
-        blocks: blockManager.blocks,
-        commonId: addressBookManager.currentCommonId || undefined,
-        subject,
-        additionalEmails: additionalEmails || undefined,
-      });
+      const request: MailSendRequest = {
+        subject: subject,
+        html_content: htmlContent,
+        recipient_email: recipient
+      };
 
+      const result = await sendMail(request);
       if (result.success) {
-        ErrorHandlerService.showSuccess(`メール送信が完了しました。\n送信先: ${result.recipients.join(', ')}`);
+        alert('メールが正常に送信されました');
       } else {
-        ErrorHandlerService.handleError(
-          result.error || 'メール送信に失敗しました',
-          ErrorCategory.NETWORK
-        );
+        alert(`メール送信に失敗しました: ${result.message}`);
       }
     } catch (error) {
-      ErrorHandlerService.handleError(
-        error instanceof Error ? error : new Error('メール送信に失敗しました'),
-        ErrorCategory.NETWORK
-      );
+      alert(`メール送信中にエラーが発生しました: ${error}`);
     }
-  };
-
-  // アドレス帳管理ハンドラー
-  const handleManageAddressBook = () => {
-    console.log('アドレス帳管理機能');
   };
 
   return (
     <div className="App">
-      <Layout
-        header={
-          <div className="app-header">
-            <h1>HTML Editor</h1>
-            <div className="header-controls">
-              <button 
-                className="btn"
-                onClick={handleDownloadHtml}
-                disabled={blockManager.blocks.length === 0}
-              >
-                💾 HTML保存
-              </button>
-              <button 
-                className="btn"
-                onClick={handleCopyToClipboard}
-                disabled={blockManager.blocks.length === 0}
-              >
-                📋 コピー
-              </button>
-            </div>
+      <header className="app-header">
+        <div className="header-content">
+          <h1>HTML Editor</h1>
+          <div className="header-import-box">
+            <textarea
+              value={importText}
+              onChange={e => setImportText(e.target.value)}
+              placeholder="ここにHTMLやテキストを貼り付けてください"
+              rows={3}
+              style={{ width: '350px', resize: 'vertical', marginRight: '8px' }}
+            />
+            <button onClick={handleImportFromTextBox} className="header-button">
+              読み込み
+            </button>
           </div>
-        }
-        sidebar={
-          <Sidebar
-            onAddBlock={blockManager.addBlock}
-            onImportFromClipboard={handleImportFromClipboard}
-            onImportFromText={handleImportFromText}
-          />
-        }
-      >
-        <div className="main-content split-view">
-          <div className="editor-pane">
-            <div className="pane-header">
-              <h3>📝 編集エリア</h3>
-            </div>
-            <div className="pane-content">
-              <BlockEditor
-                blocks={blockManager.blocks}
-                selectedBlockId={blockManager.selectedBlockId}
-                onBlockSelect={blockManager.selectBlock}
-                onBlockUpdate={blockManager.updateBlock}
-                onBlockDelete={blockManager.deleteBlock}
-                onBlockAdd={blockManager.addBlock}
-                onBlockMove={blockManager.moveBlock}
-                onBlockStyleChange={blockManager.changeBlockStyle}
-              />
-            </div>
-          </div>
-          
-          <div className="preview-pane">
-            <div className="pane-header">
-              <h3>👁 プレビューエリア</h3>
-            </div>
-            <div className="pane-content">
-              <div 
-                className="preview-content"
-                dangerouslySetInnerHTML={{ __html: previewManager.previewHtml }}
-              />
-            </div>
+          <div className="header-buttons">
+            <button onClick={handleDownloadHtml} className="header-button">
+              HTMLダウンロード
+            </button>
+            <button onClick={handleCopyToClipboard} className="header-button">
+              クリップボードにコピー
+            </button>
+            <button onClick={handleSendMail} className="header-button">
+              メール送信
+            </button>
           </div>
         </div>
-      </Layout>
+      </header>
 
-      {/* アドレス帳管理モーダル */}
-      <AddressBookManager
-        onEntrySelect={(entry) => {
-          console.log('Selected entry:', entry);
-        }}
-      />
+      <main className="app-main">
+        <div className="main-content">
+          {/* Layoutを廃止しBlockEditorを直接配置 */}
+          <BlockEditor
+            blocks={blockManager.blocks}
+            onBlockUpdate={blockManager.updateBlock}
+            onBlockAdd={blockManager.addBlock}
+            onBlockDelete={blockManager.deleteBlock}
+            onBlockMove={blockManager.moveBlock}
+            selectedBlockId={blockManager.selectedBlockId}
+            onBlockSelect={blockManager.selectBlock}
+            onBlockStyleChange={blockManager.changeBlockStyle}
+          />
+        </div>
+      </main>
+
+      {/* メール送信設定 */}
+      {emailTemplates && (
+        <div className="email-settings">
+          <div className="email-setting-item">
+            <label>宛先:</label>
+            <input
+              type="email"
+              value={customRecipient}
+              onChange={(e) => setCustomRecipient(e.target.value)}
+              placeholder={emailTemplates.default_recipient || 'メールアドレスを入力'}
+            />
+          </div>
+          <div className="email-setting-item">
+            <label>件名:</label>
+            <select
+              value={selectedSubject}
+              onChange={(e) => setSelectedSubject(e.target.value)}
+            >
+              {emailTemplates.subject_templates.map((template, index) => (
+                <option key={index} value={template}>
+                  {template}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="email-setting-item">
+            <label>本文冒頭:</label>
+            <select
+              value={selectedBodyTemplate}
+              onChange={(e) => setSelectedBodyTemplate(e.target.value)}
+            >
+              {emailTemplates.body_templates.map((template, index) => (
+                <option key={index} value={template}>
+                  {template}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

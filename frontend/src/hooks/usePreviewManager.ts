@@ -2,77 +2,64 @@
  * プレビュー管理カスタムフック
  * 
  * 責務:
- * - プレビューHTMLの生成と管理
- * - プレビュー状態の管理
- * - プレビュー生成エラーの処理
+ * - プレビューモードの状態管理
+ * - プレビューHTMLの生成
+ * - プレビュー表示の制御
  * 
- * 開発憲章の「関心の分離」と「単一責任の原則」に従う
+ * 開発憲章の「関心の分離」に従い、プレビュー機能の状態をコンポーネントから分離
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { Block } from '../types';
-import { clipboardService } from '../services/clipboardService';
+import { HtmlGenerator } from '../utils/htmlGenerator';
 
 export interface UsePreviewManagerReturn {
+  isPreviewMode: boolean;
   previewHtml: string;
-  isGenerating: boolean;
-  error: string | null;
-  regeneratePreview: () => Promise<void>;
+  togglePreviewMode: () => void;
+  generatePreview: (blocks: Block[]) => Promise<string>;
+  setPreviewMode: (mode: boolean) => void;
 }
 
-/**
- * プレビュー管理のカスタムフック
- * 
- * 開発憲章の「単一責任の原則」に従い、
- * プレビュー生成に特化した責務のみを持つ
- */
-export const usePreviewManager = (blocks: Block[]): UsePreviewManagerReturn => {
-  const [previewHtml, setPreviewHtml] = useState<string>('');
-  const [isGenerating, setIsGenerating] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
+export const usePreviewManager = (): UsePreviewManagerReturn => {
+  const [isPreviewMode, setIsPreviewMode] = useState(false);
+  const [previewHtml, setPreviewHtml] = useState('');
 
   /**
-   * プレビューHTMLを生成
+   * プレビューモードの切り替え
    */
-  const generatePreview = useCallback(async () => {
-    if (blocks.length === 0) {
-      setPreviewHtml('');
-      setError(null);
-      return;
-    }
+  const togglePreviewMode = useCallback(() => {
+    setIsPreviewMode(prev => !prev);
+  }, []);
 
-    setIsGenerating(true);
-    setError(null);
+  /**
+   * プレビューモードの設定
+   */
+  const setPreviewMode = useCallback((mode: boolean) => {
+    setIsPreviewMode(mode);
+  }, []);
 
+  /**
+   * プレビューHTMLの生成
+   */
+  const generatePreview = useCallback(async (blocks: Block[]): Promise<string> => {
     try {
-      const html = await clipboardService.blocksToPreviewHtml(blocks);
+      const html = HtmlGenerator.generatePreviewHtml(blocks);
       setPreviewHtml(html);
-    } catch (err) {
-      console.error('プレビューHTML生成エラー:', err);
-      const errorMessage = err instanceof Error ? err.message : '不明なエラー';
-      setError(errorMessage);
-      setPreviewHtml('<p>プレビューの生成に失敗しました</p>');
-    } finally {
-      setIsGenerating(false);
+      return html;
+    } catch (error) {
+      console.error('プレビュー生成エラー:', error);
+      const fallbackHtml = '<div>プレビューの生成に失敗しました</div>';
+      setPreviewHtml(fallbackHtml);
+      return fallbackHtml;
     }
-  }, [blocks]);
-
-  /**
-   * プレビューを再生成
-   */
-  const regeneratePreview = useCallback(async () => {
-    await generatePreview();
-  }, [generatePreview]);
-
-  // ブロックが変更されたらプレビューを自動生成
-  useEffect(() => {
-    generatePreview();
-  }, [generatePreview]);
+  }, []);
 
   return {
+    isPreviewMode,
     previewHtml,
-    isGenerating,
-    error,
-    regeneratePreview,
+    togglePreviewMode,
+    generatePreview,
+    setPreviewMode
   };
 }; 

@@ -2,108 +2,106 @@
 メール送信サービス
 
 開発憲章の「設定とロジックを分離」原則に従い、
-設定クラスからSMTP設定を取得
+設定ファイルからSMTP設定を取得してメール送信を実行
 """
 
 import smtplib
-from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-from email.mime.base import MIMEBase
-from email import encoders
-from typing import List
-from app.config import get_settings
+from email.mime.multipart import MIMEMultipart
+from typing import Dict, Any
+
 
 class MailService:
-    def __init__(self):
-        # 設定クラスからSMTP設定を取得
-        settings = get_settings()
-        smtp_config = settings.get_smtp_config()
-        
-        self.smtp_server = smtp_config['server']
-        self.smtp_port = smtp_config['port']
-        self.smtp_username = smtp_config['username']
-        self.smtp_password = smtp_config['password']
-        self.sender_email = smtp_config['sender_email']
-        self.sender_name = smtp_config['sender_name']
+    """
+    メール送信サービス
     
-    async def send_html_mail(
-        self, 
-        recipients: List[str], 
-        subject: str, 
-        html_content: str,
-        attachment_path: str = None,
-        attachment_name: str = None
-    ) -> bool:
+    開発憲章の「単一責任の原則」に従い、
+    メール送信のみを担当
+    """
+    
+    def __init__(
+        self,
+        smtp_server: str,
+        smtp_port: int,
+        smtp_username: str,
+        smtp_password: str,
+        sender_email: str,
+        sender_name: str
+    ):
+        """
+        メール送信サービスを初期化
+        
+        Args:
+            smtp_server: SMTPサーバーアドレス
+            smtp_port: SMTPポート番号
+            smtp_username: SMTPユーザー名
+            smtp_password: SMTPパスワード
+            sender_email: 送信者メールアドレス
+            sender_name: 送信者名
+        """
+        self.smtp_server = smtp_server
+        self.smtp_port = smtp_port
+        self.smtp_username = smtp_username
+        self.smtp_password = smtp_password
+        self.sender_email = sender_email
+        self.sender_name = sender_name
+    
+    def send_html_email(
+        self,
+        to_email: str,
+        subject: str,
+        html_content: str
+    ) -> Dict[str, Any]:
         """
         HTMLメールを送信
         
         Args:
-            recipients: 受信者のメールアドレスリスト
+            to_email: 宛先メールアドレス
             subject: 件名
-            html_content: HTMLコンテンツ
-            attachment_path: 添付ファイルのパス
-            attachment_name: 添付ファイル名
-        
+            html_content: HTML本文
+            
         Returns:
-            bool: 送信成功の場合True
+            送信結果の辞書
         """
         try:
-            # メッセージを作成
+            # メールメッセージの作成
             msg = MIMEMultipart('alternative')
             msg['From'] = f"{self.sender_name} <{self.sender_email}>"
-            msg['To'] = ", ".join(recipients)
+            msg['To'] = to_email
             msg['Subject'] = subject
             
-            # HTMLコンテンツを追加
+            # HTML本文の追加
             html_part = MIMEText(html_content, 'html', 'utf-8')
             msg.attach(html_part)
             
-            # 添付ファイルがある場合は追加
-            if attachment_path and os.path.exists(attachment_path):
-                with open(attachment_path, 'rb') as attachment:
-                    part = MIMEBase('application', 'octet-stream')
-                    part.set_payload(attachment.read())
-                
-                encoders.encode_base64(part)
-                part.add_header(
-                    'Content-Disposition',
-                    f'attachment; filename= {attachment_name or "attachment.html"}'
-                )
-                msg.attach(part)
-            
             # SMTPサーバーに接続して送信
-            server = smtplib.SMTP(self.smtp_server, self.smtp_port)
-            server.starttls()  # TLS暗号化を有効化
-            
-            if self.smtp_username and self.smtp_password:
+            with smtplib.SMTP(self.smtp_server, self.smtp_port) as server:
+                server.starttls()
                 server.login(self.smtp_username, self.smtp_password)
+                server.send_message(msg)
             
-            server.sendmail(self.sender_email, recipients, msg.as_string())
-            server.quit()
+            return {
+                'success': True,
+                'message': f"メールを {to_email} に送信しました"
+            }
             
-            return True
-            
+        except smtplib.SMTPAuthenticationError:
+            return {
+                'success': False,
+                'error': 'SMTP認証に失敗しました。ユーザー名とパスワードを確認してください。'
+            }
+        except smtplib.SMTPRecipientsRefused:
+            return {
+                'success': False,
+                'error': '宛先メールアドレスが拒否されました。'
+            }
+        except smtplib.SMTPServerDisconnected:
+            return {
+                'success': False,
+                'error': 'SMTPサーバーとの接続が切断されました。'
+            }
         except Exception as e:
-            print(f"メール送信エラー: {e}")
-            raise e
-    
-    async def test_connection(self) -> bool:
-        """
-        SMTPサーバーへの接続をテスト
-        
-        Returns:
-            bool: 接続成功の場合True
-        """
-        try:
-            server = smtplib.SMTP(self.smtp_server, self.smtp_port)
-            server.starttls()
-            
-            if self.smtp_username and self.smtp_password:
-                server.login(self.smtp_username, self.smtp_password)
-            
-            server.quit()
-            return True
-            
-        except Exception as e:
-            print(f"SMTP接続エラー: {e}")
-            raise e
+            return {
+                'success': False,
+                'error': f'メール送信中にエラーが発生しました: {str(e)}'
+            }

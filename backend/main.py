@@ -13,7 +13,7 @@ HTMLエディタ バックエンドアプリケーション
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from app.routes import address_book_routes, mail_routes, gantt_routes
+from app.routes import mail_routes, gantt_routes
 from app.models.database import engine, Base
 from app.config import get_settings
 from pathlib import Path
@@ -47,9 +47,7 @@ static_dir = Path(settings.STATIC_DIR)
 if static_dir.exists():
     app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
 
-# --- ルーターの登録（修正箇所） ---
-# アドレス帳APIは /api を起点とする
-app.include_router(address_book_routes.router, prefix="/api/address-book", tags=["address-book"])
+# --- ルーターの登録 ---
 # メールAPIは /api/mail を起点とする
 app.include_router(mail_routes.router, prefix="/api/mail", tags=["mail"])
 # ガントチャートAPIは /api/gantt を起点とする

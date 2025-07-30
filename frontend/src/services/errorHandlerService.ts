@@ -1,181 +1,118 @@
 /**
- * エラーハンドリングサービス
+ * エラーハンドラーサービス
  * 
  * 責務:
- * - エラーメッセージの標準化
- * - エラーレベルの分類
- * - ユーザーフレンドリーなエラー表示
- * - ログ出力の統一
+ * - エラーの分類と処理
+ * - ユーザーフレンドリーなエラーメッセージの生成
+ * - エラーログの記録
+ * - ユーザーインターフェースの表示
  * 
- * 開発憲章の「ログは階層と目的を意識し、意図を持って記録せよ」に従う
+ * 開発憲章の「単一責任の原則」に従い、エラー処理のみを担当
  */
 
-export enum ErrorLevel {
-  INFO = 'info',
-  WARNING = 'warning',
-  ERROR = 'error',
-  CRITICAL = 'critical'
-}
-
 export enum ErrorCategory {
-  NETWORK = 'network',
-  VALIDATION = 'validation',
-  USER_ACTION = 'user_action',
-  SYSTEM = 'system',
-  CLIPBOARD = 'clipboard',
-  FILE_OPERATION = 'file_operation'
+  NETWORK = 'NETWORK',
+  VALIDATION = 'VALIDATION',
+  FILE_OPERATION = 'FILE_OPERATION',
+  MAIL_OPERATION = 'MAIL_OPERATION',
+  CLIPBOARD_OPERATION = 'CLIPBOARD_OPERATION',
+  ADDRESS_BOOK_OPERATION = 'ADDRESS_BOOK_OPERATION',
+  UNKNOWN = 'UNKNOWN'
 }
 
 export interface ErrorInfo {
-  message: string;
-  level: ErrorLevel;
   category: ErrorCategory;
+  message: string;
   originalError?: Error;
-  context?: Record<string, any>;
-  userFriendly?: boolean;
+  timestamp: Date;
 }
 
-export interface ErrorHandlerOptions {
-  showAlert?: boolean;
-  logToConsole?: boolean;
-  throwError?: boolean;
+export interface MailSendResult {
+  success: boolean;
+  message?: string;
+  data?: any;
 }
 
-/**
- * エラーハンドリングサービス
- */
 export class ErrorHandlerService {
-  private static readonly DEFAULT_OPTIONS: ErrorHandlerOptions = {
-    showAlert: true,
-    logToConsole: true,
-    throwError: false
-  };
-
   /**
-   * エラーを処理
+   * エラーを分類して処理
    */
-  static handleError(
-    error: Error | string,
-    category: ErrorCategory = ErrorCategory.SYSTEM,
-    options: ErrorHandlerOptions = {}
-  ): void {
-    const mergedOptions = { ...this.DEFAULT_OPTIONS, ...options };
-    const errorInfo = this.createErrorInfo(error, category);
+  static handleError(error: Error, category: ErrorCategory = ErrorCategory.UNKNOWN): ErrorInfo {
+    const errorInfo: ErrorInfo = {
+      category,
+      message: this.generateUserFriendlyMessage(error, category),
+      originalError: error,
+      timestamp: new Date()
+    };
 
-    // コンソールログ出力
-    if (mergedOptions.logToConsole) {
-      this.logError(errorInfo);
-    }
-
-    // アラート表示
-    if (mergedOptions.showAlert && errorInfo.userFriendly) {
-      this.showUserAlert(errorInfo);
-    }
-
-    // エラーを再スロー
-    if (mergedOptions.throwError) {
-      throw error instanceof Error ? error : new Error(error);
-    }
+    this.logError(errorInfo);
+    return errorInfo;
   }
 
   /**
-   * エラー情報を作成
+   * ユーザーフレンドリーなエラーメッセージを生成
    */
-  private static createErrorInfo(
-    error: Error | string,
-    category: ErrorCategory
-  ): ErrorInfo {
-    const message = error instanceof Error ? error.message : error;
-    const originalError = error instanceof Error ? error : undefined;
-
-    // エラーレベルの決定
-    let level = ErrorLevel.ERROR;
-    let userFriendly = true;
+  private static generateUserFriendlyMessage(error: Error, category: ErrorCategory): string {
+    const baseMessage = error.message || '予期しないエラーが発生しました';
 
     switch (category) {
       case ErrorCategory.NETWORK:
-        level = ErrorLevel.ERROR;
-        userFriendly = true;
-        break;
+        return `ネットワークエラー: ${baseMessage}`;
       case ErrorCategory.VALIDATION:
-        level = ErrorLevel.WARNING;
-        userFriendly = true;
-        break;
-      case ErrorCategory.USER_ACTION:
-        level = ErrorLevel.INFO;
-        userFriendly = true;
-        break;
-      case ErrorCategory.SYSTEM:
-        level = ErrorLevel.ERROR;
-        userFriendly = false;
-        break;
-      case ErrorCategory.CLIPBOARD:
-        level = ErrorLevel.WARNING;
-        userFriendly = true;
-        break;
+        return `入力エラー: ${baseMessage}`;
       case ErrorCategory.FILE_OPERATION:
-        level = ErrorLevel.ERROR;
-        userFriendly = true;
-        break;
+        return `ファイル操作エラー: ${baseMessage}`;
+      case ErrorCategory.MAIL_OPERATION:
+        return `メール送信エラー: ${baseMessage}`;
+      case ErrorCategory.CLIPBOARD_OPERATION:
+        return `クリップボード操作エラー: ${baseMessage}`;
+      case ErrorCategory.ADDRESS_BOOK_OPERATION:
+        return `アドレス帳操作エラー: ${baseMessage}`;
+      default:
+        return baseMessage;
     }
-
-    return {
-      message,
-      level,
-      category,
-      originalError,
-      userFriendly
-    };
   }
 
   /**
-   * エラーをログ出力
+   * エラーログを記録
    */
   private static logError(errorInfo: ErrorInfo): void {
-    const timestamp = new Date().toISOString();
-    const logMessage = `[${timestamp}] [${errorInfo.level.toUpperCase()}] [${errorInfo.category}] ${errorInfo.message}`;
-
-    switch (errorInfo.level) {
-      case ErrorLevel.INFO:
-        console.info(logMessage);
-        break;
-      case ErrorLevel.WARNING:
-        console.warn(logMessage);
-        break;
-      case ErrorLevel.ERROR:
-      case ErrorLevel.CRITICAL:
-        console.error(logMessage);
-        if (errorInfo.originalError) {
-          console.error('Original error:', errorInfo.originalError);
-        }
-        break;
-    }
+    console.error(`[${errorInfo.category}] ${errorInfo.message}`, {
+      timestamp: errorInfo.timestamp,
+      originalError: errorInfo.originalError
+    });
   }
 
   /**
-   * ユーザー向けアラート表示
+   * エラーカテゴリを判定
    */
-  private static showUserAlert(errorInfo: ErrorInfo): void {
-    let alertMessage = errorInfo.message;
-
-    // カテゴリ別の追加情報
-    switch (errorInfo.category) {
-      case ErrorCategory.NETWORK:
-        alertMessage += '\n\nバックエンドサーバーが起動していることを確認してください。';
-        break;
-      case ErrorCategory.CLIPBOARD:
-        alertMessage += '\n\nブラウザでクリップボードのアクセス許可が必要です。';
-        break;
-      case ErrorCategory.FILE_OPERATION:
-        alertMessage += '\n\nファイルの保存権限を確認してください。';
-        break;
+  static categorizeError(error: Error): ErrorCategory {
+    const message = error.message.toLowerCase();
+    
+    if (message.includes('network') || message.includes('fetch')) {
+      return ErrorCategory.NETWORK;
     }
-
-    alert(alertMessage);
+    if (message.includes('validation') || message.includes('invalid')) {
+      return ErrorCategory.VALIDATION;
+    }
+    if (message.includes('file') || message.includes('download')) {
+      return ErrorCategory.FILE_OPERATION;
+    }
+    if (message.includes('mail') || message.includes('email')) {
+      return ErrorCategory.MAIL_OPERATION;
+    }
+    if (message.includes('clipboard')) {
+      return ErrorCategory.CLIPBOARD_OPERATION;
+    }
+    if (message.includes('address') || message.includes('contact')) {
+      return ErrorCategory.ADDRESS_BOOK_OPERATION;
+    }
+    
+    return ErrorCategory.UNKNOWN;
   }
 
   /**
-   * 成功メッセージの表示
+   * 成功メッセージを表示
    */
   static showSuccess(message: string): void {
     console.info(`[SUCCESS] ${message}`);
@@ -183,7 +120,7 @@ export class ErrorHandlerService {
   }
 
   /**
-   * 情報メッセージの表示
+   * 情報メッセージを表示
    */
   static showInfo(message: string): void {
     console.info(`[INFO] ${message}`);
@@ -191,14 +128,14 @@ export class ErrorHandlerService {
   }
 
   /**
-   * 確認ダイアログの表示
+   * 確認ダイアログを表示
    */
   static showConfirm(message: string): boolean {
     return confirm(message);
   }
 
   /**
-   * プロンプトダイアログの表示
+   * プロンプトダイアログを表示
    */
   static showPrompt(message: string, defaultValue?: string): string | null {
     return prompt(message, defaultValue);

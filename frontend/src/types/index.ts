@@ -76,46 +76,12 @@ export interface Block {
   calendarData?: CalendarData; // カレンダー用
 }
 
-// アドレス帳関連の型定義
-export interface Contact {
-  id: number;
-  common_id: string;
-  name: string;
-  email: string;
-  created_at: string;
-  updated_at?: string;
-}
 
-export interface CommonID {
-  id: number;
-  common_id: string;
-  created_at: string;
-  updated_at?: string;
-  contacts: Contact[];
-}
-
-export interface AddressBookValidation {
-  exists: boolean;
-  common_id: string;
-  contacts: Contact[];
-}
-
-// API リクエスト/レスポンス型
-export interface ContactCreateRequest {
-  name: string;
-  email: string;
-}
-
-export interface AddressBookValidationRequest {
-  common_id: string;
-}
 
 // UI状態管理用の型
 export interface AppState {
   blocks: Block[];
   selectedBlockId: string | null;
-  currentCommonId: string | null;
-  contacts: Contact[];
   isPreviewMode: boolean;
   previewHtml: string;
 }
