@@ -11,7 +11,6 @@ export type BlockType =
   | 'heading2' 
   | 'heading3' 
   | 'paragraph' 
-  | 'bulletList' 
   | 'image' 
   | 'table' 
   | 'horizontalRule'

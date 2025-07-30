@@ -213,13 +213,9 @@ export class HtmlParserService {
    */
   private elementToBlock(element: Element): Block | null {
     const tagName = element.tagName.toLowerCase();
-    const content = element.textContent?.trim() || '';
-    
-    if (!content) return null;
-    
     let blockType: BlockType;
-    let blockId = `block-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    
+    let content = '';
+
     switch (tagName) {
       case 'h1':
         blockType = 'heading1';
@@ -233,36 +229,35 @@ export class HtmlParserService {
       case 'p':
         blockType = 'paragraph';
         break;
-      case 'ul':
-      case 'ol':
-        blockType = 'bulletList';
-        break;
-      case 'table':
-        blockType = 'table';
-        break;
       case 'hr':
         blockType = 'horizontalRule';
         break;
       case 'img':
         blockType = 'image';
         break;
+      case 'table':
+        blockType = 'table';
+        break;
+      case 'ul':
+      case 'ol':
+        // リストは段落として扱う
+        blockType = 'paragraph';
+        content = this.extractListContent(element);
+        break;
       default:
         return null;
     }
-    
-    const block: Block = {
-      id: blockId,
+
+    if (!content) {
+      content = element.textContent?.trim() || '';
+    }
+
+    return {
+      id: `block-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       type: blockType,
-      content: this.extractContentFromElement(element, blockType),
+      content: content,
       src: element.getAttribute('src') || undefined,
     };
-    
-    // テーブルの場合、詳細データを追加
-    if (blockType === 'table') {
-      block.tableData = this.parseTableElement(element as HTMLTableElement);
-    }
-    
-    return block;
   }
 
   /**
@@ -270,12 +265,10 @@ export class HtmlParserService {
    */
   private extractContentFromElement(element: Element, blockType: BlockType): string {
     switch (blockType) {
-      case 'bulletList':
-        return this.extractListContent(element);
       case 'table':
         return this.extractTableContent(element as HTMLTableElement);
-      case 'paragraph':
-        return this.extractParagraphContent(element.innerHTML);
+      case 'image':
+        return element.getAttribute('alt') || element.textContent?.trim() || '';
       default:
         return element.textContent?.trim() || '';
     }

@@ -28,8 +28,6 @@ export class HtmlGenerator {
         return `<h3 ${attrs}${classAttr}>${this.escapeHtml(block.content)}</h3>`;
       case 'paragraph':
         return `<p ${attrs}${classAttr}>${this.escapeHtml(block.content)}</p>`;
-      case 'bulletList':
-        return this.generateBulletListHtml(block, attrs, classAttr);
       case 'horizontalRule':
         return `<hr ${attrs}${classAttr} />`;
       case 'image':
@@ -41,17 +39,6 @@ export class HtmlGenerator {
       default:
         return `<p ${attrs}${classAttr}>${this.escapeHtml(block.content)}</p>`;
     }
-  }
-
-  /**
-   * 箇条書きHTMLを生成
-   */
-  private static generateBulletListHtml(block: Block, attrs: string, classAttr: string): string {
-    const items = block.content.split('\n')
-      .filter(item => item.trim())
-      .map(item => `<li>${this.escapeHtml(item)}</li>`)
-      .join('\n');
-    return `<ul ${attrs}${classAttr}>\n${items}\n</ul>`;
   }
 
   /**

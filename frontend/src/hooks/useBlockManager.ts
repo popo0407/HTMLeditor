@@ -33,7 +33,6 @@ const getDefaultContent = (blockType: BlockType): string => {
     case 'heading2': return '中見出し';
     case 'heading3': return '小見出し';
     case 'paragraph': return '';
-    case 'bulletList': return '新しいリスト項目';
     case 'table': return 'テーブルセル';
     case 'horizontalRule': return '';
     case 'image': return '';
