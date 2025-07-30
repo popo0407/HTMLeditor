@@ -2,16 +2,19 @@
 データベース設定とセッション管理
 
 SQLAlchemyを使用してデータベース接続を管理
-設定とロジックの分離原則に従い、接続情報は環境変数で管理可能
+開発憲章の「設定とロジックを分離」原則に従い、設定クラスから接続情報を取得
 """
 
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
-import os
+from app.config import get_settings
 
-# データベース設定
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./html_editor.db")
+# 設定インスタンスを取得
+settings = get_settings()
+
+# データベース設定（設定クラスから取得）
+DATABASE_URL = settings.get_database_url()
 
 # SQLAlchemyエンジンの作成
 engine = create_engine(

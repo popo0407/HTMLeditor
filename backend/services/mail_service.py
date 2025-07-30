@@ -1,24 +1,30 @@
 """
 メール送信サービス
+
+開発憲章の「設定とロジックを分離」原則に従い、
+設定クラスからSMTP設定を取得
 """
 
 import smtplib
-import os
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.base import MIMEBase
 from email import encoders
 from typing import List
+from app.config import get_settings
 
 class MailService:
     def __init__(self):
-        # 環境変数またはデフォルト値を使用
-        self.smtp_server = os.getenv('SMTP_SERVER', 'smtp.gmail.com')
-        self.smtp_port = int(os.getenv('SMTP_PORT', '587'))
-        self.smtp_username = os.getenv('SMTP_USERNAME', '')
-        self.smtp_password = os.getenv('SMTP_PASSWORD', '')
-        self.sender_email = os.getenv('SENDER_EMAIL', self.smtp_username)
-        self.sender_name = os.getenv('SENDER_NAME', 'HTML Editor')
+        # 設定クラスからSMTP設定を取得
+        settings = get_settings()
+        smtp_config = settings.get_smtp_config()
+        
+        self.smtp_server = smtp_config['server']
+        self.smtp_port = smtp_config['port']
+        self.smtp_username = smtp_config['username']
+        self.smtp_password = smtp_config['password']
+        self.sender_email = smtp_config['sender_email']
+        self.sender_name = smtp_config['sender_name']
     
     async def send_html_mail(
         self, 

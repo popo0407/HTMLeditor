@@ -5,18 +5,21 @@ HTMLエディタ バックエンドアプリケーション
 - プレゼンテーション層: FastAPI Routes
 - ビジネスロジック層: Services
 - データアクセス層: Repositories + SQLAlchemy
+
+設定管理:
+- 開発憲章の「設定とロジックを分離」原則に従い、設定クラスを使用
 """
 
-import os
-from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from app.routes import address_book_routes, mail_routes, gantt_routes
 from app.models.database import engine, Base
+from app.config import get_settings
+from pathlib import Path
 
-# 環境変数を .env ファイルから読み込み（ルートディレクトリから）
-load_dotenv(dotenv_path=os.path.join(os.path.dirname(os.path.dirname(__file__)), '.env'))
+# 設定インスタンスを取得
+settings = get_settings()
 
 # データベーステーブルの作成
 Base.metadata.create_all(bind=engine)
@@ -27,25 +30,9 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# CORS設定の動的生成
-def get_cors_origins():
-    cors_env = os.getenv("CORS_ORIGINS", "")
-    default_origins = [
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-        "http://localhost:82",
-        "http://10.166.96.135:82",
-    ]
-    if cors_env:
-        env_origins = [origin.strip() for origin in cors_env.split(",") if origin.strip()]
-        all_origins = list(set(default_origins + env_origins))
-        print(f"CORS Origins (from env): {all_origins}")
-        return all_origins
-    else:
-        print(f"CORS Origins (default): {default_origins}")
-        return default_origins
-
-origins = get_cors_origins()
+# CORS設定（設定クラスから取得）
+origins = settings.get_cors_origins()
+print(f"CORS Origins: {origins}")
 
 app.add_middleware(
     CORSMiddleware,
@@ -56,8 +43,9 @@ app.add_middleware(
 )
 
 # 静的ファイルの提供設定
-if os.path.exists("static"):
-    app.mount("/static", StaticFiles(directory="static"), name="static")
+static_dir = Path(settings.STATIC_DIR)
+if static_dir.exists():
+    app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
 
 # --- ルーターの登録（修正箇所） ---
 # アドレス帳APIは /api を起点とする
@@ -76,5 +64,4 @@ async def root():
 
 if __name__ == "__main__":
     import uvicorn
-    port = int(os.getenv("PORT_NO", "8002"))
-    uvicorn.run(app, host="0.0.0.0", port=port)
+    uvicorn.run(app, host=settings.HOST, port=settings.PORT_NO)
