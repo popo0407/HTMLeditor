@@ -3,8 +3,6 @@ import { KeyboardHandlers, KeyboardHandler } from '../types/wordEditorTypes';
 
 export interface UseKeyboardShortcutsProps {
   quillRef: React.RefObject<any>;
-  onHeadingToggle?: () => void;
-  onEmphasisToggle?: () => void;
   onTableInsert?: () => void;
   onTableAddRow?: (position: 'above' | 'below') => void;
   onTableAddColumn?: (position: 'left' | 'right') => void;
@@ -14,8 +12,6 @@ export interface UseKeyboardShortcutsProps {
 
 export const useKeyboardShortcuts = ({
   quillRef,
-  onHeadingToggle,
-  onEmphasisToggle,
   onTableInsert,
   onTableAddRow,
   onTableAddColumn,
