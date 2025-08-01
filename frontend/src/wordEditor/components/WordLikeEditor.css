@@ -1,0 +1,362 @@
+/* WordLikeEditorコンポーネント専用スタイル */
+
+.word-like-editor {
+  width: 60vw; /* 画面サイズの6割に固定 */
+  max-width: 1200px; /* 最大幅を設定 */
+  min-width: 600px; /* 最小幅を設定 */
+  margin: 0 auto;
+  padding: 20px;
+  background-color: #fff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+}
+
+.editor-container {
+  position: relative;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  transition: border-color 0.2s ease;
+  min-height: 500px;
+  background-color: #fff;
+  width: 100%; /* 親要素の幅に合わせる */
+  box-sizing: border-box; /* ボックスサイジングを追加 */
+}
+
+.editor-container:focus-within {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.editor-container:hover {
+  border-color: #d1d5db;
+}
+
+.word-editor {
+  border: none;
+  border-radius: 6px;
+  width: 100%; /* 親要素の幅に合わせる */
+  box-sizing: border-box; /* ボックスサイジングを追加 */
+}
+
+.word-editor .ql-container {
+  border: none;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  width: 100%; /* 親要素の幅に合わせる */
+  box-sizing: border-box; /* ボックスサイジングを追加 */
+}
+
+.word-editor .ql-editor {
+  min-height: 500px;
+  padding: 24px 32px; /* 左右のパディングを増加 */
+  font-size: 16px;
+  line-height: 1.4; /* 1.6から1.4に変更して間隔を狭く */
+  color: #374151;
+  /* フォーカス時のアウトラインを削除 */
+  outline: none !important;
+  width: 100%; /* 幅を100%に設定 */
+  box-sizing: border-box; /* ボックスサイジングを追加 */
+}
+
+.word-editor .ql-editor:focus {
+  outline: none !important;
+  /* フォーカス時の背景色を微調整 */
+  background-color: #fafafa;
+}
+
+/* フォーカス状態の改善 */
+.word-editor .ql-editor:focus-within {
+  outline: none !important;
+}
+
+/* カーソル位置の明確化 */
+.word-editor .ql-editor .ql-cursor {
+  border-left: 2px solid #3b82f6;
+  background-color: rgba(59, 130, 246, 0.1);
+}
+
+/* 見出しスタイルの強化 */
+.word-editor .ql-editor h1 {
+  font-size: 32px;
+  font-weight: 900;
+  color: #111827;
+  margin: 24px 0 16px 0; /* 32px 0 20px 0から24px 0 16px 0に変更 */
+  line-height: 1.1;
+  border-bottom: 3px solid #3b82f6;
+  padding-bottom: 12px;
+  position: relative;
+}
+
+.word-editor .ql-editor h1::before {
+  content: "📋";
+  margin-right: 8px;
+  font-size: 28px;
+}
+
+.word-editor .ql-editor h2 {
+  font-size: 28px;
+  font-weight: 800;
+  color: #111827;
+  margin: 20px 0 12px 0; /* 28px 0 16px 0から20px 0 12px 0に変更 */
+  line-height: 1.2;
+  border-bottom: 2px solid #e5e7eb;
+  padding-bottom: 8px;
+  position: relative;
+}
+
+.word-editor .ql-editor h2::before {
+  content: "📝";
+  margin-right: 8px;
+  font-size: 24px;
+}
+
+.word-editor .ql-editor h3 {
+  font-size: 24px;
+  font-weight: 700;
+  color: #111827;
+  margin: 16px 0 8px 0; /* 24px 0 12px 0から16px 0 8px 0に変更 */
+  line-height: 1.3;
+  position: relative;
+}
+
+.word-editor .ql-editor h3::before {
+  content: "📌";
+  margin-right: 8px;
+  font-size: 20px;
+}
+
+/* Quill.jsの見出しクラス対応 */
+.word-editor .ql-editor .ql-size-huge {
+  font-size: 32px !important;
+  font-weight: 900 !important;
+  color: #111827 !important;
+  margin: 24px 0 16px 0 !important; /* 32px 0 20px 0から24px 0 16px 0に変更 */
+  line-height: 1.1 !important;
+  border-bottom: 3px solid #3b82f6 !important;
+  padding-bottom: 12px !important;
+  position: relative !important;
+}
+
+.word-editor .ql-editor .ql-size-large {
+  font-size: 28px !important;
+  font-weight: 800 !important;
+  color: #111827 !important;
+  margin: 20px 0 12px 0 !important; /* 28px 0 16px 0から20px 0 12px 0に変更 */
+  line-height: 1.2 !important;
+  border-bottom: 2px solid #e5e7eb !important;
+  padding-bottom: 8px !important;
+  position: relative !important;
+}
+
+.word-editor .ql-editor .ql-size-small {
+  font-size: 24px !important;
+  font-weight: 700 !important;
+  color: #111827 !important;
+  margin: 16px 0 8px 0 !important; /* 24px 0 12px 0から16px 0 8px 0に変更 */
+  line-height: 1.3 !important;
+  position: relative !important;
+}
+
+.word-editor .ql-editor p {
+  margin: 8px 0; /* 16px 0から8px 0に変更して間隔を狭く */
+  padding: 0;
+  line-height: 1.4; /* 段落のline-heightも調整 */
+}
+
+/* 強調スタイルの強化 */
+.word-editor .ql-editor .important {
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%) !important;
+  border-left: 6px solid #f59e0b !important;
+  padding: 12px 16px !important; /* 16px 20pxから12px 16pxに変更 */
+  margin: 8px 0 !important; /* 12px 0から8px 0に変更 */
+  border-radius: 8px !important;
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.2) !important;
+  position: relative !important;
+  font-weight: 600 !important;
+  /* 行全体の背景色を追加 */
+  display: block !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+.word-editor .ql-editor .action-item {
+  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%) !important;
+  border-left: 6px solid #3b82f6 !important;
+  padding: 12px 16px !important; /* 16px 20pxから12px 16pxに変更 */
+  margin: 8px 0 !important; /* 12px 0から8px 0に変更 */
+  border-radius: 8px !important;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.2) !important;
+  position: relative !important;
+  font-weight: 600 !important;
+  /* 行全体の背景色を追加 */
+  display: block !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+/* 強調スタイルの行全体背景色 */
+.word-editor .ql-editor p.important,
+.word-editor .ql-editor div.important {
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%) !important;
+  border-left: 6px solid #f59e0b !important;
+  padding: 12px 16px !important; /* 16px 20pxから12px 16pxに変更 */
+  margin: 8px 0 !important; /* 12px 0から8px 0に変更 */
+  border-radius: 8px !important;
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.2) !important;
+  position: relative !important;
+  font-weight: 600 !important;
+  display: block !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+.word-editor .ql-editor p.action-item,
+.word-editor .ql-editor div.action-item {
+  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%) !important;
+  border-left: 6px solid #3b82f6 !important;
+  padding: 12px 16px !important; /* 16px 20pxから12px 16pxに変更 */
+  margin: 8px 0 !important; /* 12px 0から8px 0に変更 */
+  border-radius: 8px !important;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.2) !important;
+  position: relative !important;
+  font-weight: 600 !important;
+  display: block !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+/* 強調スタイルのホバー効果 */
+.word-editor .ql-editor .important:hover,
+.word-editor .ql-editor p.important:hover,
+.word-editor .ql-editor div.important:hover {
+  background: linear-gradient(135deg, #fde68a 0%, #fcd34d 100%) !important;
+  box-shadow: 0 6px 16px rgba(245, 158, 11, 0.25) !important;
+  transform: translateY(-1px) !important;
+  transition: all 0.3s ease !important;
+}
+
+.word-editor .ql-editor .action-item:hover,
+.word-editor .ql-editor p.action-item:hover,
+.word-editor .ql-editor div.action-item:hover {
+  background: linear-gradient(135deg, #bfdbfe 0%, #93c5fd 100%) !important;
+  box-shadow: 0 6px 16px rgba(59, 130, 246, 0.25) !important;
+  transform: translateY(-1px) !important;
+  transition: all 0.3s ease !important;
+}
+
+/* 編集状態の視覚的フィードバック */
+.word-editor.editing .ql-editor {
+  background-color: #fafafa;
+  transition: background-color 0.3s ease;
+}
+
+.word-editor.editing .editor-container {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* フォーカス保持の改善 */
+.word-editor .ql-editor:focus,
+.word-editor .ql-editor:focus-within {
+  background-color: #fafafa;
+}
+
+/* 見出し・強調切り替え時のアニメーション */
+.word-editor .ql-editor h1,
+.word-editor .ql-editor h2,
+.word-editor .ql-editor h3,
+.word-editor .ql-editor .important,
+.word-editor .ql-editor .action-item {
+  transition: all 0.3s ease;
+}
+
+/* デバッグ情報のスタイル改善 */
+.debug-info {
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 16px;
+  margin-top: 16px;
+  font-size: 13px;
+  color: #64748b;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.debug-info p {
+  margin: 6px 0;
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
+  padding: 4px 8px;
+  background-color: #fff;
+  border-radius: 4px;
+  border: 1px solid #e2e8f0;
+}
+
+/* プレースホルダーの改善 */
+.word-editor .ql-editor .ql-placeholder {
+  color: #9ca3af;
+  font-style: italic;
+  font-size: 16px;
+}
+
+/* 選択範囲のスタイル改善 */
+.word-editor .ql-editor ::selection {
+  background-color: #3b82f6;
+  color: white;
+}
+
+.word-editor .ql-editor ::-moz-selection {
+  background-color: #3b82f6;
+  color: white;
+}
+
+/* スクロールバーの改善 */
+.word-editor .ql-editor::-webkit-scrollbar {
+  width: 10px;
+}
+
+.word-editor .ql-editor::-webkit-scrollbar-track {
+  background: #f8fafc;
+  border-radius: 5px;
+}
+
+.word-editor .ql-editor::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 5px;
+  border: 2px solid #f8fafc;
+}
+
+.word-editor .ql-editor::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* ダークモード対応 */
+@media (prefers-color-scheme: dark) {
+  .word-like-editor {
+    background-color: #1f2937;
+    color: #f9fafb;
+  }
+  
+  .editor-container {
+    border-color: #4b5563;
+  }
+  
+  .word-editor .ql-editor {
+    background-color: #111827;
+    color: #f9fafb;
+  }
+  
+  .word-editor .ql-editor:focus {
+    background-color: #1f2937;
+  }
+  
+  .word-editor .ql-editor h1,
+  .word-editor .ql-editor h2,
+  .word-editor .ql-editor h3 {
+    color: #f9fafb;
+  }
+  
+  .debug-info {
+    background: linear-gradient(135deg, #374151 0%, #4b5563 100%);
+    border-color: #6b7280;
+    color: #d1d5db;
+  }
+} 

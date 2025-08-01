@@ -65,6 +65,37 @@
   cursor: not-allowed;
 }
 
+.editor-mode-switch {
+  display: flex;
+  gap: 8px;
+  margin-right: 16px;
+}
+
+.mode-button {
+  padding: 8px 16px;
+  border: 2px solid var(--accent-color);
+  background-color: white;
+  color: var(--accent-color);
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: var(--primary-font);
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.mode-button:hover {
+  background-color: var(--accent-color);
+  color: white;
+}
+
+.mode-button.active {
+  background-color: var(--accent-color);
+  color: white;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
 .header-import-box {
   display: flex;
   align-items: center;

@@ -116,7 +116,7 @@ export class ErrorHandlerService {
    */
   static showSuccess(message: string): void {
     console.info(`[SUCCESS] ${message}`);
-    alert(message);
+    window.alert(message);
   }
 
   /**
@@ -124,20 +124,20 @@ export class ErrorHandlerService {
    */
   static showInfo(message: string): void {
     console.info(`[INFO] ${message}`);
-    alert(message);
+    window.alert(message);
   }
 
   /**
    * 確認ダイアログを表示
    */
   static showConfirm(message: string): boolean {
-    return confirm(message);
+    return window.confirm(message);
   }
 
   /**
    * プロンプトダイアログを表示
    */
   static showPrompt(message: string, defaultValue?: string): string | null {
-    return prompt(message, defaultValue);
+    return window.prompt(message, defaultValue);
   }
 } 

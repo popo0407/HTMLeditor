@@ -4,17 +4,12 @@
  * 開発憲章の「関心の分離」に従い、UIの状態管理をコンポーネントに閉じてカプセル化
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import './App.css';
-import { BlockEditor } from './components/BlockEditor';
-import { useBlockManager } from './hooks/useBlockManager';
-import { usePreviewManager } from './hooks/usePreviewManager';
-import { useKeyboardNavigation, KeyboardNavigationConfig, KeyboardNavigationHandlers } from './hooks/useKeyboardNavigation';
-import { useUndoRedo } from './hooks/useUndoRedo';
-import { useSearchReplace } from './hooks/useSearchReplace';
-import { OperationHandlerService } from './services/operationHandlerService';
+import { WordLikeEditor } from './wordEditor/components/WordLikeEditor';
 import { getEmailTemplates, sendMail, MailSendRequest } from './services/apiService';
-import { Block, BlockType, BlockStyle } from './types';
+import { HtmlExportService } from './wordEditor/services/htmlExportService';
+import { EditorContent } from './wordEditor/types/wordEditorTypes';
 
 interface EmailTemplates {
   default_recipient: string;
@@ -24,131 +19,41 @@ interface EmailTemplates {
 }
 
 function App() {
-  const blockManager = useBlockManager();
-  const previewManager = usePreviewManager();
   const [emailTemplates, setEmailTemplates] = useState<EmailTemplates | null>(null);
   const [selectedSubject, setSelectedSubject] = useState<string>('');
   const [selectedBodyTemplate, setSelectedBodyTemplate] = useState<string>('');
   const [customRecipient, setCustomRecipient] = useState<string>('');
   const [importText, setImportText] = useState('');
+  const [editorContent, setEditorContent] = useState<EditorContent>({
+    content: '',
+    formats: {
+      heading: 'p',
+      emphasis: 'normal',
+      inline: { bold: false, underline: false },
+      paragraph: { indent: 0 },
+      table: {
+        rows: 0,
+        cols: 0,
+        hasHeaderRow: false,
+        hasHeaderCol: false,
+        cellMerges: [],
+        styles: {
+          borderColor: '#000000',
+          backgroundColor: '#ffffff',
+          headerBackgroundColor: '#f0f0f0',
+          alignment: 'left',
+          cellPadding: 8,
+        },
+      },
+    },
+  });
 
-  // アンドゥ/リドゥ機能
-  const undoRedo = useUndoRedo();
+  const htmlExportService = useRef(new HtmlExportService());
 
-  // 検索・置換機能
-  const searchReplace = useSearchReplace();
-
-  // キーボードナビゲーション設定
-  const keyboardConfig: KeyboardNavigationConfig = {
-    enableArrowKeys: true,
-    enableCtrlSpace: true,
-    enableShiftSpace: true,
-    enableContextMenu: true,
-  };
-
-  // キーボードナビゲーションハンドラー
-  const keyboardHandlers: KeyboardNavigationHandlers = {
-    onBlockMove: (direction: 'up' | 'down') => {
-      if (direction === 'up') {
-        blockManager.navigateToPreviousBlock();
-        // 移動後にカーソルを移動（少し遅延）
-        setTimeout(() => {
-          if (blockManager.focusedBlockId) {
-            blockManager.focusBlockWithCursor(blockManager.focusedBlockId);
-          }
-        }, 20);
-      } else {
-        blockManager.navigateToNextBlock();
-        // 移動後にカーソルを移動（少し遅延）
-        setTimeout(() => {
-          if (blockManager.focusedBlockId) {
-            blockManager.focusBlockWithCursor(blockManager.focusedBlockId);
-          }
-        }, 20);
-      }
-    },
-    onBlockCreate: (blockType: BlockType) => {
-      // 現在フォーカスされているブロックの後に新しいブロックを作成
-      if (blockManager.focusedBlockId) {
-        const newBlockId = blockManager.addBlock(blockType, blockManager.focusedBlockId);
-        // 新しく作成されたブロックにカーソルを移動
-        blockManager.focusBlockWithCursor(newBlockId);
-      } else {
-        // フォーカスされていない場合は最後に追加
-        const newBlockId = blockManager.addBlock(blockType);
-        // 新しく作成されたブロックにカーソルを移動
-        blockManager.focusBlockWithCursor(newBlockId);
-      }
-    },
-    onBlockTypeChange: (blockId: string, newType: BlockType) => {
-      blockManager.changeBlockType(blockId, newType);
-    },
-    onBlockStyleChange: (blockId: string, newStyle: BlockStyle) => {
-      blockManager.changeBlockStyle(blockId, newStyle);
-    },
-    onBlockDelete: (blockId: string) => {
-      blockManager.deleteBlock(blockId);
-    },
-    onBlockSelect: (blockId: string) => {
-      blockManager.focusBlock(blockId);
-    },
-    onSelectAll: (blockId: string) => {
-      blockManager.selectAllInBlock(blockId);
-    },
-    onUndo: () => {
-      undoRedo.undo();
-    },
-    onRedo: () => {
-      undoRedo.redo();
-    },
-    onSearch: () => {
-      // 検索UIを表示（後で実装）
-      console.log('検索機能を開始');
-    },
-    onReplace: () => {
-      // 置換UIを表示（後で実装）
-      console.log('置換機能を開始');
-    },
-  };
-
-  // キーボードナビゲーション
-  const keyboardNavigation = useKeyboardNavigation(keyboardConfig, keyboardHandlers);
-
-  // 現在のブロック情報を取得
-  const currentBlock = blockManager.blocks.find(b => b.id === blockManager.focusedBlockId);
-  const currentBlockType = currentBlock?.type;
-  const currentBlockStyle = currentBlock?.style || 'normal';
-
-  // キーボードナビゲーション（現在のブロック情報付き）
-  const keyboardNavigationWithBlockInfo = useKeyboardNavigation(
-    keyboardConfig, 
-    keyboardHandlers,
-    currentBlockType,
-    currentBlockStyle
-  );
-
+  // メールテンプレートの読み込み
   useEffect(() => {
     loadEmailTemplates();
   }, []);
-
-  // 初期フォーカスの設定
-  useEffect(() => {
-    if (blockManager.blocks.length > 0 && !blockManager.focusedBlockId) {
-      blockManager.focusBlockWithCursor(blockManager.blocks[0].id);
-    }
-  }, [blockManager.blocks, blockManager.focusedBlockId, blockManager.focusBlockWithCursor]);
-
-  // ブロック変更時にアンドゥ/リドゥの状態を保存
-  useEffect(() => {
-    if (blockManager.blocks.length > 0) {
-      undoRedo.saveState(blockManager.blocks, blockManager.focusedBlockId);
-    }
-  }, [blockManager.blocks, blockManager.focusedBlockId, undoRedo]);
-
-  // キーボードナビゲーションの現在ブロックIDを同期
-  useEffect(() => {
-    keyboardNavigationWithBlockInfo.setCurrentBlockId(blockManager.focusedBlockId);
-  }, [blockManager.focusedBlockId, keyboardNavigationWithBlockInfo]);
 
   const loadEmailTemplates = async () => {
     try {
@@ -160,89 +65,106 @@ function App() {
       if (templates.body_templates.length > 0) {
         setSelectedBodyTemplate(templates.body_templates[0]);
       }
+      setCustomRecipient(templates.default_recipient || '');
     } catch (error) {
-      console.error('メールテンプレート読み込みエラー:', error);
+      console.error('メールテンプレートの読み込みに失敗しました:', error);
     }
   };
 
   const handleImportFromTextBox = async () => {
     if (!importText.trim()) {
-      alert('テキストを入力してください');
+      alert('インポートするテキストを入力してください。');
       return;
     }
-    const result = await OperationHandlerService.handleImportFromText(importText);
-    if (result.success && result.data) {
-      blockManager.setBlocks(result.data);
+
+    try {
+      // WordライクエディタにHTMLをインポート
+      console.log('Importing text to Word editor:', importText);
+      setEditorContent(prev => ({
+        ...prev,
+        content: importText,
+      }));
       setImportText(''); // 読み込み後クリア
-    } else {
-      alert('テキストの読み込みに失敗しました');
+    } catch (error) {
+      console.error('テキストのインポートに失敗しました:', error);
+      alert('テキストのインポートに失敗しました。');
     }
   };
 
   const handleImportFromText = async () => {
-    const htmlText = prompt('HTMLテキストを入力してください:');
-    if (htmlText) {
-      const result = await OperationHandlerService.handleImportFromText(htmlText);
-      if (result.success && result.data) {
-        blockManager.setBlocks(result.data);
-      }
+    try {
+      const text = await navigator.clipboard.readText();
+      setImportText(text);
+    } catch (error) {
+      console.error('クリップボードからの読み込みに失敗しました:', error);
+      alert('クリップボードからの読み込みに失敗しました。');
     }
   };
 
   const handleDownloadHtml = async () => {
-    const filename = prompt('ファイル名を入力してください:', 'document.html');
-    if (filename) {
-      await OperationHandlerService.handleDownloadHtml(blockManager.blocks, filename);
+    try {
+      // WordライクエディタからHTMLを取得してダウンロード
+      console.log('Downloading HTML from Word editor');
+      const filename = prompt('ファイル名を入力してください:', 'document.html') || 'document.html';
+      htmlExportService.current.downloadHtml(editorContent, filename);
+    } catch (error) {
+      console.error('HTMLのダウンロードに失敗しました:', error);
+      alert('HTMLのダウンロードに失敗しました。');
     }
   };
 
   const handleCopyToClipboard = async () => {
-    await OperationHandlerService.handleCopyToClipboard(blockManager.blocks);
+    try {
+      // WordライクエディタからHTMLを取得してクリップボードにコピー
+      console.log('Copying HTML to clipboard from Word editor');
+      await htmlExportService.current.copyToClipboard(editorContent);
+      alert('HTMLがクリップボードにコピーされました。');
+    } catch (error) {
+      console.error('クリップボードへのコピーに失敗しました:', error);
+      alert('クリップボードへのコピーに失敗しました。');
+    }
   };
 
   const handleSendMail = async () => {
     if (!emailTemplates) {
-      alert('メールテンプレートが読み込まれていません');
+      alert('メールテンプレートが読み込まれていません。');
       return;
     }
 
-    const recipient = customRecipient || emailTemplates.default_recipient;
-    if (!recipient) {
-      alert('宛先メールアドレスが設定されていません');
+    if (!customRecipient.trim()) {
+      alert('宛先を入力してください。');
       return;
     }
 
-    const subject = selectedSubject || emailTemplates.default_subject;
-    
-    // 本文に選択されたテンプレートを追加
-    let htmlContent = await previewManager.generatePreview(blockManager.blocks);
-    if (selectedBodyTemplate) {
-      htmlContent = `<p>${selectedBodyTemplate}</p>\n${htmlContent}`;
-    }
-    
     try {
-      const request: MailSendRequest = {
-        subject: subject,
-        html_content: htmlContent,
-        recipient_email: recipient
+      const mailRequest: MailSendRequest = {
+        recipient_email: customRecipient,
+        subject: selectedSubject,
+        html_content: selectedBodyTemplate,
       };
 
-      const result = await sendMail(request);
-      if (result.success) {
-        alert('メールが正常に送信されました');
-      } else {
-        alert(`メール送信に失敗しました: ${result.message}`);
-      }
+      await sendMail(mailRequest);
+      alert('メールが正常に送信されました。');
     } catch (error) {
-      alert(`メール送信中にエラーが発生しました: ${error}`);
+      console.error('メール送信に失敗しました:', error);
+      alert('メール送信に失敗しました。');
     }
   };
 
+  const handleContentChange = (content: string) => {
+    console.log('Word editor content changed:', content);
+    setEditorContent(prev => ({
+      ...prev,
+      html: content,
+      text: content.replace(/<[^>]*>/g, ''),
+    }));
+  };
+
   return (
-    <div className="App">
+    <div className="app">
       <header className="app-header">
         <div className="header-content">
-          <h1>HTML Editor</h1>
+          <h1>HTMLエディタ</h1>
           <div className="header-import-box">
             <textarea
               value={importText}
@@ -271,18 +193,20 @@ function App() {
 
       <main className="app-main">
         <div className="main-content">
-          {/* Layoutを廃止しBlockEditorを直接配置 */}
-          <BlockEditor
-            blocks={blockManager.blocks}
-            onBlockUpdate={blockManager.updateBlock}
-            onBlockAdd={blockManager.addBlock}
-            onBlockDelete={blockManager.deleteBlock}
-            onBlockMove={blockManager.moveBlock}
-            focusedBlockId={blockManager.focusedBlockId}
-            onBlockFocus={blockManager.focusBlock}
-            onBlockStyleChange={blockManager.changeBlockStyle}
-            onBlockTypeChange={blockManager.changeBlockType}
-          />
+          {/* Wordライクエディタのみ */}
+            <WordLikeEditor
+              initialContent={editorContent.content}
+              onContentChange={handleContentChange}
+              onSave={() => {
+                console.log('Word editor save');
+              }}
+              onTableInsert={() => {
+                console.log('Word editor table insert');
+              }}
+              onHtmlImport={(html) => {
+                console.log('Word editor HTML import:', html);
+              }}
+            />
         </div>
       </main>
 
