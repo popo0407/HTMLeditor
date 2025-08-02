@@ -78,11 +78,21 @@ function App() {
     }
 
     try {
-      // WordライクエディタにHTMLをインポート
+      // HTMLまたはマークダウンテキストを処理
       console.log('Importing text to Word editor:', importText);
+      
+      // マークダウンの場合はHTMLに変換
+      let processedContent = importText;
+      if (importText.includes('#') || importText.includes('|')) {
+        processedContent = convertMarkdownToHtml(importText);
+      }
+      
+      // HTMLをクリーンアップして安全な形式に変換
+      processedContent = sanitizeHtml(processedContent);
+      
       setEditorContent(prev => ({
         ...prev,
-        content: importText,
+        content: processedContent,
       }));
       setImportText(''); // 読み込み後クリア
     } catch (error) {
@@ -91,14 +101,64 @@ function App() {
     }
   };
 
-  const handleImportFromText = async () => {
-    try {
-      const text = await navigator.clipboard.readText();
-      setImportText(text);
-    } catch (error) {
-      console.error('クリップボードからの読み込みに失敗しました:', error);
-      alert('クリップボードからの読み込みに失敗しました。');
+  // マークダウンをHTMLに変換する関数
+  const convertMarkdownToHtml = (markdown: string): string => {
+    let html = markdown;
+    
+    // 見出しの変換
+    html = html.replace(/^### (.*$)/gim, '<h3>$1</h3>');
+    html = html.replace(/^## (.*$)/gim, '<h2>$1</h2>');
+    html = html.replace(/^# (.*$)/gim, '<h1>$1</h1>');
+    
+    // 太字の変換
+    html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+    html = html.replace(/__(.*?)__/g, '<strong>$1</strong>');
+    
+    // 斜体の変換
+    html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
+    html = html.replace(/_(.*?)_/g, '<em>$1</em>');
+    
+    // リストの変換
+    html = html.replace(/^\* (.*$)/gim, '<li>$1</li>');
+    html = html.replace(/^- (.*$)/gim, '<li>$1</li>');
+    html = html.replace(/^(\d+)\. (.*$)/gim, '<li>$2</li>');
+    
+    // 段落の変換（空行で区切られたテキストを段落に）
+    html = html.replace(/\n\n/g, '</p><p>');
+    html = html.replace(/^(?!<[h|li|ul|ol|table])(.*$)/gim, '<p>$1</p>');
+    
+    // 基本的な表の変換（簡易版）
+    const tableRegex = /\|(.+)\|/g;
+    if (tableRegex.test(html)) {
+      html = html.replace(/\|(.+)\|/g, (match: string, content: string) => {
+        const cells = content.split('|').map((cell: string) => cell.trim());
+        return `<tr>${cells.map((cell: string) => `<td>${cell}</td>`).join('')}</tr>`;
+      });
+      html = html.replace(/(<tr>.*<\/tr>)/gs, '<table border="1">$1</table>');
     }
+    
+    return html;
+  };
+
+  // HTMLをクリーンアップする関数
+  const sanitizeHtml = (html: string): string => {
+    // 許可するタグのみを残す
+    const allowedTags = [
+      'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+      'p', 'br', 'div', 'span',
+      'strong', 'b', 'em', 'i', 'u',
+      'ul', 'ol', 'li',
+      'table', 'thead', 'tbody', 'tr', 'th', 'td',
+      'blockquote', 'code', 'pre'
+    ];
+    
+    // 基本的なXSS対策
+    html = html.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
+    html = html.replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, '');
+    html = html.replace(/javascript:/gi, '');
+    html = html.replace(/on\w+\s*=/gi, '');
+    
+    return html;
   };
 
   const handleDownloadHtml = async () => {
@@ -169,9 +229,9 @@ function App() {
             <textarea
               value={importText}
               onChange={e => setImportText(e.target.value)}
-              placeholder="ここにHTMLやテキストを貼り付けてください"
-              rows={3}
-              style={{ width: '350px', resize: 'vertical', marginRight: '8px' }}
+              placeholder="ここにHTMLやマークダウンテキストを貼り付けてください"
+              rows={4}
+              style={{ width: '400px', resize: 'vertical', marginRight: '8px' }}
             />
             <button onClick={handleImportFromTextBox} className="header-button">
               読み込み
