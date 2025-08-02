@@ -32,14 +32,17 @@
 .header-content {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   width: 100%;
+  flex-wrap: wrap;
+  gap: 16px;
 }
 
 .header-buttons {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
+  align-items: flex-start;
 }
 
 .header-button {
@@ -100,6 +103,8 @@
   display: flex;
   align-items: center;
   margin-bottom: 8px;
+  flex: 1;
+  min-width: 300px;
 }
 
 .header-import-box textarea {
@@ -124,14 +129,15 @@
 }
 
 .main-content {
-  max-width: 900px;
-  margin: 0 auto;
-  padding: 24px 0;
+  max-width: none; /* 最大幅制限を削除 */
+  margin: 0;
+  padding: 24px;
   display: flex;
   flex-direction: column;
   overflow-y: auto;
   overflow-x: hidden;
   background-color: white;
+  width: 100%;
 }
 
 /* 分割ビューのスタイル */
@@ -235,9 +241,20 @@
     padding: 10px;
   }
   
+  .header-content {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .header-import-box {
+    min-width: auto;
+    width: 100%;
+  }
+  
   .header-buttons {
     flex-wrap: wrap;
     gap: 6px;
+    justify-content: center;
   }
   
   .header-button {
@@ -247,6 +264,7 @@
   
   .main-content {
     height: calc(100vh - 120px);
+    padding: 12px;
   }
   
   .split-view {
