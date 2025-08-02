@@ -291,13 +291,130 @@ export const WordLikeEditor: React.FC<WordLikeEditorProps> = ({
             hasFormatLine: !!quill.formatLine,
             hasFocus: !!quill.focus
           });
+
+          // text-changeイベントリスナーを追加
+          quill.on('text-change', (delta: any, oldContents: any, source: any) => {
+            // 改行が含まれているかチェック
+            if (delta.ops) {
+              const hasNewline = delta.ops.some((op: any) => 
+                op.insert && typeof op.insert === 'string' && op.insert.includes('\n')
+              );
+              
+              if (hasNewline && source === 'user') {
+                console.log('text-changeで改行を検出');
+                // 改行後の新しい行のフォーマットをリセット
+                setTimeout(() => {
+                  const selection = quill.getSelection();
+                  if (selection) {
+                    const [line] = quill.getLine(selection.index);
+                    if (line) {
+                      const lineStart = line.offset();
+                      const lineLength = line.length();
+                      
+                      // 見出しと強調の両方を強制的にリセット
+                      quill.formatLine(lineStart, lineLength, 'header', false);
+                      quill.formatLine(lineStart, lineLength, 'class', false);
+                      quill.formatText(lineStart, lineLength, 'color', false);
+                      
+                      // CSSクラスを強制的に削除
+                      const lineElement = quill.getLine(lineStart)[0]?.domNode;
+                      if (lineElement) {
+                        lineElement.classList.remove('important', 'action-item');
+                        lineElement.style.color = '';
+                      }
+                      
+                      // フォーマット状態を更新
+                      setFormats(prev => ({
+                        ...prev,
+                        heading: 'p',
+                        emphasis: 'normal'
+                      }));
+                      
+                      // 強制的にHTMLを更新
+                      const updatedHtml = quill.root.innerHTML;
+                      setContent(updatedHtml);
+                      
+                      // さらに遅延させて確実に更新
+                      setTimeout(() => {
+                        const finalHtml = quill.root.innerHTML;
+                        setContent(finalHtml);
+                      }, 10);
+                    }
+                  }
+                }, 5);
+              }
+            }
+          });
         }
       }
     };
 
     // 初期化を少し遅延させる
     setTimeout(initializeEditor, 200);
-  }, []);
+  }, [setFormats]);
+
+  // エディタのフォーカス復元を確実にする
+  useEffect(() => {
+    const handleWindowFocus = () => {
+      if (quillRef.current && !contextMenu.show) {
+        const quill = quillRef.current.getEditor();
+        if (quill && quill.focus) {
+          setTimeout(() => {
+            quill.focus();
+            console.log('ウィンドウフォーカス時にエディタフォーカスを復元');
+          }, 50);
+        }
+      }
+    };
+
+    window.addEventListener('focus', handleWindowFocus);
+    return () => {
+      window.removeEventListener('focus', handleWindowFocus);
+    };
+  }, [contextMenu.show]);
+
+  // formats（editorFormats）とQuillの見た目を同期
+  useEffect(() => {
+    if (!quillRef.current) return;
+    const quill = quillRef.current.getEditor();
+    if (!quill) return;
+
+    const selection = quill.getSelection();
+    if (!selection) return;
+
+    const [line] = quill.getLine(selection.index);
+    if (!line) return;
+
+    const lineStart = line.offset();
+    const lineLength = line.length();
+
+    // 見出し
+    if (editorFormats.heading === 'p') {
+      quill.formatLine(lineStart, lineLength, 'header', false);
+    } else if (editorFormats.heading === 'h1' || editorFormats.heading === 'h2' || editorFormats.heading === 'h3') {
+      const headerLevel = parseInt(editorFormats.heading.charAt(1));
+      quill.formatLine(lineStart, lineLength, 'header', headerLevel);
+    }
+
+    // 強調
+    if (editorFormats.emphasis === 'normal') {
+      quill.formatLine(lineStart, lineLength, 'class', false);
+      quill.formatText(lineStart, lineLength, 'color', false);
+      // クラス・色もDOMから消す
+      const lineElement = quill.getLine(lineStart)[0]?.domNode;
+      if (lineElement) {
+        lineElement.classList.remove('important', 'action-item');
+        lineElement.style.color = '';
+      }
+    } else {
+      quill.formatLine(lineStart, lineLength, 'class', editorFormats.emphasis);
+      if (editorFormats.emphasis === 'important') {
+        quill.formatText(lineStart, lineLength, 'color', '#d97706');
+      } else if (editorFormats.emphasis === 'action-item') {
+        quill.formatText(lineStart, lineLength, 'color', '#2563eb');
+      }
+    }
+  }, [editorFormats, quillRef]);
 
   // コンテンツ変更ハンドラー
   const handleChange = useCallback((value: string, delta: any, source: any, editor: any) => {
@@ -322,8 +439,28 @@ export const WordLikeEditor: React.FC<WordLikeEditorProps> = ({
     // エディタのキーボード入力を復元（バインディングは自動的にクリアされる）
     if (quillRef.current) {
       const quill = quillRef.current.getEditor();
+      
+      // キーボードバインディングをクリア
+      if (quill.keyboard) {
+        // バインディングを削除（Quill.jsの仕様上、同じキーで新しいバインディングを追加すると上書きされる）
+        quill.keyboard.addBinding({ key: 'enter' }, () => {
+          return true; // デフォルト動作を許可
+        });
+        quill.keyboard.addBinding({ key: 'escape' }, () => {
+          return true; // デフォルト動作を許可
+        });
+      }
+      
       // フォーカスを戻す
       quill.focus();
+      
+      // 少し遅延させてからフォーカスを確実に設定
+      setTimeout(() => {
+        if (quillRef.current) {
+          const quill = quillRef.current.getEditor();
+          quill.focus();
+        }
+      }, 10);
     }
     
     setContextMenu(prev => ({ ...prev, show: false, savedSelection: null }));
@@ -336,6 +473,34 @@ export const WordLikeEditor: React.FC<WordLikeEditorProps> = ({
       e.preventDefault();
       e.stopPropagation();
       return;
+    }
+  }, [contextMenu.show]);
+
+  // ReactQuillのキーボードイベントハンドラー
+  const handleQuillKeyDown = useCallback((e: React.KeyboardEvent) => {
+    // メニューが表示されている間は、エンターキーを無効化
+    if (contextMenu.show && e.key === 'Enter') {
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
+  }, [contextMenu.show]);
+
+  // エディタのフォーカス復元ハンドラー
+  const handleEditorFocus = useCallback(() => {
+    // メニューが閉じられた後にフォーカスを確実に復元
+    if (!contextMenu.show && quillRef.current) {
+      const quill = quillRef.current.getEditor();
+      quill.focus();
+    }
+  }, [contextMenu.show]);
+
+  // エディタのクリックハンドラー
+  const handleEditorClick = useCallback(() => {
+    // メニューが閉じられた後にクリックでフォーカスを復元
+    if (!contextMenu.show && quillRef.current) {
+      const quill = quillRef.current.getEditor();
+      quill.focus();
     }
   }, [contextMenu.show]);
 
@@ -428,6 +593,10 @@ export const WordLikeEditor: React.FC<WordLikeEditorProps> = ({
 
           // エディタにフォーカスを戻す
           quill.focus();
+          
+          // カーソルを該当行の文末に移動して全選択を解除
+          const lineEnd = lineStart + lineLength;
+          quill.setSelection(lineEnd, 0);
         } else {
           console.error('行が見つかりません');
         }
@@ -501,6 +670,10 @@ export const WordLikeEditor: React.FC<WordLikeEditorProps> = ({
 
           // エディタにフォーカスを戻す
           quill.focus();
+          
+          // カーソルを該当行の文末に移動して全選択を解除
+          const lineEnd = lineStart + lineLength;
+          quill.setSelection(lineEnd, 0);
         } else {
           console.error('行が見つかりません');
         }
@@ -556,21 +729,23 @@ export const WordLikeEditor: React.FC<WordLikeEditorProps> = ({
         className="editor-container"
         onContextMenu={handleContextMenu}
         onKeyDown={handleEditorKeyDown}
+        onFocus={handleEditorFocus}
+        onClick={handleEditorClick}
       >
-        <ReactQuill
-          ref={quillRef}
-          value={content}
-          onChange={handleChange}
-          onFocus={handleFocus}
-          modules={modules}
-          formats={quillFormats}
-          placeholder="ここにテキストを入力してください..."
-          className={`word-editor ${isEditing ? 'editing' : ''}`}
-          preserveWhitespace={true}
-          readOnly={contextMenu.show}
-          theme="snow"
-          onKeyDown={handleEditorKeyDown}
-        />
+                 <ReactQuill
+           ref={quillRef}
+           value={content}
+           onChange={handleChange}
+           onFocus={handleFocus}
+           modules={modules}
+           formats={quillFormats}
+           placeholder="ここにテキストを入力してください..."
+           className={`word-editor ${isEditing ? 'editing' : ''}`}
+           preserveWhitespace={true}
+           readOnly={contextMenu.show}
+           theme="snow"
+           onKeyDown={handleQuillKeyDown}
+         />
       </div>
 
       {/* コンテキストメニュー */}
