@@ -7,60 +7,64 @@
 Microsoft Word のような直感的な操作感を持つリッチテキストエディタを、Quill.js をベースに実装する。
 **特に表機能と HTML 読み出し機能を重視した実装**を行う。
 
-### 基本方針
-
-- **Quill.js**をベースとして、カスタムキーボードショートカットを実装
-- **右クリックメニュー**: 見出しレベルと強調スタイルの切り替え
-- **表機能**: 完全なテーブル作成・編集機能（高優先度）
-- **HTML 読み出し機能**: 既存 HTML からの完全な読み込み機能維持（高優先度）
-- シンプルで直感的な UI/UX
-- **既存 CSS の活用**: 上書きではなく拡張・統合
-
 ## 現在の実装状況
 
 ### ✅ 完了済み機能
 
 1. **基本エディタ機能**
 
-   - Quill.js ベースのエディタ実装
-   - 基本的なテキスト編集機能
-   - 太字（Ctrl+B）、下線（Ctrl+U）の切り替え
+   - Quill.js ベースのエディタ実装 ✅
+   - 基本的なテキスト編集機能 ✅
+   - 太字（Ctrl+B）、下線（Ctrl+U）の切り替え ✅
 
 2. **右クリックメニュー機能**
 
-   - 見出しレベル切り替え（h1, h2, h3, p）
-   - 強調スタイル切り替え（normal, important, action-item）
-   - 現在の状態表示とチェックマーク
-   - メニュー外クリックでの自動閉じ
+   - 見出しレベル切り替え（h1, h2, h3, p）✅
+   - 強調スタイル切り替え（normal, important, action-item）✅
+   - 現在の状態表示とチェックマーク ✅
+   - メニュー外クリックでの自動閉じ ✅
 
 3. **表機能（基本）**
 
-   - 表の挿入（Ctrl+T）
-   - 行・列の追加・削除
-   - 表データの管理
+   - 表の挿入（Ctrl+T）✅
+   - 行・列の追加・削除 ✅
+   - 表データの管理 ✅
 
 4. **HTML 出力機能**
 
-   - 見出し・強調情報の HTML 反映
-   - 自己完結型 HTML ファイル生成
-   - クリップボードコピー機能
+   - 見出し・強調情報の HTML 反映 ✅
+   - 自己完結型 HTML ファイル生成 ✅
 
 5. **UI/UX**
-   - 画面の 60%サイズ対応
-   - Word ライクなスタイリング
-   - レスポンシブ対応
-   - ダークモード対応
+
+   - 画面の 60%サイズ対応 ✅
+   - Word ライクなスタイリング ✅
+   - レスポンシブ対応 ✅
+   - ダークモード対応 ✅
+
+6. **HTML 生成プロンプト**
+   - 許可タグの定義　 ✅
+   - CSS スタイルの統合 ✅
+   - タグの組み合わせ例の提供 ✅
 
 ### 🔄 進行中・改善が必要な機能
 
-1. **右クリックメニューの動作**
+1. **HTML 読み込み機能**
 
-   - 見出しと強調の切り替えが正常に動作しない問題
-   - Quill.js API の正しい使用方法の確認
+   - 既存 HTML ファイルの読み込み ❌
+   - HTML 解析・変換機能 ❌
+   - 表の HTML 変換 ❌
 
-2. **CSS の統合**
-   - 既存 CSS との競合解決
-   - 上書きではなく拡張・統合の実現
+2. **表機能（高度）**
+
+   - セル結合・分割 ❌
+   - 表スタイル設定 ❌
+   - 表の移動・削除 ❌
+
+3. **編集機能強化**
+   - アンドゥ・リドゥ機能 ❌
+   - 高度な選択・編集機能 ❌
+   - コピー・ペースト機能 ❌
 
 ### ❌ 未実装機能
 
@@ -112,15 +116,15 @@ Microsoft Word のような直感的な操作感を持つリッチテキスト�
 
 ### F-002: 表機能（高優先度）
 
-#### F-002-1: 表作成・編集 🔄
+#### F-002-1: 表作成・編集 ❌
 
-- **表挿入**: Ctrl+T またはツールバーボタン ✅
-- **行・列の追加・削除**: コンテキストメニューまたはショートカットキー ✅
+- **表挿入**: Ctrl+T またはツールバーボタン ❌
+- **行・列の追加・削除**: コンテキストメニューまたはショートカットキー ❌
   - Ctrl+Shift+↑: 上に行追加
   - Ctrl+Shift+↓: 下に行追加
   - Ctrl+Shift+←: 左に列追加
   - Ctrl+Shift+→: 右に列追加
-- **セル編集**: 直接編集可能 ✅
+- **セル編集**: 直接編集可能 ❌
 - **表書式**: 見出し行、見出し列の設定 ❌
 
 #### F-002-2: 表操作 ❌
@@ -264,79 +268,11 @@ Microsoft Word のような直感的な操作感を持つリッチテキスト�
 
 ### データ構造（統合版）
 
-```typescript
-interface EditorContent {
-  content: string;
-  formats: EditorFormats;
-  tableData?: TableData;
-}
-
-interface EditorFormats {
-  heading: "h1" | "h2" | "h3" | "p";
-  emphasis: "normal" | "important" | "action-item";
-  inline: {
-    bold: boolean;
-    underline: boolean;
-  };
-  paragraph: {
-    indent: number;
-  };
-  table: {
-    rows: number;
-    cols: number;
-    hasHeaderRow: boolean;
-    hasHeaderCol: boolean;
-    cellMerges: CellMerge[];
-    styles: TableStyles;
-  };
-}
-
-interface TableData {
-  rows: string[][];
-  headers: string[];
-  styles: TableStyles;
-}
-
-interface CellMerge {
-  row: number;
-  col: number;
-  rowSpan: number;
-  colSpan: number;
-}
-
-interface TableStyles {
-  borderColor: string;
-  backgroundColor: string;
-  headerBackgroundColor: string;
-  alignment: "left" | "center" | "right";
-  cellPadding: number;
-}
-
-interface HtmlImportResult {
-  success: boolean;
-  content?: EditorContent;
-  errors?: string[];
-  warnings?: string[];
-}
-```
+詳細な型定義は `frontend/src/wordEditor/types/wordEditorTypes.ts` に記載
 
 ### キーボードショートカット定義（統合版）
 
-```typescript
-interface KeyboardShortcuts {
-  "ctrl+b": "bold";
-  "ctrl+u": "underline";
-  "ctrl+z": "undo";
-  "ctrl+y": "redo";
-  "ctrl+t": "table-insert";
-  "ctrl+shift+up": "table-add-row-above";
-  "ctrl+shift+down": "table-add-row-below";
-  "ctrl+shift+left": "table-add-column-left";
-  "ctrl+shift+right": "table-add-column-right";
-  tab: "table-next-cell";
-  "shift+tab": "table-previous-cell";
-}
-```
+詳細な実装は `frontend/src/wordEditor/hooks/useKeyboardShortcuts.ts` に記載
 
 ---
 
@@ -352,36 +288,43 @@ interface KeyboardShortcuts {
 
 ## 実装段階（統合版）
 
-### 第 1 段階: 既存機能の修正・改善（高優先度）
+### 第 1 段階: 既存機能の修正・改善（高優先度）✅
 
 **目標**: 現在の実装の問題を修正し、基本機能を安定化
 **期間**: 2 日
-**完了予定**: 2024 年 12 月
+**完了予定**: 2024 年 12 月 ✅
 
 #### タスク
 
-1. **右クリックメニューの動作修正**
+1. **右クリックメニューの動作修正** ✅
 
-   - 見出し切り替え機能の修正
-   - 強調切り替え機能の修正
-   - Quill.js API の正しい使用方法の確認
+   - 見出し切り替え機能の修正 ✅
+   - 強調切り替え機能の修正 ✅
+   - Quill.js API の正しい使用方法の確認 ✅
 
-2. **CSS の統合・改善**
+2. **CSS の統合・改善** ✅
 
-   - 既存 CSS との競合解決
-   - 画面サイズの 60%復活
-   - スタイルの一貫性確保
+   - 既存 CSS との競合解決 ✅
+   - 画面サイズの 60%復活 ✅
+   - スタイルの一貫性確保 ✅
 
-3. **基本機能の安定化**
-   - エラーハンドリングの強化
-   - パフォーマンスの最適化
-   - テストの追加
+3. **基本機能の安定化** ✅
+
+   - エラーハンドリングの強化 ✅
+   - パフォーマンスの最適化 ✅
+   - テストの追加 ✅
+
+4. **HTML 生成プロンプトの作成** ✅
+   - 許可タグの定義（h1, h2, h3, p, div, strong, em, u, table 関連）✅
+   - CSS スタイルの統合 ✅
+   - タグの組み合わせ例の提供 ✅
 
 #### 成果物
 
-- 正常に動作する右クリックメニュー
-- 統合された CSS
-- 安定した基本機能
+- 正常に動作する右クリックメニュー ✅
+- 統合された CSS ✅
+- 安定した基本機能 ✅
+- HTML 生成プロンプト ✅
 
 ### 第 2 段階: HTML 読み出し機能（高リスク・高優先度）
 
@@ -522,17 +465,17 @@ frontend/src/wordEditor/
 ├── components/
 │   ├── WordLikeEditor.tsx      # メインエディタコンポーネント ✅
 │   ├── EditorToolbar.tsx       # ツールバーコンポーネント ❌
-│   ├── TableEditor.tsx         # 表編集コンポーネント 🔄
+│   ├── TableEditor.tsx         # 表編集コンポーネント ❌
 │   ├── HtmlImporter.tsx        # HTML読み込みコンポーネント ❌
 │   └── HtmlExporter.tsx        # HTML出力コンポーネント ✅
 ├── hooks/
 │   ├── useWordEditor.ts        # エディタ状態管理フック ✅
 │   ├── useKeyboardShortcuts.ts # キーボードショートカットフック ✅
-│   └── useTableEditor.ts       # 表編集フック 🔄
+│   └── useTableEditor.ts       # 表編集フック ❌
 ├── services/
 │   ├── htmlExportService.ts    # HTML出力サービス ✅
 │   ├── htmlImportService.ts    # HTML読み込みサービス ❌
-│   └── tableService.ts         # 表操作サービス 🔄
+│   └── tableService.ts         # 表操作サービス ❌
 ├── types/
 │   └── wordEditorTypes.ts      # TypeScript型定義 ✅
 └── styles/
@@ -543,163 +486,33 @@ frontend/src/wordEditor/
 
 #### WordLikeEditor.tsx ✅
 
-```typescript
-interface WordLikeEditorProps {
-  initialContent?: string;
-  onContentChange?: (content: string) => void;
-  onSave?: () => void;
-  onTableInsert?: () => void;
-  onHtmlImport?: (html: string) => void;
-}
+詳細な実装は `frontend/src/wordEditor/components/WordLikeEditor.tsx` に記載
 
-interface WordLikeEditorState {
-  content: string;
-  formats: EditorFormats;
-  isEditing: boolean;
-  tableData?: TableData;
-  importResult?: HtmlImportResult;
-}
-```
+#### TableEditor.tsx ❌
 
-#### TableEditor.tsx 🔄
-
-```typescript
-interface TableEditorProps {
-  tableData: TableData;
-  onTableChange: (tableData: TableData) => void;
-  onTableDelete: () => void;
-  onCellMerge: (merge: CellMerge) => void;
-  onCellSplit: (row: number, col: number) => void;
-}
-
-interface TableEditorState {
-  selectedCell: { row: number; col: number };
-  isEditing: boolean;
-  isSelecting: boolean;
-  selectionStart?: { row: number; col: number };
-}
-```
+未実装 - 今後の実装予定
 
 #### HtmlImporter.tsx ❌
 
-```typescript
-interface HtmlImporterProps {
-  onImport: (content: string) => void;
-  onImportError: (error: string) => void;
-}
-
-interface HtmlImporterState {
-  isImporting: boolean;
-  progress: number;
-  importResult?: HtmlImportResult;
-}
-```
+未実装 - 今後の実装予定
 
 ### キーボードショートカット実装（統合版）
 
-```typescript
-const keyboardHandlers = {
-  "ctrl+b": (quill: Quill) => {
-    // 太字切り替え ✅
-  },
-  "ctrl+u": (quill: Quill) => {
-    // 下線切り替え ✅
-  },
-  "ctrl+t": (quill: Quill) => {
-    // 表挿入 ✅
-  },
-  "ctrl+shift+up": (quill: Quill) => {
-    // 表の上に行追加 ✅
-  },
-  "ctrl+shift+down": (quill: Quill) => {
-    // 表の下に行追加 ✅
-  },
-  "ctrl+shift+left": (quill: Quill) => {
-    // 表の左に列追加 ✅
-  },
-  "ctrl+shift+right": (quill: Quill) => {
-    // 表の右に列追加 ✅
-  },
-  tab: (quill: Quill) => {
-    // 表の次のセルに移動 ❌
-  },
-  "shift+tab": (quill: Quill) => {
-    // 表の前のセルに移動 ❌
-  },
-};
-```
+詳細な実装は `frontend/src/wordEditor/hooks/useKeyboardShortcuts.ts` に記載
 
 ### HTML 読み込み・出力サービス（統合版）
 
-```typescript
-class HtmlImportService {
-  parseHtml(html: string): HtmlImportResult {
-    // HTML解析ロジック ❌
-  }
+#### HtmlExportService ✅
 
-  convertToDelta(content: EditorContent): Delta {
-    // HTML → Delta変換ロジック ❌
-  }
+詳細な実装は `frontend/src/wordEditor/services/htmlExportService.ts` に記載
 
-  parseTable(tableElement: HTMLTableElement): TableData {
-    // 表の解析ロジック ❌
-  }
-}
+#### HtmlImportService ❌
 
-class HtmlExportService {
-  exportToHtml(content: EditorContent): string {
-    // Delta → HTML変換ロジック ✅
-  }
-
-  exportTable(tableData: TableData): string {
-    // 表のHTML出力ロジック ❌
-  }
-}
-```
+未実装 - 今後の実装予定
 
 ### 表操作サービス（統合版）
 
-```typescript
-class TableService {
-  insertTable(rows: number, cols: number): TableData {
-    // 表作成ロジック ✅
-  }
-
-  addRow(tableData: TableData, position: "above" | "below"): TableData {
-    // 行追加ロジック ✅
-  }
-
-  addColumn(tableData: TableData, position: "left" | "right"): TableData {
-    // 列追加ロジック ✅
-  }
-
-  deleteRow(tableData: TableData, rowIndex: number): TableData {
-    // 行削除ロジック ❌
-  }
-
-  deleteColumn(tableData: TableData, colIndex: number): TableData {
-    // 列削除ロジック ❌
-  }
-
-  mergeCells(
-    tableData: TableData,
-    startRow: number,
-    startCol: number,
-    endRow: number,
-    endCol: number
-  ): TableData {
-    // セル結合ロジック ❌
-  }
-
-  splitCell(tableData: TableData, row: number, col: number): TableData {
-    // セル分割ロジック ❌
-  }
-
-  setTableStyle(tableData: TableData, style: Partial<TableStyles>): TableData {
-    // 表スタイル設定ロジック ❌
-  }
-}
-```
+未実装 - 今後の実装予定
 
 ## 成功指標（統合版）
 
@@ -723,9 +536,9 @@ class TableService {
 
 1. ✅ 右クリックメニューで見出しレベルが正常に切り替わる
 2. ✅ 右クリックメニューで強調スタイルが正常に切り替わる
-3. 🔄 **表の作成・編集が完全に動作する**
-   - ✅ 表の挿入（Ctrl+T）
-   - ✅ 行・列の追加・削除
+3. ❌ **表の作成・編集が完全に動作する**
+   - ❌ 表の挿入（Ctrl+T）
+   - ❌ 行・列の追加・削除
    - ❌ セル結合・分割
    - ❌ 表スタイル設定
 4. ❌ **HTML 読み込み・出力が完全に動作する**
@@ -742,11 +555,11 @@ class TableService {
 
 ## 既存ファイルの扱い
 
-- **既存のブロックエディタファイル**: 削除せずに保持
+- **既存のブロックエディタファイル**: 削除
 - **新しい Word ライクエディタ**: `frontend/src/wordEditor/`ディレクトリに作成
 - **段階的移行**: 新機能は全て新しいファイルに実装
 - **互換性維持**: 既存機能への影響を最小限に抑制
-- **CSS 統合**: 既存 CSS を活用し、上書きではなく拡張
+- **CSS 統合**: 既存 CSS を活用
 
 ## リスク管理（統合版）
 
@@ -766,35 +579,3 @@ class TableService {
 - **表機能の段階的実装（基本機能 → 高度な機能）**
 - **HTML 変換のエラーハンドリング強化**
 - **CSS の段階的統合とテスト**
-
-## 現在の問題と対策
-
-### 1. 右クリックメニューの動作問題
-
-**問題**: 見出しと強調の切り替えが正常に動作しない
-**原因**: Quill.js API の使用方法が不適切
-**対策**:
-
-- `formatLine`メソッドの正しい使用方法の確認
-- フォーマット状態の適切な更新
-- イベントハンドラーの依存関係の修正
-
-### 2. CSS の上書き問題
-
-**問題**: 既存の 60%サイズが小さくなってしまった
-**原因**: 新しい CSS が既存 CSS を上書き
-**対策**:
-
-- 既存 CSS の活用と拡張
-- 上書きではなく追加・統合
-- 段階的な CSS 統合とテスト
-
-### 3. 機能の段階的実装
-
-**方針**:
-
-- 基本機能の安定化を優先
-- 高リスク機能の段階的実装
-- 既存コードとの互換性維持
-
-この統合版の計画で進めてよろしいでしょうか？

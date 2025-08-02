@@ -144,12 +144,10 @@ function App() {
   const sanitizeHtml = (html: string): string => {
     // 許可するタグのみを残す
     const allowedTags = [
-      'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
-      'p', 'br', 'div', 'span',
+      'h1', 'h2', 'h3',
+      'p', 'div',
       'strong', 'b', 'em', 'i', 'u',
-      'ul', 'ol', 'li',
-      'table', 'thead', 'tbody', 'tr', 'th', 'td',
-      'blockquote', 'code', 'pre'
+      'table', 'thead', 'tbody', 'tr', 'th', 'td'
     ];
     
     // 基本的なXSS対策
@@ -157,6 +155,18 @@ function App() {
     html = html.replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, '');
     html = html.replace(/javascript:/gi, '');
     html = html.replace(/on\w+\s*=/gi, '');
+    
+    // 許可されていないタグを削除（許可されているタグは残す）
+    const allowedTagsSet = new Set(allowedTags);
+    
+    // 開始タグと終了タグの両方を処理
+    html = html.replace(/<\/?([a-zA-Z][a-zA-Z0-9]*)\b[^>]*>/g, (match, tagName) => {
+      const lowerTagName = tagName.toLowerCase();
+      if (allowedTagsSet.has(lowerTagName)) {
+        return match; // 許可されているタグはそのまま残す
+      }
+      return ''; // 許可されていないタグは削除
+    });
     
     return html;
   };
