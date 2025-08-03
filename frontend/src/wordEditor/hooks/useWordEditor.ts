@@ -118,9 +118,8 @@ export const useWordEditor = ({ initialContent = '', onContentChange }: UseWordE
     return {
       content,
       formats,
-      tableData,
     };
-  }, [content, formats, tableData]);
+  }, [content, formats]);
 
   return {
     content,

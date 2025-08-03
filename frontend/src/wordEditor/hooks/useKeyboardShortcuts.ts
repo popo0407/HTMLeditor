@@ -38,11 +38,6 @@ export const useKeyboardShortcuts = ({
           quill.format('underline', !format.underline);
         }
       },
-      'ctrl+t': (quill: any) => {
-        if (onTableInsert) {
-          onTableInsert();
-        }
-      },
       'ctrl+shift+up': (quill: any) => {
         if (onTableAddRow) {
           onTableAddRow('above');
@@ -76,67 +71,62 @@ export const useKeyboardShortcuts = ({
     };
     console.log('Keyboard handlers registered:', Object.keys(handlersRef.current));
   }, [
-    onTableInsert,
     onTableAddRow,
     onTableAddColumn,
     onTableNextCell,
     onTablePreviousCell,
   ]);
 
-  // キーボードイベントハンドラー
-  const handleKeyDown = (event: KeyboardEvent) => {
-    const key = event.key.toLowerCase();
-    const ctrl = event.ctrlKey;
-    const shift = event.shiftKey;
-    const alt = event.altKey;
-    
-    // キーの組み合わせを構築
-    let keyCombination = '';
-    if (ctrl) keyCombination += 'ctrl+';
-    if (shift) keyCombination += 'shift+';
-    if (alt) keyCombination += 'alt+';
-    keyCombination += key;
-    
-    console.log('Key pressed:', keyCombination);
-    
-    // エディタがフォーカスされているかチェック
-    if (!quillRef.current) {
-      console.log('Quill ref not available');
-      return;
-    }
-    
-    const quill = quillRef.current.getEditor();
-    if (!quill) {
-      console.log('Quill editor not available');
-      return;
-    }
-    
-    const selection = quill.getSelection();
-    if (!selection) {
-      console.log('No selection in editor');
-      return;
-    }
-    
-    console.log('Editor focused, selection available');
-    
-    // ハンドラーを検索
-    const handler = handlersRef.current[keyCombination];
-    if (handler) {
-      console.log('Handler found for:', keyCombination);
-      event.preventDefault();
-      event.stopPropagation();
-      handler(quill);
-    } else {
-      console.log('No handler found for:', keyCombination);
-    }
-  };
-
   // イベントリスナーの設定
   useEffect(() => {
     setupHandlers();
     
     const handleKeyDownWithCapture = (event: KeyboardEvent) => {
-      handleKeyDown(event);
+      const key = event.key.toLowerCase();
+      const ctrl = event.ctrlKey;
+      const shift = event.shiftKey;
+      const alt = event.altKey;
+      
+      // キーの組み合わせを構築
+      let keyCombination = '';
+      if (ctrl) keyCombination += 'ctrl+';
+      if (shift) keyCombination += 'shift+';
+      if (alt) keyCombination += 'alt+';
+      keyCombination += key;
+      
+      console.log('Key pressed:', keyCombination);
+      
+      // エディタが利用可能かチェック
+      if (!quillRef.current) {
+        console.log('Quill ref not available');
+        return;
+      }
+      
+      const quill = quillRef.current.getEditor();
+      if (!quill) {
+        console.log('Quill editor not available');
+        return;
+      }
+      
+      // ハンドラーを検索
+      const handler = handlersRef.current[keyCombination];
+      if (handler) {
+        console.log('Handler found for:', keyCombination);
+        
+        // ブラウザのデフォルト動作を防ぐ
+        event.preventDefault();
+        event.stopPropagation();
+        event.stopImmediatePropagation();
+        
+        // エディタにフォーカスを設定（必要に応じて）
+        if (!quill.hasFocus()) {
+          quill.focus();
+        }
+        
+        handler(quill);
+      } else {
+        console.log('No handler found for:', keyCombination);
+      }
     };
     
     // キャプチャフェーズでイベントをリッスン

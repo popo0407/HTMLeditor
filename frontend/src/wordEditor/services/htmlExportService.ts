@@ -5,7 +5,7 @@
  * HTML出力機能を独立したサービスとして実装
  */
 
-import { EditorContent, EditorFormats } from '../types/wordEditorTypes';
+import { EditorContent, EditorFormats, TableData } from '../types/wordEditorTypes';
 
 export interface HtmlExportOptions {
   includeStyles?: boolean;
@@ -24,6 +24,10 @@ export class HtmlExportService {
     
     // 見出し・強調スタイルの適用
     html = this.applyFormats(html, content.formats);
+    
+    // 表のHTML出力は別途処理する必要があります
+    // 現在のEditorContentにはtableDataが含まれていないため、
+    // 表データは別の方法で管理されています
     
     if (selfContained) {
       html = this.wrapInDocument(html, includeStyles);
@@ -218,5 +222,80 @@ export class HtmlExportService {
   copyToClipboard(content: EditorContent): Promise<void> {
     const html = this.exportToHtml(content, { selfContained: false, includeStyles: false });
     return navigator.clipboard.writeText(html);
+  }
+
+  /**
+   * 表をHTMLにエクスポート
+   */
+  private exportTableToHtml(tableData: TableData): string {
+    const { rows, headers, styles } = tableData;
+    
+    if (!rows || rows.length === 0) {
+      return '';
+    }
+    
+    // デフォルトスタイルを設定
+    const defaultStyles = {
+      borderColor: '#000000',
+      backgroundColor: '#ffffff',
+      headerBackgroundColor: '#f0f0f0',
+      alignment: 'left' as const,
+      cellPadding: 8,
+    };
+    
+    const finalStyles = styles || defaultStyles;
+    
+    const tableStyle = `
+      border-collapse: collapse;
+      width: 100%;
+      border: 1px solid ${finalStyles.borderColor};
+      background-color: ${finalStyles.backgroundColor};
+      margin: 20px 0;
+    `;
+    
+    const cellStyle = `
+      border: 1px solid ${finalStyles.borderColor};
+      padding: ${finalStyles.cellPadding}px;
+      text-align: ${finalStyles.alignment};
+    `;
+    
+    const headerStyle = `
+      ${cellStyle}
+      background-color: ${finalStyles.headerBackgroundColor};
+      font-weight: bold;
+    `;
+    
+    let html = `<table style="${tableStyle}">`;
+    
+    // ヘッダー行
+    if (headers && headers.some(header => header.trim() !== '')) {
+      html += '<thead><tr>';
+      headers.forEach(header => {
+        html += `<th style="${headerStyle}">${this.escapeHtml(header)}</th>`;
+      });
+      html += '</tr></thead>';
+    }
+    
+    // データ行
+    html += '<tbody>';
+    rows.forEach(row => {
+      html += '<tr>';
+      row.forEach(cell => {
+        html += `<td style="${cellStyle}">${this.escapeHtml(cell)}</td>`;
+      });
+      html += '</tr>';
+    });
+    html += '</tbody></table>';
+    
+    return html;
+  }
+
+  /**
+   * HTMLエスケープ
+   */
+  private escapeHtml(text: string): string {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
   }
 } 

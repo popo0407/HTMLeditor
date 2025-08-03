@@ -1,176 +1,20 @@
 import React, { useRef, useEffect, useCallback, useState } from 'react';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
-import { WordLikeEditorProps } from '../types/wordEditorTypes';
+import { WordLikeEditorProps, ContextMenuState, HeadingLevel, EmphasisStyle } from '../types/wordEditorTypes';
 import { useWordEditor } from '../hooks/useWordEditor';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
+import { useEditorSections } from '../hooks/useEditorSections';
+import { useEditorFormatting } from '../hooks/useEditorFormatting';
+import { SimpleTableEditor } from './SimpleTableEditor';
+import { ContextMenu } from './ContextMenu';
 import './WordLikeEditor.css';
 
 // 定数定義
-const HEADING_LEVELS = ['h1', 'h2', 'h3', 'p'] as const;
-const EMPHASIS_STYLES = ['normal', 'important', 'action-item'] as const;
 const EMPHASIS_COLORS = {
   important: '#d97706',
   'action-item': '#2563eb'
 } as const;
-
-type HeadingLevel = typeof HEADING_LEVELS[number];
-type EmphasisStyle = typeof EMPHASIS_STYLES[number];
-
-interface ContextMenuProps {
-  x: number;
-  y: number;
-  onClose: () => void;
-  onHeadingChange: (level: HeadingLevel) => void;
-  onEmphasisChange: (style: EmphasisStyle) => void;
-  currentHeading: string;
-  currentEmphasis: string;
-}
-
-const ContextMenu: React.FC<ContextMenuProps> = ({
-  x,
-  y,
-  onClose,
-  onHeadingChange,
-  onEmphasisChange,
-  currentHeading,
-  currentEmphasis,
-}) => {
-  const menuRef = useRef<HTMLDivElement>(null);
-  const [selectedIndex, setSelectedIndex] = useState(0);
-  const [selectedSection, setSelectedSection] = useState<'heading' | 'emphasis'>('heading');
-
-  // メニュー項目の定義
-  const headingItems = [
-    { key: 'h1' as const, label: '見出し1' },
-    { key: 'h2' as const, label: '見出し2' },
-    { key: 'h3' as const, label: '見出し3' },
-    { key: 'p' as const, label: '通常テキスト' }
-  ];
-
-  const emphasisItems = [
-    { key: 'normal' as const, label: '通常' },
-    { key: 'important' as const, label: '重要' },
-    { key: 'action-item' as const, label: 'アクション項目' }
-  ];
-
-  // 全メニュー項目を統合
-  const allMenuItems = [
-    ...headingItems.map(item => ({ ...item, section: 'heading' as const })),
-    ...emphasisItems.map(item => ({ ...item, section: 'emphasis' as const }))
-  ];
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        onClose();
-      }
-    };
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      // メニューが表示されている間は、すべてのキーボードイベントをエディタに送らない
-      event.preventDefault();
-      event.stopPropagation();
-
-      switch (event.key) {
-        case 'ArrowUp':
-          const currentItemIndexUp = selectedSection === 'heading'
-            ? selectedIndex
-            : headingItems.length + selectedIndex;
-          const prevItemIndex = currentItemIndexUp > 0 ? currentItemIndexUp - 1 : allMenuItems.length - 1;
-          const prevItem = allMenuItems[prevItemIndex];
-          setSelectedSection(prevItem.section);
-          setSelectedIndex(prevItem.section === 'heading'
-            ? headingItems.findIndex(item => item.key === prevItem.key)
-            : emphasisItems.findIndex(item => item.key === prevItem.key)
-          );
-          break;
-        case 'ArrowDown':
-          const currentItemIndexDown = selectedSection === 'heading'
-            ? selectedIndex
-            : headingItems.length + selectedIndex;
-          const nextItemIndex = currentItemIndexDown < allMenuItems.length - 1 ? currentItemIndexDown + 1 : 0;
-          const nextItem = allMenuItems[nextItemIndex];
-          setSelectedSection(nextItem.section);
-          setSelectedIndex(nextItem.section === 'heading'
-            ? headingItems.findIndex(item => item.key === nextItem.key)
-            : emphasisItems.findIndex(item => item.key === nextItem.key)
-          );
-          break;
-        case 'Tab':
-          setSelectedSection(prev => prev === 'heading' ? 'emphasis' : 'heading');
-          setSelectedIndex(0);
-          break;
-        case 'Enter':
-          if (selectedSection === 'heading') {
-            onHeadingChange(headingItems[selectedIndex].key);
-          } else {
-            onEmphasisChange(emphasisItems[selectedIndex].key);
-          }
-          break;
-        case 'Escape':
-          onClose();
-          break;
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    document.addEventListener('keydown', handleKeyDown);
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-      document.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [onClose, onHeadingChange, onEmphasisChange, selectedIndex, selectedSection]);
-
-  return (
-    <div
-      ref={menuRef}
-      className="context-menu"
-      style={{
-        position: 'fixed',
-        left: x,
-        top: y,
-        backgroundColor: 'white',
-        border: '1px solid #ccc',
-        borderRadius: '4px',
-        boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
-        zIndex: 1000,
-        minWidth: '200px',
-      }}
-    >
-      <div className="menu-section">
-        <div className="menu-title">見出し</div>
-        {headingItems.map((item, index) => (
-          <div
-            key={item.key}
-            className={`menu-item ${selectedSection === 'heading' && selectedIndex === index ? 'keyboard-selected' : ''}`}
-            onClick={() => onHeadingChange(item.key)}
-          >
-            <span className={currentHeading === item.key ? 'selected' : ''}>
-              {item.label}
-            </span>
-          </div>
-        ))}
-      </div>
-
-      <div className="menu-section">
-        <div className="menu-title">強調</div>
-        {emphasisItems.map((item, index) => (
-          <div
-            key={item.key}
-            className={`menu-item ${selectedSection === 'emphasis' && selectedIndex === index ? 'keyboard-selected' : ''}`}
-            onClick={() => onEmphasisChange(item.key)}
-          >
-            <span className={currentEmphasis === item.key ? 'selected' : ''}>
-              {item.label}
-            </span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-};
 
 export const WordLikeEditor: React.FC<WordLikeEditorProps> = ({
   initialContent = '',
@@ -181,12 +25,12 @@ export const WordLikeEditor: React.FC<WordLikeEditorProps> = ({
 }) => {
 
   const quillRef = useRef<ReactQuill>(null);
-  const [contextMenu, setContextMenu] = useState<{
-    show: boolean;
-    x: number;
-    y: number;
-    savedSelection: any; // 保存された選択範囲
-  }>({ show: false, x: 0, y: 0, savedSelection: null });
+  const [contextMenu, setContextMenu] = useState<ContextMenuState>({ 
+    show: false, 
+    x: 0, 
+    y: 0, 
+    savedSelection: null 
+  });
 
   const {
     content,
@@ -205,13 +49,28 @@ export const WordLikeEditor: React.FC<WordLikeEditorProps> = ({
     onContentChange,
   });
 
+  // エディタセクション管理
+  const {
+    sections: editorSections,
+    currentSectionId,
+    updateSectionContent,
+    updateSectionTableData,
+    removeSection,
+    insertTableAfterSection
+  } = useEditorSections({ initialContent });
+
+  // エディタフォーマット管理
+  const {
+    getCurrentHeading,
+    getCurrentEmphasis,
+    applyHeading,
+    applyEmphasis,
+    resetLineFormatting
+  } = useEditorFormatting({ quillRef });
+
   // キーボードショートカットの設定
   useKeyboardShortcuts({
     quillRef,
-    onTableInsert: () => {
-      console.log('Table insert called from WordLikeEditor');
-      insertTable();
-    },
     onTableAddRow: (position) => {
       console.log('Table add row called from WordLikeEditor:', position);
       if (tableData) {
@@ -303,15 +162,15 @@ export const WordLikeEditor: React.FC<WordLikeEditorProps> = ({
             hasFocus: !!quill.focus
           });
 
-          // text-changeイベントリスナーを追加
+          // text-changeイベントリスナーを追加（改行時の処理）
           quill.on('text-change', (delta: any, oldContents: any, source: any) => {
             // 改行が含まれているかチェック
-            if (delta.ops) {
+            if (delta.ops && source === 'user') {
               const hasNewline = delta.ops.some((op: any) => 
                 op.insert && typeof op.insert === 'string' && op.insert.includes('\n')
               );
               
-              if (hasNewline && source === 'user') {
+              if (hasNewline) {
                 console.log('text-changeで改行を検出');
                 // 改行後の新しい行のフォーマットをリセット
                 setTimeout(() => {
@@ -322,34 +181,47 @@ export const WordLikeEditor: React.FC<WordLikeEditorProps> = ({
                       const lineStart = line.offset();
                       const lineLength = line.length();
                       
-                      // 見出しと強調の両方を強制的にリセット
+                      // カーソル位置を保存
+                      const savedIndex = selection.index;
+                      
+                      // 新しい行の見出しと強調の両方をリセット
                       quill.formatLine(lineStart, lineLength, 'header', false);
                       quill.formatLine(lineStart, lineLength, 'class', false);
                       quill.formatText(lineStart, lineLength, 'color', false);
+                      quill.formatText(lineStart, lineLength, 'bold', false);
+                      quill.formatText(lineStart, lineLength, 'italic', false);
+                      quill.formatText(lineStart, lineLength, 'underline', false);
                       
                       // CSSクラスを強制的に削除
                       const lineElement = quill.getLine(lineStart)[0]?.domNode;
                       if (lineElement) {
                         lineElement.classList.remove('important', 'action-item');
                         lineElement.style.color = '';
+                        lineElement.style.fontWeight = '';
+                        
+                        // 子要素のスタイルもリセット
+                        const childElements = lineElement.querySelectorAll('*');
+                        childElements.forEach((child: Element) => {
+                          if (child instanceof HTMLElement) {
+                            child.classList.remove('important', 'action-item');
+                            child.style.color = '';
+                            child.style.fontWeight = '';
+                          }
+                        });
                       }
                       
-                      // フォーマット状態を更新
+                      // 新しい行の状態をリセット
                       setFormats(prev => ({
                         ...prev,
                         heading: 'p',
                         emphasis: 'normal'
                       }));
                       
-                      // 強制的にHTMLを更新
-                      const updatedHtml = quill.root.innerHTML;
-                      setContent(updatedHtml);
-                      
-                      // さらに遅延させて確実に更新
+                      // カーソル位置を正しく復元（改行後の位置に戻す）
                       setTimeout(() => {
-                        const finalHtml = quill.root.innerHTML;
-                        setContent(finalHtml);
-                      }, 10);
+                        quill.setSelection(savedIndex, 0);
+                        quill.focus();
+                      }, 1);
                     }
                   }
                 }, 5);
@@ -383,80 +255,6 @@ export const WordLikeEditor: React.FC<WordLikeEditorProps> = ({
       window.removeEventListener('focus', handleWindowFocus);
     };
   }, [contextMenu.show]);
-
-  // formats（editorFormats）とQuillの見た目を同期
-  useEffect(() => {
-    if (!quillRef.current) return;
-    const quill = quillRef.current.getEditor();
-    if (!quill) return;
-
-    const selection = quill.getSelection();
-    if (!selection) return;
-
-    const [line] = quill.getLine(selection.index);
-    if (!line) return;
-
-    const lineStart = line.offset();
-    const lineLength = line.length();
-
-    // 見出し
-    if (editorFormats.heading === 'p') {
-      quill.formatLine(lineStart, lineLength, 'header', false);
-    } else if (editorFormats.heading === 'h1' || editorFormats.heading === 'h2' || editorFormats.heading === 'h3') {
-      const headerLevel = parseInt(editorFormats.heading.charAt(1));
-      quill.formatLine(lineStart, lineLength, 'header', headerLevel);
-    }
-
-    // 強調
-    if (editorFormats.emphasis === 'normal') {
-      quill.formatLine(lineStart, lineLength, 'class', false);
-      quill.formatText(lineStart, lineLength, 'color', false);
-      // クラス・色もDOMから消す
-      const lineElement = quill.getLine(lineStart)[0]?.domNode;
-      if (lineElement) {
-        lineElement.classList.remove('important', 'action-item');
-        lineElement.style.color = '';
-      }
-    } else {
-      quill.formatLine(lineStart, lineLength, 'class', editorFormats.emphasis);
-      if (editorFormats.emphasis === 'important') {
-        quill.formatText(lineStart, lineLength, 'color', '#d97706');
-      } else if (editorFormats.emphasis === 'action-item') {
-        quill.formatText(lineStart, lineLength, 'color', '#2563eb');
-      }
-    }
-  }, [editorFormats, quillRef]);
-
-  // 共通処理: 現在の行の情報を取得
-  const getCurrentLineInfo = useCallback(() => {
-    if (!quillRef.current) return null;
-    const quill = quillRef.current.getEditor();
-    if (!quill) return null;
-
-    const selection = contextMenu.savedSelection || quill.getSelection();
-    if (!selection) return null;
-
-    const [line] = quill.getLine(selection.index);
-    if (!line) return null;
-
-    return {
-      quill,
-      line,
-      lineStart: line.offset(),
-      lineLength: line.length(),
-      selection
-    };
-  }, [contextMenu.savedSelection]);
-
-  // 共通処理: フォーマット変更後の後処理
-  const handleFormatChangeAfter = useCallback((quill: any, lineStart: number, lineLength: number) => {
-    // エディタにフォーカスを戻す
-    quill.focus();
-    
-    // カーソルを該当行の文末に移動して全選択を解除
-    const lineEnd = lineStart + lineLength;
-    quill.setSelection(lineEnd, 0);
-  }, []);
 
   // コンテンツ変更ハンドラー
   const handleChange = useCallback((value: string, delta: any, source: any, editor: any) => {
@@ -585,139 +383,76 @@ export const WordLikeEditor: React.FC<WordLikeEditorProps> = ({
   // 見出し変更ハンドラー
   const handleHeadingChange = useCallback((level: HeadingLevel) => {
     console.log('見出し変更:', level);
-    
-    const lineInfo = getCurrentLineInfo();
-    if (!lineInfo) {
-      console.error('現在の行の情報を取得できません');
-      return;
-    }
-
-    const { quill, lineStart, lineLength } = lineInfo;
-
-    // 行全体を選択
-    quill.setSelection(lineStart, lineLength);
-
-    // 見出しレベルを設定
-    if (level === 'p') {
-      quill.formatLine(lineStart, lineLength, 'header', false);
-    } else {
-      const headerLevel = parseInt(level.charAt(1));
-      quill.formatLine(lineStart, lineLength, 'header', headerLevel);
-    }
-
-    // フォーマット状態を更新（useEffectが自動的にQuillの見た目を同期）
+    applyHeading(level, contextMenu.savedSelection);
+    // 状態管理を更新
     setFormats(prev => ({
       ...prev,
       heading: level
     }));
-
-    console.log('見出し変更完了:', level);
-
-    // 後処理
-    handleFormatChangeAfter(quill, lineStart, lineLength);
     closeContextMenu();
-  }, [getCurrentLineInfo, setFormats, handleFormatChangeAfter, closeContextMenu]);
+  }, [applyHeading, closeContextMenu, contextMenu.savedSelection, setFormats]);
 
   // 強調変更ハンドラー
   const handleEmphasisChange = useCallback((style: EmphasisStyle) => {
     console.log('強調変更:', style);
-    
-    const lineInfo = getCurrentLineInfo();
-    if (!lineInfo) {
-      console.error('現在の行の情報を取得できません');
-      return;
-    }
-
-    const { quill, lineStart, lineLength } = lineInfo;
-
-    // 行全体を選択
-    quill.setSelection(lineStart, lineLength);
-
-    // 強調スタイルを設定
-    if (style === 'normal') {
-      quill.formatLine(lineStart, lineLength, 'class', false);
-      quill.formatText(lineStart, lineLength, 'color', false);
-    } else {
-      quill.formatLine(lineStart, lineLength, 'class', style);
-      const color = EMPHASIS_COLORS[style];
-      if (color) {
-        quill.formatText(lineStart, lineLength, 'color', color);
-      }
-    }
-
-    // フォーマット状態を更新（useEffectが自動的にQuillの見た目を同期）
+    applyEmphasis(style, contextMenu.savedSelection);
+    // 状態管理を更新
     setFormats(prev => ({
       ...prev,
       emphasis: style
     }));
-
-    console.log('強調変更完了:', style);
-
-    // 後処理
-    handleFormatChangeAfter(quill, lineStart, lineLength);
     closeContextMenu();
-  }, [getCurrentLineInfo, setFormats, handleFormatChangeAfter, closeContextMenu]);
+  }, [applyEmphasis, closeContextMenu, contextMenu.savedSelection, setFormats]);
 
-  // 現在の見出しレベルを取得
-  const getCurrentHeading = useCallback(() => {
-    if (quillRef.current) {
-      const quill = quillRef.current.getEditor();
-      const selection = quill.getSelection();
 
-      if (selection) {
-        const [line] = quill.getLine(selection.index);
-        if (line) {
-          const lineStart = line.offset();
-          const format = quill.getFormat(lineStart, 1);
-          return format.header ? `h${format.header}` : 'p';
-        }
-      }
-    }
-    return 'p';
-  }, []);
-
-  // 現在の強調スタイルを取得
-  const getCurrentEmphasis = useCallback((): string => {
-    if (quillRef.current) {
-      const quill = quillRef.current.getEditor();
-      const selection = quill.getSelection();
-
-      if (selection) {
-        const [line] = quill.getLine(selection.index);
-        if (line) {
-          const lineStart = line.offset();
-          const format = quill.getFormat(lineStart, 1);
-          return (format.class as string) || 'normal';
-        }
-      }
-    }
-    return 'normal';
-  }, []);
 
   return (
     <div className="word-like-editor">
-      <div
-        className="editor-container"
-        onContextMenu={handleContextMenu}
-        onKeyDown={handleEditorKeyDown}
-        onFocus={handleEditorFocus}
-        onClick={handleEditorClick}
-      >
-                 <ReactQuill
-           ref={quillRef}
-           value={content}
-           onChange={handleChange}
-           onFocus={handleFocus}
-           modules={modules}
-           formats={quillFormats}
-           placeholder="ここにテキストを入力してください..."
-           className={`word-editor ${isEditing ? 'editing' : ''}`}
-           preserveWhitespace={true}
-           readOnly={contextMenu.show}
-           theme="snow"
-           onKeyDown={handleQuillKeyDown}
-         />
-      </div>
+      {editorSections.map((section, index) => (
+        <div key={section.id} className="editor-section">
+          {section.type === 'text' ? (
+            <div
+              className="editor-container"
+              onContextMenu={handleContextMenu}
+              onKeyDown={handleEditorKeyDown}
+              onFocus={handleEditorFocus}
+              onClick={handleEditorClick}
+            >
+              <ReactQuill
+                ref={quillRef}
+                value={section.content}
+                onChange={(value) => {
+                  updateSectionContent(section.id, value);
+                  // 全セクションのコンテンツを結合してhandleChangeに渡す
+                  const allContent = editorSections
+                    .map(s => s.type === 'text' ? s.content : '')
+                    .join('\n');
+                  handleChange(allContent, null, null, null);
+                }}
+                onFocus={handleFocus}
+                modules={modules}
+                formats={quillFormats}
+                placeholder="ここにテキストを入力してください..."
+                className={`word-editor ${isEditing ? 'editing' : ''}`}
+                preserveWhitespace={true}
+                readOnly={contextMenu.show}
+                theme="snow"
+                onKeyDown={handleQuillKeyDown}
+              />
+            </div>
+          ) : (
+            <SimpleTableEditor
+              tableData={section.tableData!}
+              onTableChange={(newTableData) => {
+                updateSectionTableData(section.id, newTableData);
+              }}
+              onTableDelete={() => {
+                removeSection(section.id);
+              }}
+            />
+          )}
+        </div>
+      ))}
 
       {/* コンテキストメニュー */}
       {contextMenu.show && (
@@ -727,19 +462,35 @@ export const WordLikeEditor: React.FC<WordLikeEditorProps> = ({
           onClose={closeContextMenu}
           onHeadingChange={handleHeadingChange}
           onEmphasisChange={handleEmphasisChange}
-          currentHeading={getCurrentHeading()}
-          currentEmphasis={getCurrentEmphasis()}
+          onTableCreate={() => {
+            // 新しい表セクションを挿入
+            const newTableData = {
+              rows: [
+                ['', ''],
+                ['', '']
+              ]
+            };
+            
+            insertTableAfterSection(currentSectionId, newTableData);
+            closeContextMenu();
+          }}
+          currentHeading={editorFormats.heading}
+          currentEmphasis={editorFormats.emphasis}
         />
       )}
 
+
+
       {/* デバッグ情報 */}
       <div className="debug-info">
-        <p>表データ: {tableData ? `${tableData.rows.length}x${tableData.rows[0]?.length || 0}` : 'なし'}</p>
+        <p>エディタセクション数: {editorSections.length}</p>
+        <p>現在のセクション: {currentSectionId}</p>
         <p>編集状態: {isEditing ? '編集中' : '非編集'}</p>
         <p>コンテンツ長: {content.length}文字</p>
-        <p>ショートカット: Ctrl+T (表挿入), Ctrl+B (太字), Ctrl+U (下線)</p>
-        <p>右クリック: 見出し・強調メニュー</p>
+        <p>ショートカット: Ctrl+B (太字), Ctrl+U (下線)</p>
+        <p>右クリック: 見出し・強調・表作成メニュー</p>
         <p>メニュー操作: ↑↓ (選択), Tab (セクション切替), Enter (決定), Esc (キャンセル)</p>
+        <p>表機能: ワンクリック編集、矢印キー移動</p>
       </div>
     </div>
   );

@@ -11,12 +11,13 @@ html, body {
   padding: 0;
   width: 100%;
   height: 100%;
-  overflow: hidden;
+  overflow: auto;
 }
 
 #root {
   width: 100%;
   height: 100%;
+  overflow: auto;
 }
 
 /* コードスタイル（変更なし） */

@@ -1,0 +1,88 @@
+/* ContextMenu.css */
+
+.context-menu {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-size: 14px;
+}
+
+.context-menu .menu-section {
+  border-bottom: 1px solid #eee;
+  padding: 8px 0;
+}
+
+.context-menu .menu-section:last-child {
+  border-bottom: none;
+}
+
+.context-menu .menu-title {
+  font-weight: 600;
+  color: #333;
+  padding: 4px 12px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.context-menu .menu-item {
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  display: flex;
+  align-items: center;
+}
+
+.context-menu .menu-item:hover {
+  background-color: #f0f0f0;
+}
+
+.context-menu .menu-item span {
+  flex: 1;
+}
+
+.context-menu .menu-item span.selected {
+  color: #3b82f6;
+  font-weight: 600;
+}
+
+.context-menu .menu-item span.selected::before {
+  content: "✓ ";
+  margin-right: 4px;
+}
+
+/* キーボード選択時のスタイル */
+.context-menu .menu-item.keyboard-selected {
+  background-color: #3b82f6 !important;
+  color: white !important;
+}
+
+.context-menu .menu-item.keyboard-selected span {
+  color: white !important;
+}
+
+.context-menu .menu-item.keyboard-selected span.selected {
+  color: white !important;
+}
+
+/* ダークモード対応 */
+@media (prefers-color-scheme: dark) {
+  .context-menu {
+    background-color: #1f2937;
+    border-color: #4b5563;
+  }
+  
+  .context-menu .menu-title {
+    color: #f9fafb;
+  }
+  
+  .context-menu .menu-item {
+    color: #f9fafb;
+  }
+  
+  .context-menu .menu-item:hover {
+    background-color: #374151;
+  }
+  
+  .context-menu .menu-item.keyboard-selected {
+    background-color: #1e3a8a !important;
+  }
+} 

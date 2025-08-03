@@ -1,35 +1,45 @@
 // Wordライクエディタ用の型定義
 
+// ===== エディタコンテンツ関連 =====
 export interface EditorContent {
   content: string;
   formats: EditorFormats;
-  tableData?: TableData;
 }
 
 export interface EditorFormats {
-  heading: 'h1' | 'h2' | 'h3' | 'p';
-  emphasis: 'normal' | 'important' | 'action-item';
-  inline: {
-    bold: boolean;
-    underline: boolean;
-  };
-  paragraph: {
-    indent: number;
-  };
-  table: {
-    rows: number;
-    cols: number;
-    hasHeaderRow: boolean;
-    hasHeaderCol: boolean;
-    cellMerges: CellMerge[];
-    styles: TableStyles;
-  };
+  heading: HeadingLevel;
+  emphasis: EmphasisStyle;
+  inline: InlineFormats;
+  paragraph: ParagraphFormats;
+  table: TableFormats;
 }
 
+export type HeadingLevel = 'h1' | 'h2' | 'h3' | 'p';
+export type EmphasisStyle = 'normal' | 'important' | 'action-item';
+
+export interface InlineFormats {
+  bold: boolean;
+  underline: boolean;
+}
+
+export interface ParagraphFormats {
+  indent: number;
+}
+
+export interface TableFormats {
+  rows: number;
+  cols: number;
+  hasHeaderRow: boolean;
+  hasHeaderCol: boolean;
+  cellMerges: CellMerge[];
+  styles: TableStyles;
+}
+
+// ===== 表関連 =====
 export interface TableData {
   rows: string[][];
-  headers: string[];
-  styles: TableStyles;
+  headers?: string[];
+  styles?: TableStyles;
 }
 
 export interface CellMerge {
@@ -47,13 +57,32 @@ export interface TableStyles {
   cellPadding: number;
 }
 
-export interface HtmlImportResult {
-  success: boolean;
-  content?: EditorContent;
-  errors?: string[];
-  warnings?: string[];
+export interface CellPosition {
+  row: number;
+  col: number;
 }
 
+export interface TableSelection {
+  start: CellPosition;
+  end: CellPosition;
+}
+
+// ===== エディタセクション関連 =====
+export type EditorSectionType = 'text' | 'table';
+
+export interface EditorSection {
+  id: string;
+  type: EditorSectionType;
+  content: string;
+  tableData?: TableData;
+}
+
+export interface EditorSectionState {
+  sections: EditorSection[];
+  currentSectionId: string;
+}
+
+// ===== コンポーネントProps =====
 export interface WordLikeEditorProps {
   initialContent?: string;
   onContentChange?: (content: string) => void;
@@ -62,6 +91,32 @@ export interface WordLikeEditorProps {
   onHtmlImport?: (html: string) => void;
 }
 
+export interface SimpleTableEditorProps {
+  tableData: TableData;
+  onTableChange: (tableData: TableData) => void;
+  onTableDelete: () => void;
+}
+
+export interface TableEditorProps {
+  tableData: TableData;
+  onTableChange: (tableData: TableData) => void;
+  onTableDelete: () => void;
+  onCellMerge?: (merge: CellMerge) => void;
+  onCellSplit?: (row: number, col: number) => void;
+}
+
+export interface ContextMenuProps {
+  x: number;
+  y: number;
+  onClose: () => void;
+  onHeadingChange: (level: HeadingLevel) => void;
+  onEmphasisChange: (style: EmphasisStyle) => void;
+  onTableCreate: () => void;
+  currentHeading: string;
+  currentEmphasis: string;
+}
+
+// ===== 状態管理関連 =====
 export interface WordLikeEditorState {
   content: string;
   formats: EditorFormats;
@@ -70,19 +125,26 @@ export interface WordLikeEditorState {
   importResult?: HtmlImportResult;
 }
 
-export interface TableEditorProps {
-  tableData: TableData;
-  onTableChange: (tableData: TableData) => void;
-  onTableDelete: () => void;
-  onCellMerge: (merge: CellMerge) => void;
-  onCellSplit: (row: number, col: number) => void;
-}
-
 export interface TableEditorState {
-  selectedCell: { row: number; col: number };
+  selectedCell: CellPosition;
   isEditing: boolean;
   isSelecting: boolean;
-  selectionStart?: { row: number; col: number };
+  selectionStart?: CellPosition;
+}
+
+export interface ContextMenuState {
+  show: boolean;
+  x: number;
+  y: number;
+  savedSelection: any;
+}
+
+// ===== HTMLインポート関連 =====
+export interface HtmlImportResult {
+  success: boolean;
+  content?: EditorContent;
+  errors?: string[];
+  warnings?: string[];
 }
 
 export interface HtmlImporterProps {
@@ -96,7 +158,7 @@ export interface HtmlImporterState {
   importResult?: HtmlImportResult;
 }
 
-// キーボードショートカットの型定義
+// ===== キーボードショートカット関連 =====
 export type KeyboardShortcut = 
   | 'ctrl+b'
   | 'ctrl+u'
@@ -118,7 +180,15 @@ export interface KeyboardHandlers {
   [key: string]: KeyboardHandler;
 }
 
-// Quill.jsの型定義
+export interface KeyboardShortcutsProps {
+  quillRef: React.RefObject<any>;
+  onTableAddRow?: (position: 'above' | 'below') => void;
+  onTableAddColumn?: (position: 'left' | 'right') => void;
+  onTableNextCell?: () => void;
+  onTablePreviousCell?: () => void;
+}
+
+// ===== Quill.js関連 =====
 export interface Quill {
   getContents(): any;
   setContents(contents: any): void;
@@ -131,11 +201,22 @@ export interface Quill {
   insertText(index: number, text: string, format?: any): void;
   deleteText(index: number, length: number): void;
   insertEmbed(index: number, type: string, value: any): void;
+  getLine(index: number): any[];
+  getFormat(index: number, length?: number): any;
+  focus(): void;
+  on(event: string, handler: Function): void;
+  off(event: string, handler: Function): void;
 }
 
-// メール送信用の型定義
+// ===== メール送信関連 =====
 export interface MailSendRequest {
   recipient_email: string;
   subject: string;
   html_content: string;
-} 
+}
+
+// ===== イベントハンドラー型 =====
+export type ContentChangeHandler = (value: string, delta: any, source: any, editor: any) => void;
+export type FocusHandler = () => void;
+export type KeyboardEventHandler = (e: React.KeyboardEvent) => void;
+export type MouseEventHandler = (e: React.MouseEvent) => void; 
