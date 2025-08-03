@@ -13,9 +13,9 @@ export const SimpleTableEditor: React.FC<SimpleTableEditorProps> = ({
   onTableChange,
   onTableDelete,
 }) => {
-  const [selectedCell, setSelectedCell] = useState<{ row: number; col: number }>({ row: 0, col: 0 });
-  const [isEditing, setIsEditing] = useState(false);
+  const [focusedCell, setFocusedCell] = useState<{ row: number; col: number }>({ row: 0, col: 0 });
   const [localTableData, setLocalTableData] = useState<TableData>(tableData);
+  const [moveDirection, setMoveDirection] = useState<'left' | 'right' | 'up' | 'down' | 'tab' | 'shift-tab' | null>(null);
   const tableRef = useRef<HTMLDivElement>(null);
 
   // 表データの同期
@@ -23,10 +23,9 @@ export const SimpleTableEditor: React.FC<SimpleTableEditorProps> = ({
     setLocalTableData(tableData);
   }, [tableData]);
 
-  // セルクリックで編集開始（ワンクリックで編集モード）
-  const handleCellClick = useCallback((row: number, col: number) => {
-    setSelectedCell({ row, col });
-    setIsEditing(true);
+  // セルフォーカス（常に編集可能）
+  const handleCellFocus = useCallback((row: number, col: number) => {
+    setFocusedCell({ row, col });
   }, []);
 
   // セル編集
@@ -37,169 +36,297 @@ export const SimpleTableEditor: React.FC<SimpleTableEditorProps> = ({
     onTableChange(newTableData);
   }, [localTableData, onTableChange]);
 
-  // キーボードナビゲーション（Excel/Word風）
+  // キーボードナビゲーション（Word風）
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (!isEditing) {
-      const { row, col } = selectedCell;
-      const maxRow = localTableData.rows.length - 1;
-      const maxCol = localTableData.rows[0]?.length - 1;
+    const { row, col } = focusedCell;
+    const maxRow = localTableData.rows.length - 1;
+    const maxCol = localTableData.rows[0]?.length - 1;
 
-      switch (e.key) {
-        case 'ArrowUp':
-          e.preventDefault();
-          if (row > 0) {
-            setSelectedCell({ row: row - 1, col });
-            setIsEditing(true); // 移動後に自動的に編集モード
-          }
-          break;
-        case 'ArrowDown':
-          e.preventDefault();
-          if (row < maxRow) {
-            setSelectedCell({ row: row + 1, col });
-            setIsEditing(true); // 移動後に自動的に編集モード
-          }
-          break;
-        case 'ArrowLeft':
-          e.preventDefault();
+    switch (e.key) {
+      case 'ArrowUp':
+        e.preventDefault();
+        if (row > 0) {
+          setMoveDirection('up');
+          setFocusedCell({ row: row - 1, col });
+        }
+        break;
+      case 'ArrowDown':
+        e.preventDefault();
+        if (row < maxRow) {
+          setMoveDirection('down');
+          setFocusedCell({ row: row + 1, col });
+        }
+        break;
+      case 'ArrowLeft':
+        // 左キーはセル内の文字移動または左のセルに移動
+        // この処理はEditableCell内で行う
+        break;
+      case 'ArrowRight':
+        // 右キーはセル内の文字移動または右のセルに移動
+        // この処理はEditableCell内で行う
+        break;
+      case 'Tab':
+        e.preventDefault();
+        if (e.shiftKey) {
+          // Shift+Tab: 前のセルに移動
+          setMoveDirection('shift-tab');
           if (col > 0) {
-            setSelectedCell({ row, col: col - 1 });
-            setIsEditing(true); // 移動後に自動的に編集モード
+            setFocusedCell({ row, col: col - 1 });
+          } else if (row > 0) {
+            setFocusedCell({ row: row - 1, col: maxCol });
           }
-          break;
-        case 'ArrowRight':
-          e.preventDefault();
+        } else {
+          // Tab: 次のセルに移動
+          setMoveDirection('tab');
           if (col < maxCol) {
-            setSelectedCell({ row, col: col + 1 });
-            setIsEditing(true); // 移動後に自動的に編集モード
+            setFocusedCell({ row, col: col + 1 });
+          } else if (row < maxRow) {
+            setFocusedCell({ row: row + 1, col: 0 });
           }
-          break;
-        case 'Enter':
-        case 'F2':
+        }
+        break;
+      case 'Enter':
+        if (e.ctrlKey) {
+          // Ctrl+Enter: 新しい行を追加
           e.preventDefault();
-          setIsEditing(true);
-          break;
-      }
+          const newTableData = { ...localTableData };
+          const newRow = Array(newTableData.rows[0]?.length || 0).fill('');
+          newTableData.rows.splice(row + 1, 0, newRow);
+          setLocalTableData(newTableData);
+          onTableChange(newTableData);
+          setFocusedCell({ row: row + 1, col });
+        }
+        // 通常のEnterは改行として処理（セル内で改行）
+        break;
     }
-  }, [isEditing, selectedCell, localTableData.rows]);
+  }, [focusedCell, localTableData.rows, onTableChange]);
 
-  // 行追加（選択行の下に追加）
+  // 行追加（フォーカス行の下に追加）
   const handleAddRow = useCallback(() => {
     const newTableData = { ...localTableData };
     const newRow = Array(newTableData.rows[0]?.length || 0).fill('');
     
-    // 選択されている行がある場合はその下に、なければ最後に追加
-    const insertIndex = selectedCell.row >= 0 ? selectedCell.row + 1 : newTableData.rows.length;
+    // フォーカスされている行がある場合はその下に、なければ最後に追加
+    const insertIndex = focusedCell.row >= 0 ? focusedCell.row + 1 : newTableData.rows.length;
     newTableData.rows.splice(insertIndex, 0, newRow);
     
     setLocalTableData(newTableData);
     onTableChange(newTableData);
     
-    // 新しい行の同じ列に選択を移動
-    setSelectedCell({ row: insertIndex, col: selectedCell.col });
-  }, [localTableData, selectedCell, onTableChange]);
+    // 新しい行の同じ列にフォーカスを移動
+    setFocusedCell({ row: insertIndex, col: focusedCell.col });
+  }, [localTableData, focusedCell, onTableChange]);
 
-  // 列追加（選択列の右に追加）
+  // 列追加（フォーカス列の右に追加）
   const handleAddColumn = useCallback(() => {
     const newTableData = { ...localTableData };
     
-    // 選択されている列がある場合はその右に、なければ最後に追加
-    const insertIndex = selectedCell.col >= 0 ? selectedCell.col + 1 : newTableData.rows[0]?.length || 0;
+    // フォーカスされている列がある場合はその右に、なければ最後に追加
+    const insertIndex = focusedCell.col >= 0 ? focusedCell.col + 1 : newTableData.rows[0]?.length || 0;
     newTableData.rows.forEach(row => row.splice(insertIndex, 0, ''));
     
     setLocalTableData(newTableData);
     onTableChange(newTableData);
     
-    // 新しい列の同じ行に選択を移動
-    setSelectedCell({ row: selectedCell.row, col: insertIndex });
-  }, [localTableData, selectedCell, onTableChange]);
+    // 新しい列の同じ行にフォーカスを移動
+    setFocusedCell({ row: focusedCell.row, col: insertIndex });
+  }, [localTableData, focusedCell, onTableChange]);
 
   // 行削除
   const handleDeleteRow = useCallback(() => {
     if (localTableData.rows.length > 1) {
       const newTableData = { ...localTableData };
-      newTableData.rows.splice(selectedCell.row, 1);
+      newTableData.rows.splice(focusedCell.row, 1);
       setLocalTableData(newTableData);
       onTableChange(newTableData);
-      // 選択位置を調整
-      if (selectedCell.row >= newTableData.rows.length) {
-        setSelectedCell({ row: newTableData.rows.length - 1, col: selectedCell.col });
+      // フォーカス位置を調整
+      if (focusedCell.row >= newTableData.rows.length) {
+        setFocusedCell({ row: newTableData.rows.length - 1, col: focusedCell.col });
       }
     }
-  }, [localTableData, selectedCell, onTableChange]);
+  }, [localTableData, focusedCell, onTableChange]);
 
   // 列削除
   const handleDeleteColumn = useCallback(() => {
     if (localTableData.rows[0]?.length > 1) {
       const newTableData = { ...localTableData };
-      newTableData.rows.forEach(row => row.splice(selectedCell.col, 1));
+      newTableData.rows.forEach(row => row.splice(focusedCell.col, 1));
       setLocalTableData(newTableData);
       onTableChange(newTableData);
-      // 選択位置を調整
-      if (selectedCell.col >= newTableData.rows[0]?.length) {
-        setSelectedCell({ row: selectedCell.row, col: newTableData.rows[0]?.length - 1 });
+      // フォーカス位置を調整
+      if (focusedCell.col >= newTableData.rows[0]?.length) {
+        setFocusedCell({ row: focusedCell.row, col: newTableData.rows[0]?.length - 1 });
       }
     }
-  }, [localTableData, selectedCell, onTableChange]);
+  }, [localTableData, focusedCell, onTableChange]);
 
   // 編集可能セルコンポーネント
   const EditableCell: React.FC<{ row: number; col: number; value: string }> = ({ row, col, value }) => {
     const inputRef = useRef<HTMLInputElement>(null);
-    const isSelected = selectedCell.row === row && selectedCell.col === col;
+    const isFocused = focusedCell.row === row && focusedCell.col === col;
 
     useEffect(() => {
-      if (isSelected && isEditing && inputRef.current) {
+      if (isFocused && inputRef.current) {
         inputRef.current.focus();
-        inputRef.current.select();
+        // フォーカス時にカーソル位置を設定
+        if (focusedCell.row === row && focusedCell.col === col) {
+          const textLength = inputRef.current.value.length;
+          
+          // 移動方向に応じてカーソル位置を設定
+          switch (moveDirection) {
+            case 'left':
+              // 左キーで移動した場合は文末にカーソルを配置
+              inputRef.current.setSelectionRange(textLength, textLength);
+              break;
+            case 'right':
+              // 右キーで移動した場合は文頭にカーソルを配置
+              inputRef.current.setSelectionRange(0, 0);
+              break;
+            case 'up':
+            case 'down':
+            case 'tab':
+            case 'shift-tab':
+            default:
+              // その他の移動はデフォルト位置（文頭）
+              inputRef.current.setSelectionRange(0, 0);
+              break;
+          }
+          
+          // 移動方向をリセット
+          setMoveDirection(null);
+        }
       }
-    }, [isSelected, isEditing]);
+    }, [isFocused, focusedCell.row, focusedCell.col, row, col, moveDirection]);
 
     const handleClick = () => {
-      handleCellClick(row, col);
+      handleCellFocus(row, col);
     };
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       handleCellEdit(row, col, e.target.value);
     };
 
-    const handleInputBlur = () => {
-      setIsEditing(false);
-    };
-
     const handleInputKeyDown = (e: React.KeyboardEvent) => {
-      if (e.key === 'Enter') {
+      if (e.key === 'Tab') {
         e.preventDefault();
-        setIsEditing(false);
-        // 次のセルに移動
-        const maxRow = localTableData.rows.length - 1;
-        const maxCol = localTableData.rows[0]?.length - 1;
-        if (col < maxCol) {
-          setSelectedCell({ row, col: col + 1 });
-        } else if (row < maxRow) {
-          setSelectedCell({ row: row + 1, col: 0 });
+        if (e.shiftKey) {
+          // Shift+Tab: 前のセルに移動
+          const maxRow = localTableData.rows.length - 1;
+          const maxCol = localTableData.rows[0]?.length - 1;
+          if (col > 0) {
+            setFocusedCell({ row, col: col - 1 });
+          } else if (row > 0) {
+            setFocusedCell({ row: row - 1, col: maxCol });
+          }
+        } else {
+          // Tab: 次のセルに移動
+          const maxRow = localTableData.rows.length - 1;
+          const maxCol = localTableData.rows[0]?.length - 1;
+          if (col < maxCol) {
+            setFocusedCell({ row, col: col + 1 });
+          } else if (row < maxRow) {
+            setFocusedCell({ row: row + 1, col: 0 });
+          }
         }
-      } else if (e.key === 'Escape') {
-        setIsEditing(false);
+      } else if (e.key === 'Enter' && e.ctrlKey) {
+        // Ctrl+Enter: 新しい行を追加
+        e.preventDefault();
+        const newTableData = { ...localTableData };
+        const newRow = Array(newTableData.rows[0]?.length || 0).fill('');
+        newTableData.rows.splice(row + 1, 0, newRow);
+        setLocalTableData(newTableData);
+        onTableChange(newTableData);
+        setFocusedCell({ row: row + 1, col });
+      } else if (e.key === 'ArrowLeft') {
+        // 左キー: 文頭以外はセル内の左の文字に移動、文頭だったら左のセルの文末に移動
+        const input = e.target as HTMLInputElement;
+        const selectionStart = input.selectionStart ?? 0;
+        if (selectionStart > 0) {
+          // セル内で左に移動可能な場合は何もしない（デフォルト動作）
+          return;
+        } else {
+          // 文頭の場合は左のセルに移動
+          e.preventDefault();
+          const maxRow = localTableData.rows.length - 1;
+          const maxCol = localTableData.rows[0]?.length - 1;
+          if (col > 0) {
+            setMoveDirection('left');
+            setFocusedCell({ row, col: col - 1 });
+            // 左のセルに移動後、カーソルを文末に配置
+            setTimeout(() => {
+              const prevInput = document.querySelector(`[data-row="${row}"][data-col="${col - 1}"] input`) as HTMLInputElement;
+              if (prevInput) {
+                const textLength = prevInput.value.length;
+                prevInput.setSelectionRange(textLength, textLength);
+              }
+            }, 0);
+          } else if (row > 0) {
+            setMoveDirection('left');
+            setFocusedCell({ row: row - 1, col: maxCol });
+            // 前の行の最後のセルに移動後、カーソルを文末に配置
+            setTimeout(() => {
+              const prevInput = document.querySelector(`[data-row="${row - 1}"][data-col="${maxCol}"] input`) as HTMLInputElement;
+              if (prevInput) {
+                const textLength = prevInput.value.length;
+                prevInput.setSelectionRange(textLength, textLength);
+              }
+            }, 0);
+          }
+        }
+      } else if (e.key === 'ArrowRight') {
+        // 右キー: 文末以外はセル内の右の文字に移動、文末だったら右のセルの文頭に移動
+        const input = e.target as HTMLInputElement;
+        const selectionStart = input.selectionStart ?? 0;
+        if (selectionStart < input.value.length) {
+          // セル内で右に移動可能な場合は何もしない（デフォルト動作）
+          return;
+        } else {
+          // 文末の場合は右のセルに移動
+          e.preventDefault();
+          const maxRow = localTableData.rows.length - 1;
+          const maxCol = localTableData.rows[0]?.length - 1;
+          if (col < maxCol) {
+            setMoveDirection('right');
+            setFocusedCell({ row, col: col + 1 });
+            // 次のセルに移動後、カーソルを文頭に配置
+            setTimeout(() => {
+              const nextInput = document.querySelector(`[data-row="${row}"][data-col="${col + 1}"] input`) as HTMLInputElement;
+              if (nextInput) {
+                nextInput.setSelectionRange(0, 0);
+              }
+            }, 0);
+          } else if (row < maxRow) {
+            setMoveDirection('right');
+            setFocusedCell({ row: row + 1, col: 0 });
+            // 次の行の最初のセルに移動後、カーソルを文頭に配置
+            setTimeout(() => {
+              const nextInput = document.querySelector(`[data-row="${row + 1}"][data-col="0"] input`) as HTMLInputElement;
+              if (nextInput) {
+                nextInput.setSelectionRange(0, 0);
+              }
+            }, 0);
+          }
+        }
       }
+      // 通常のEnterは改行として処理（セル内で改行）
     };
 
     return (
       <td
-        className={`simple-table-cell ${isSelected ? 'selected' : ''}`}
+        className={`simple-table-cell ${isFocused ? 'focused' : ''}`}
         onClick={handleClick}
+        data-row={row}
+        data-col={col}
       >
-        {isSelected && isEditing ? (
-          <input
-            ref={inputRef}
-            type="text"
-            value={value}
-            onChange={handleInputChange}
-            onBlur={handleInputBlur}
-            onKeyDown={handleInputKeyDown}
-            className="cell-input"
-          />
-        ) : (
-          <span className="cell-content">{value}</span>
-        )}
+        <input
+          ref={inputRef}
+          type="text"
+          value={value}
+          onChange={handleInputChange}
+          onKeyDown={handleInputKeyDown}
+          className="cell-input"
+          placeholder=""
+        />
       </td>
     );
   };

@@ -67,11 +67,11 @@
 
 .simple-table-cell {
   border: 1px solid #d1d5db;
-  padding: 8px 12px;
+  padding: 0;
   min-width: 100px;
   min-height: 40px;
   position: relative;
-  cursor: pointer;
+  cursor: text;
   transition: background-color 0.2s ease;
 }
 
@@ -79,21 +79,14 @@
   background-color: #f9fafb;
 }
 
-.simple-table-cell.selected {
+.simple-table-cell.focused {
   background-color: #dbeafe;
   border-color: #3b82f6;
 }
 
-.simple-table-cell.selected .cell-content {
+.simple-table-cell.focused .cell-input {
   color: #1e40af;
   font-weight: 500;
-}
-
-.cell-content {
-  display: block;
-  min-height: 20px;
-  line-height: 1.4;
-  color: #374151;
 }
 
 .cell-input {
@@ -101,16 +94,17 @@
   height: 100%;
   border: none;
   outline: none;
+  padding: 8px 12px;
   background: transparent;
-  font-size: inherit;
-  font-family: inherit;
-  color: inherit;
-  padding: 0;
-  margin: 0;
+  font-size: 14px;
+  line-height: 1.4;
+  color: #374151;
+  box-sizing: border-box;
 }
 
 .cell-input:focus {
-  background-color: #fef3c7;
+  outline: none;
+  background: transparent;
 }
 
 /* レスポンシブ対応 */
