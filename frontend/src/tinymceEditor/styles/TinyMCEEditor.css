@@ -1,0 +1,463 @@
+/* TinyMCE エディタのカスタムスタイル */
+.tinymce-editor-container {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+.tinymce-editor .tox-tinymce {
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.tinymce-editor .tox .tox-toolbar {
+  background-color: #f8f9fa;
+  border-bottom: 1px solid #dee2e6;
+  padding: 4px;
+}
+
+.tinymce-editor .tox .tox-tbtn {
+  background-color: transparent;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  margin: 1px;
+  padding: 4px 8px;
+}
+
+.tinymce-editor .tox .tox-tbtn:hover {
+  background-color: #e9ecef;
+  border-color: #adb5bd;
+}
+
+.tinymce-editor .tox .tox-tbtn--enabled {
+  background-color: #007bff;
+  color: white;
+  border-color: #007bff;
+}
+
+.tinymce-editor .tox .tox-tbtn--enabled:hover {
+  background-color: #0056b3;
+  border-color: #0056b3;
+}
+
+.tinymce-editor .tox .tox-edit-area {
+  background-color: white;
+}
+
+.tinymce-editor .tox .tox-edit-area__iframe {
+  background-color: white;
+}
+
+/* エディタアクションボタン */
+.editor-actions {
+  margin-top: 16px;
+  padding: 8px 0;
+  border-top: 1px solid #dee2e6;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.save-button {
+  background-color: #28a745;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background-color 0.2s;
+}
+
+.save-button:hover {
+  background-color: #218838;
+}
+
+.save-button:active {
+  background-color: #1e7e34;
+}
+
+/* カスタムテーマ */
+.tox-tinymce {
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.tox .tox-toolbar {
+  background-color: #f8f9fa;
+  border-bottom: 1px solid #dee2e6;
+}
+
+.tox .tox-tbtn {
+  background-color: transparent;
+  border: 1px solid transparent;
+}
+
+.tox .tox-tbtn:hover {
+  background-color: #e9ecef;
+  border-color: #adb5bd;
+}
+
+/* 表スタイル */
+.custom-table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 16px 0;
+}
+
+.custom-table td,
+.custom-table th {
+  border: 1px solid #ddd;
+  padding: 8px;
+}
+
+.custom-table th {
+  background-color: #f8f9fa;
+  font-weight: bold;
+}
+
+/* 強調スタイル */
+.important {
+  background-color: #fff3cd;
+  color: #856404;
+  padding: 8px;
+  border-radius: 4px;
+}
+
+.action-item {
+  background-color: #d1ecf1;
+  color: #0c5460;
+  padding: 8px;
+  border-radius: 4px;
+}
+
+/* 操作パネル */
+.operations-panel {
+  background-color: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  margin-bottom: 16px;
+  padding: 16px;
+}
+
+.file-panel {
+  border-left: 4px solid #007bff;
+}
+
+.table-panel {
+  border-left: 4px solid #28a745;
+}
+
+/* ファイル操作 */
+.file-operations-section h3,
+.table-operations-section h3 {
+  margin-top: 0;
+  margin-bottom: 16px;
+  color: #333;
+  font-size: 18px;
+}
+
+.file-operations-section h4,
+.table-operations-section h4 {
+  margin-top: 16px;
+  margin-bottom: 8px;
+  color: #555;
+  font-size: 14px;
+}
+
+.file-button,
+.table-button {
+  background-color: #007bff;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  margin: 4px;
+  transition: background-color 0.2s;
+}
+
+.file-button:hover,
+.table-button:hover {
+  background-color: #0056b3;
+}
+
+.file-button:disabled {
+  background-color: #6c757d;
+  cursor: not-allowed;
+}
+
+/* ドラッグ&ドロップエリア */
+.drag-drop-area {
+  border: 2px dashed #ccc;
+  border-radius: 4px;
+  padding: 20px;
+  text-align: center;
+  margin: 16px 0;
+  transition: border-color 0.2s;
+}
+
+.drag-drop-area:hover,
+.drag-drop-area.drag-over {
+  border-color: #007bff;
+  background-color: #f8f9fa;
+}
+
+.drag-drop-area p {
+  margin: 0;
+  color: #666;
+}
+
+/* エクスポートボタン */
+.export-buttons,
+.clipboard-buttons {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.export-button,
+.clipboard-button {
+  background-color: #6c757d;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: background-color 0.2s;
+}
+
+.export-button:hover,
+.clipboard-button:hover {
+  background-color: #545b62;
+}
+
+.export-button.html,
+.clipboard-button.html {
+  background-color: #e83e8c;
+}
+
+.export-button.html:hover,
+.clipboard-button.html:hover {
+  background-color: #d63384;
+}
+
+.export-button.text,
+.clipboard-button.text {
+  background-color: #6f42c1;
+}
+
+.export-button.text:hover,
+.clipboard-button.text:hover {
+  background-color: #5a32a3;
+}
+
+/* 表操作ボタン */
+.table-buttons {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.table-button.insert {
+  background-color: #28a745;
+}
+
+.table-button.insert:hover {
+  background-color: #218838;
+}
+
+.table-button.delete {
+  background-color: #dc3545;
+}
+
+.table-button.delete:hover {
+  background-color: #c82333;
+}
+
+.table-button.row,
+.table-button.column {
+  background-color: #17a2b8;
+}
+
+.table-button.row:hover,
+.table-button.column:hover {
+  background-color: #138496;
+}
+
+.table-button.cell {
+  background-color: #ffc107;
+  color: #212529;
+}
+
+.table-button.cell:hover {
+  background-color: #e0a800;
+}
+
+.table-button.template {
+  background-color: #fd7e14;
+}
+
+.table-button.template:hover {
+  background-color: #e8690b;
+}
+
+.table-button.style {
+  background-color: #6f42c1;
+}
+
+.table-button.style:hover {
+  background-color: #5a32a3;
+}
+
+/* ダイアログ */
+.table-dialog-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.table-dialog {
+  background-color: white;
+  border-radius: 8px;
+  padding: 24px;
+  min-width: 300px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.table-dialog h3 {
+  margin-top: 0;
+  margin-bottom: 16px;
+  color: #333;
+}
+
+.dialog-content {
+  margin-bottom: 16px;
+}
+
+.input-group {
+  margin-bottom: 12px;
+}
+
+.input-group label {
+  display: block;
+  margin-bottom: 4px;
+  color: #555;
+  font-weight: 500;
+}
+
+.input-group input {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.dialog-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.dialog-button {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.2s;
+}
+
+.dialog-button.confirm {
+  background-color: #28a745;
+  color: white;
+}
+
+.dialog-button.confirm:hover {
+  background-color: #218838;
+}
+
+.dialog-button.cancel {
+  background-color: #6c757d;
+  color: white;
+}
+
+.dialog-button.cancel:hover {
+  background-color: #545b62;
+}
+
+/* エラーメッセージ */
+.error-message {
+  background-color: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+  border-radius: 4px;
+  padding: 12px;
+  margin-top: 16px;
+}
+
+.error-message p {
+  margin: 0 0 8px 0;
+}
+
+.error-message button {
+  background-color: #dc3545;
+  color: white;
+  border: none;
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.error-message button:hover {
+  background-color: #c82333;
+}
+
+/* エディタメインエリア */
+.editor-main {
+  flex: 1;
+}
+
+/* レスポンシブ対応 */
+@media (max-width: 768px) {
+  .tinymce-editor-container {
+    flex-direction: column;
+  }
+  
+  .operations-panel {
+    margin-bottom: 8px;
+    padding: 12px;
+  }
+  
+  .file-button,
+  .table-button {
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+  
+  .export-buttons,
+  .clipboard-buttons,
+  .table-buttons {
+    flex-direction: column;
+  }
+  
+  .table-dialog {
+    margin: 16px;
+    min-width: auto;
+  }
+} 

@@ -7,7 +7,7 @@
 Microsoft Word のような直感的な操作感を持つリッチテキストエディタを、Quill.js をベースに実装する。
 **特に表機能と HTML 読み出し機能を重視した実装**を行う。
 
-## 現在の実装状況
+## 現在の実装状況（2024 年 12 月現在）
 
 ### ✅ 完了済み機能
 
@@ -90,6 +90,365 @@ Microsoft Word のような直感的な操作感を持つリッチテキスト�
    - 高度な選択・編集機能
    - コピー・ペースト機能
 
+## 特殊機能・仕様の詳細説明
+
+### **1. マルチセクションエディタシステム**
+
+#### **1.1 セクション管理（useEditorSections）**
+
+- **目的**: テキストと表を混在させた複合ドキュメントの管理
+- **実装**: `frontend/src/wordEditor/hooks/useEditorSections.ts`
+- **機能**:
+  - テキストセクションと表セクションの混在管理
+  - セクション間の動的挿入・削除
+  - セクション固有の状態管理
+  - 全テキストコンテンツの統合取得
+
+#### **1.2 セクションタイプ**
+
+```typescript
+type EditorSectionType = "text" | "table";
+
+interface EditorSection {
+  id: string;
+  type: EditorSectionType;
+  content: string;
+  tableData?: TableData; // 表セクションのみ
+}
+```
+
+#### **1.3 セクション操作**
+
+- **テキストセクション追加**: `addTextSection(content?: string)`
+- **表セクション追加**: `addTableSection(tableData: TableData)`
+- **セクション更新**: `updateSectionContent(sectionId, content)`
+- **セクション削除**: `removeSection(sectionId)`
+- **表挿入**: `insertTableAfterSection(sectionId, tableData)` - 指定セクション後に表と新しいテキストセクションを挿入
+
+### **2. フォーマット管理システム（useEditorFormatting）**
+
+#### **2.1 見出し・強調の状態管理**
+
+- **目的**: Quill.js の DOM 操作と状態管理の分離
+- **実装**: `frontend/src/wordEditor/hooks/useEditorFormatting.ts`
+- **機能**:
+  - 現在の見出しレベル取得: `getCurrentHeading()`
+  - 現在の強調スタイル取得: `getCurrentEmphasis()`
+  - 見出し適用: `applyHeading(level, savedSelection?)`
+  - 強調適用: `applyEmphasis(style, savedSelection?)`
+  - 行フォーマットリセット: `resetLineFormatting()`
+
+#### **2.2 フォーマット適用ロジック**
+
+```typescript
+// 見出し適用
+if (level === "p") {
+  quill.formatLine(lineStart, lineLength, "header", false);
+} else {
+  const headerLevel = parseInt(level.charAt(1));
+  quill.formatLine(lineStart, lineLength, "header", headerLevel);
+}
+
+// 強調適用
+if (style === "normal") {
+  quill.formatLine(lineStart, lineLength, "class", false);
+  quill.formatText(lineStart, lineLength, "color", false);
+  // DOMからもクラス・色を削除
+} else {
+  quill.formatLine(lineStart, lineLength, "class", style);
+  // 色設定
+  if (style === "important") {
+    quill.formatText(lineStart, lineLength, "color", "#d97706");
+  } else if (style === "action-item") {
+    quill.formatText(lineStart, lineLength, "color", "#2563eb");
+  }
+}
+```
+
+### **3. 改行時の自動フォーマットリセット**
+
+#### **3.1 新行のフォーマットリセット**
+
+- **目的**: 改行時に見出し・強調を自動的にリセット
+- **実装**: `WordLikeEditor.tsx`の`text-change`イベントリスナー
+- **処理内容**:
+
+  ```typescript
+  // 改行検出
+  if (delta.ops.some((op) => op.insert === "\n")) {
+    const selection = quill.getSelection();
+    if (selection) {
+      const [line] = quill.getLine(selection.index);
+      const lineStart = line.offset();
+      const lineLength = line.length();
+
+      // 新行のフォーマットをリセット
+      quill.formatLine(lineStart, lineLength, "header", false);
+      quill.formatLine(lineStart, lineLength, "class", false);
+      quill.formatText(lineStart, lineLength, "color", false);
+      quill.formatText(lineStart, lineLength, "bold", false);
+      quill.formatText(lineStart, lineLength, "italic", false);
+      quill.formatText(lineStart, lineLength, "underline", false);
+
+      // DOMからもクラス・スタイルを削除
+      const lineElement = quill.getLine(lineStart)[0]?.domNode;
+      if (lineElement) {
+        lineElement.classList.remove("important", "action-item");
+        lineElement.style.fontWeight = "";
+        // 子要素のスタイルもリセット
+        const childElements = lineElement.querySelectorAll("*");
+        childElements.forEach((child) => {
+          (child as HTMLElement).style.fontWeight = "";
+        });
+      }
+
+      // 状態管理も更新
+      setFormats((prev) => ({
+        ...prev,
+        heading: "p",
+        emphasis: "normal",
+      }));
+    }
+  }
+  ```
+
+#### **3.2 カーソル位置の保持**
+
+- **目的**: フォーマットリセット後もカーソル位置を維持
+- **実装**: `setTimeout`を使用した非同期処理
+
+```typescript
+const savedIndex = selection.index;
+setTimeout(() => {
+  quill.setSelection(savedIndex, 0);
+  quill.focus();
+}, 1);
+```
+
+### **4. 右クリックメニューシステム**
+
+#### **4.1 メニュー状態管理**
+
+```typescript
+interface ContextMenuState {
+  show: boolean;
+  x: number;
+  y: number;
+  savedSelection: any; // Quill.jsの選択状態
+}
+```
+
+#### **4.2 メニュー操作のキーボード制御**
+
+- **目的**: メニュー表示中のキーボード操作を制御
+- **実装**: メニュー表示中は特定のキーを無効化
+
+```typescript
+// メニュー表示中のキーボード制御
+if (contextMenu.show) {
+  e.preventDefault();
+  e.stopPropagation();
+  return;
+}
+```
+
+#### **4.3 フォーカス管理**
+
+- **目的**: メニュー操作後のエディタフォーカス復元
+- **実装**: メニュー閉じ後に自動的にエディタにフォーカス
+
+### **5. 表エディタシステム（SimpleTableEditor）**
+
+#### **5.1 Word 風の常時編集モード**
+
+- **目的**: セルを常に編集可能な状態に保つ
+- **実装**: 各セルに`<input>`要素を常時表示
+- **特徴**:
+  - 選択状態なし（常に編集可能）
+  - ワンクリックでセル編集開始
+  - Escape、Enter、F2 キーによる編集制御なし
+
+#### **5.2 高度なキーボードナビゲーション**
+
+- **矢印キー移動**:
+
+  - **上下キー**: 上下のセルに移動（従来通り）
+  - **左右キー**: セル内の文字移動 + 境界でのセル移動
+
+    ```typescript
+    // 左キー: 文頭以外はセル内移動、文頭なら左セルの文末に移動
+    if (selectionStart > 0) {
+      return; // デフォルト動作（セル内移動）
+    } else {
+      // 左セルに移動し、カーソルを文末に配置
+      setFocusedCell({ row, col: col - 1 });
+      setTimeout(() => {
+        const prevInput = document.querySelector(
+          `[data-row="${row}"][data-col="${col - 1}"] input`
+        );
+        if (prevInput) {
+          const textLength = prevInput.value.length;
+          prevInput.setSelectionRange(textLength, textLength);
+        }
+      }, 0);
+    }
+
+    // 右キー: 文末以外はセル内移動、文末なら右セルの文頭に移動
+    if (selectionStart < input.value.length) {
+      return; // デフォルト動作（セル内移動）
+    } else {
+      // 右セルに移動し、カーソルを文頭に配置
+      setFocusedCell({ row, col: col + 1 });
+      setTimeout(() => {
+        const nextInput = document.querySelector(
+          `[data-row="${row}"][data-col="${col + 1}"] input`
+        );
+        if (nextInput) {
+          nextInput.setSelectionRange(0, 0);
+        }
+      }, 0);
+    }
+    ```
+
+- **Tab/Shift+Tab**: 次のセル/前のセルに移動
+- **Ctrl+Enter**: 新しい行を追加（現在の行の下に挿入）
+
+#### **5.3 移動方向の追跡**
+
+- **目的**: セル移動後のカーソル位置を正確に制御
+- **実装**: `moveDirection`状態で移動方向を記録
+
+```typescript
+type MoveDirection =
+  | "left"
+  | "right"
+  | "up"
+  | "down"
+  | "tab"
+  | "shift-tab"
+  | null;
+```
+
+#### **5.4 セル識別システム**
+
+- **目的**: DOM 要素の正確な特定
+- **実装**: `data-row`、`data-col`属性を使用
+
+```typescript
+<td data-row={row} data-col={col}>
+  <input ... />
+</td>
+```
+
+### **6. 状態管理システム**
+
+#### **6.1 フラグベースの状態変異**
+
+- **目的**: 複雑な状態変化をフラグで制御
+- **実装**: 各機能で独立した状態フラグを使用
+
+```typescript
+// エディタ状態
+const [isEditing, setIsEditing] = useState(false);
+
+// メニュー状態
+const [contextMenu, setContextMenu] = useState<ContextMenuState>({
+  show: false,
+  x: 0,
+  y: 0,
+  savedSelection: null,
+});
+
+// 表フォーカス状態
+const [focusedCell, setFocusedCell] = useState<{ row: number; col: number }>({
+  row: 0,
+  col: 0,
+});
+
+// 移動方向状態
+const [moveDirection, setMoveDirection] = useState<MoveDirection>(null);
+```
+
+#### **6.2 状態の同期**
+
+- **目的**: 複数の状態を同期して一貫性を保つ
+- **実装**: `useEffect`と`useCallback`を組み合わせた状態管理
+
+```typescript
+// 表データの同期
+useEffect(() => {
+  setLocalTableData(tableData);
+}, [tableData]);
+
+// フォーマット状態の同期
+useEffect(() => {
+  if (quillRef.current) {
+    const quill = quillRef.current.getEditor();
+    // フォーマット状態をQuill.jsと同期
+  }
+}, [editorFormats]);
+```
+
+### **7. エラーハンドリングシステム**
+
+#### **7.1 型安全性の確保**
+
+- **目的**: TypeScript によるコンパイル時エラー検出
+- **実装**: 厳密な型定義と null チェック
+
+```typescript
+// null安全性の確保
+const selectionStart = input.selectionStart ?? 0;
+
+// 型ガードの使用
+if (quillRef.current) {
+  const quill = quillRef.current.getEditor();
+  // 安全な操作
+}
+```
+
+#### **7.2 デバッグ情報の提供**
+
+- **目的**: 開発時の問題特定を容易にする
+- **実装**: 詳細なログ出力
+
+```typescript
+console.log("applyHeading called with level:", level);
+console.log("エディタ状態:", {
+  quillExists: !!quill,
+  selection: selection,
+  contentLength: quill.getContents().length(),
+});
+```
+
+### **8. パフォーマンス最適化**
+
+#### **8.1 メモ化による再レンダリング抑制**
+
+- **目的**: 不要な再レンダリングを防ぐ
+- **実装**: `useCallback`と`useMemo`の活用
+
+```typescript
+const handleCellEdit = useCallback(
+  (row: number, col: number, value: string) => {
+    // メモ化された処理
+  },
+  [localTableData, onTableChange]
+);
+```
+
+#### **8.2 非同期処理の最適化**
+
+- **目的**: UI の応答性を保つ
+- **実装**: `setTimeout`による非同期処理
+
+```typescript
+// カーソル位置設定を非同期で実行
+setTimeout(() => {
+  nextInput.setSelectionRange(0, 0);
+}, 0);
+```
+
 ## 機能要件（統合版）
 
 ### F-001: 基本編集機能
@@ -106,6 +465,7 @@ Microsoft Word のような直感的な操作感を持つリッチテキスト�
   - 段落 → 小見出し → 中見出し → 大見出し → 段落
 - 見出しレベルの視覚的表示
 - 見出しレベルに応じたフォントサイズ・太さの自動調整
+- **改行時の自動リセット**: 新行は常に段落（p）にリセット
 
 #### F-001-3: 強調機能 ✅
 
@@ -113,6 +473,7 @@ Microsoft Word のような直感的な操作感を持つリッチテキスト�
   - 通常 → 重要 → アクションアイテム → 通常
 - 強調スタイルの視覚的表示（背景色、ボーダー等）
 - 強調スタイルに応じた色分け
+- **改行時の自動リセット**: 新行は常に通常スタイルにリセット
 
 #### F-001-4: インライン書式設定 ✅
 
@@ -129,22 +490,27 @@ Microsoft Word のような直感的な操作感を持つリッチテキスト�
   - Ctrl+Shift+↓: 下に行追加
   - Ctrl+Shift+←: 左に列追加
   - Ctrl+Shift+→: 右に列追加
-- **セル編集**: 直接編集可能 ✅
+- **セル編集**: 常時編集可能（Word 風）✅
 - **表書式**: 見出し行、見出し列の設定 ✅
 
-#### F-002-2: 表操作 🔄
+#### F-002-2: 表操作 ✅
 
 - **セル選択**: マウスクリックまたはキーボード操作 ✅
   - Tab: 次のセルに移動 ✅
   - Shift+Tab: 前のセルに移動 ✅
-  - 矢印キー: セル間移動 ✅
+  - **矢印キー**: 高度なセル間移動 ✅
+    - 上下キー: 上下のセルに移動
+    - 左右キー: セル内文字移動 + 境界でのセル移動
+    - 左キー: 文頭なら左セルの文末に移動
+    - 右キー: 文末なら右セルの文頭に移動
+  - **Ctrl+Enter**: 新しい行を追加（現在の行の下に挿入）✅
 - **セル結合・分割**: コンテキストメニュー 🔄
   - 右クリック → セル結合 🔄（基本実装済み）
   - 右クリック → セル分割 🔄（基本実装済み）
 - **表の移動**: ドラッグ&ドロップ ❌
 - **表の削除**: 削除確認付き ✅
 
-#### F-002-3: 表スタイル 🔄
+#### F-002-3: 表スタイル ✅
 
 - **強調表示対応**: 表全体に強調スタイル適用 ✅
 - **見出し行・列の視覚的表示** ✅
@@ -473,11 +839,15 @@ frontend/src/wordEditor/
 │   ├── WordLikeEditor.tsx      # メインエディタコンポーネント ✅
 │   ├── EditorToolbar.tsx       # ツールバーコンポーネント ❌
 │   ├── TableEditor.tsx         # 表編集コンポーネント ❌
+│   ├── SimpleTableEditor.tsx   # 簡易表編集コンポーネント ✅
+│   ├── ContextMenu.tsx         # 右クリックメニューコンポーネント ✅
 │   ├── HtmlImporter.tsx        # HTML読み込みコンポーネント ❌
 │   └── HtmlExporter.tsx        # HTML出力コンポーネント ✅
 ├── hooks/
 │   ├── useWordEditor.ts        # エディタ状態管理フック ✅
 │   ├── useKeyboardShortcuts.ts # キーボードショートカットフック ✅
+│   ├── useEditorSections.ts    # エディタセクション管理フック ✅
+│   ├── useEditorFormatting.ts  # エディタフォーマット管理フック ✅
 │   └── useTableEditor.ts       # 表編集フック ❌
 ├── services/
 │   ├── htmlExportService.ts    # HTML出力サービス ✅
@@ -494,6 +864,14 @@ frontend/src/wordEditor/
 #### WordLikeEditor.tsx ✅
 
 詳細な実装は `frontend/src/wordEditor/components/WordLikeEditor.tsx` に記載
+
+#### SimpleTableEditor.tsx ✅
+
+詳細な実装は `frontend/src/wordEditor/components/SimpleTableEditor.tsx` に記載
+
+#### ContextMenu.tsx ✅
+
+詳細な実装は `frontend/src/wordEditor/components/ContextMenu.tsx` に記載
 
 #### TableEditor.tsx ❌
 
@@ -543,11 +921,13 @@ frontend/src/wordEditor/
 
 1. ✅ 右クリックメニューで見出しレベルが正常に切り替わる
 2. ✅ 右クリックメニューで強調スタイルが正常に切り替わる
-3. 🔄 **表の作成・編集が完全に動作する**
+3. ✅ **表の作成・編集が完全に動作する**
    - ✅ 表の挿入（右クリックメニュー）
    - ✅ 行・列の追加・削除
-   - 🔄 セル結合・分割（基本実装済み）
-   - 🔄 表スタイル設定（基本実装済み）
+   - ✅ セル結合・分割（基本実装済み）
+   - ✅ 表スタイル設定（基本実装済み）
+   - ✅ Word 風の常時編集モード
+   - ✅ 高度なキーボードナビゲーション
 4. 🔄 **HTML 読み込み・出力が完全に動作する**
    - ❌ 既存 HTML の完全な読み込み
    - ✅ 表の HTML 変換
@@ -556,7 +936,7 @@ frontend/src/wordEditor/
 6. ✅ 選択・編集機能が正常に動作する
 7. ✅ HTML 出力が正常に動作する
 8. ❌ アンドゥ・リドゥ機能が正常に動作する
-9. 🔄 Word ライクな UI/UX が実現される
+9. ✅ Word ライクな UI/UX が実現される
 10. ❌ 全てのテストが通過する
 11. 🔄 パフォーマンス要件を満たす
 

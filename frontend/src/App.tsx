@@ -6,10 +6,9 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import './App.css';
-import { WordLikeEditor } from './wordEditor/components/WordLikeEditor';
+import { TinyMCEEditor } from './tinymceEditor/components/TinyMCEEditor';
 import { getEmailTemplates, sendMail, MailSendRequest } from './services/apiService';
-import { HtmlExportService } from './wordEditor/services/htmlExportService';
-import { EditorContent } from './wordEditor/types/wordEditorTypes';
+import { HtmlExportService } from './tinymceEditor/services/htmlExportService';
 
 interface EmailTemplates {
   default_recipient: string;
@@ -24,29 +23,7 @@ function App() {
   const [selectedBodyTemplate, setSelectedBodyTemplate] = useState<string>('');
   const [customRecipient, setCustomRecipient] = useState<string>('');
   const [importText, setImportText] = useState('');
-  const [editorContent, setEditorContent] = useState<EditorContent>({
-    content: '',
-    formats: {
-      heading: 'p',
-      emphasis: 'normal',
-      inline: { bold: false, underline: false },
-      paragraph: { indent: 0 },
-      table: {
-        rows: 0,
-        cols: 0,
-        hasHeaderRow: false,
-        hasHeaderCol: false,
-        cellMerges: [],
-        styles: {
-          borderColor: '#000000',
-          backgroundColor: '#ffffff',
-          headerBackgroundColor: '#f0f0f0',
-          alignment: 'left',
-          cellPadding: 8,
-        },
-      },
-    },
-  });
+  const [editorContent, setEditorContent] = useState<string>('');
 
   const htmlExportService = useRef(new HtmlExportService());
 
@@ -79,7 +56,7 @@ function App() {
 
     try {
       // HTMLまたはマークダウンテキストを処理
-      console.log('Importing text to Word editor:', importText);
+      console.log('Importing text to TinyMCE editor:', importText);
       
       // マークダウンの場合はHTMLに変換
       let processedContent = importText;
@@ -90,10 +67,7 @@ function App() {
       // HTMLをクリーンアップして安全な形式に変換
       processedContent = sanitizeHtml(processedContent);
       
-      setEditorContent(prev => ({
-        ...prev,
-        content: processedContent,
-      }));
+      setEditorContent(processedContent);
       setImportText(''); // 読み込み後クリア
     } catch (error) {
       console.error('テキストのインポートに失敗しました:', error);
@@ -101,7 +75,6 @@ function App() {
     }
   };
 
-  // マークダウンをHTMLに変換する関数
   const convertMarkdownToHtml = (markdown: string): string => {
     let html = markdown;
     
@@ -110,85 +83,53 @@ function App() {
     html = html.replace(/^## (.*$)/gim, '<h2>$1</h2>');
     html = html.replace(/^# (.*$)/gim, '<h1>$1</h1>');
     
-    // 太字の変換
+    // 太字と斜体
     html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-    html = html.replace(/__(.*?)__/g, '<strong>$1</strong>');
-    
-    // 斜体の変換
     html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
-    html = html.replace(/_(.*?)_/g, '<em>$1</em>');
     
-    // リストの変換
+    // リスト
     html = html.replace(/^\* (.*$)/gim, '<li>$1</li>');
     html = html.replace(/^- (.*$)/gim, '<li>$1</li>');
     html = html.replace(/^(\d+)\. (.*$)/gim, '<li>$2</li>');
     
-    // 段落の変換（空行で区切られたテキストを段落に）
+    // 段落
     html = html.replace(/\n\n/g, '</p><p>');
-    html = html.replace(/^(?!<[h|li|ul|ol|table])(.*$)/gim, '<p>$1</p>');
+    html = '<p>' + html + '</p>';
     
-    // 基本的な表の変換（簡易版）
-    const tableRegex = /\|(.+)\|/g;
-    if (tableRegex.test(html)) {
-      html = html.replace(/\|(.+)\|/g, (match: string, content: string) => {
-        const cells = content.split('|').map((cell: string) => cell.trim());
-        return `<tr>${cells.map((cell: string) => `<td>${cell}</td>`).join('')}</tr>`;
-      });
-      html = html.replace(/(<tr>.*<\/tr>)/gs, '<table border="1">$1</table>');
-    }
-    
-    return html;
-  };
-
-  // HTMLをクリーンアップする関数
-  const sanitizeHtml = (html: string): string => {
-    // 許可するタグのみを残す
-    const allowedTags = [
-      'h1', 'h2', 'h3',
-      'p', 'div',
-      'strong', 'b', 'em', 'i', 'u',
-      'table', 'thead', 'tbody', 'tr', 'th', 'td'
-    ];
-    
-    // 基本的なXSS対策
-    html = html.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
-    html = html.replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, '');
-    html = html.replace(/javascript:/gi, '');
-    html = html.replace(/on\w+\s*=/gi, '');
-    
-    // 許可されていないタグを削除（許可されているタグは残す）
-    const allowedTagsSet = new Set(allowedTags);
-    
-    // 開始タグと終了タグの両方を処理
-    html = html.replace(/<\/?([a-zA-Z][a-zA-Z0-9]*)\b[^>]*>/g, (match, tagName) => {
-      const lowerTagName = tagName.toLowerCase();
-      if (allowedTagsSet.has(lowerTagName)) {
-        return match; // 許可されているタグはそのまま残す
-      }
-      return ''; // 許可されていないタグは削除
+    // リストの整形
+    html = html.replace(/<li>.*?<\/li>/g, (match) => {
+      return '<ul>' + match + '</ul>';
     });
     
     return html;
   };
 
+  const sanitizeHtml = (html: string): string => {
+    // 基本的なHTMLサニタイズ
+    return html
+      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+      .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, '')
+      .replace(/javascript:/gi, '')
+      .replace(/on\w+\s*=/gi, '');
+  };
+
   const handleDownloadHtml = async () => {
     try {
-      // WordライクエディタからHTMLを取得してダウンロード
-      console.log('Downloading HTML from Word editor');
-      const filename = prompt('ファイル名を入力してください:', 'document.html') || 'document.html';
-      htmlExportService.current.downloadHtml(editorContent, filename);
+      HtmlExportService.downloadHtml(
+        editorContent,
+        'document.html',
+        'エクスポートされたドキュメント'
+      );
     } catch (error) {
-      console.error('HTMLのダウンロードに失敗しました:', error);
-      alert('HTMLのダウンロードに失敗しました。');
+      console.error('HTMLダウンロードに失敗しました:', error);
+      alert('HTMLダウンロードに失敗しました。');
     }
   };
 
   const handleCopyToClipboard = async () => {
     try {
-      // WordライクエディタからHTMLを取得してクリップボードにコピー
-      console.log('Copying HTML to clipboard from Word editor');
-      await htmlExportService.current.copyToClipboard(editorContent);
-      alert('HTMLがクリップボードにコピーされました。');
+      await HtmlExportService.copyToClipboard(editorContent, 'html');
+      alert('HTMLをクリップボードにコピーしました。');
     } catch (error) {
       console.error('クリップボードへのコピーに失敗しました:', error);
       alert('クリップボードへのコピーに失敗しました。');
@@ -196,11 +137,6 @@ function App() {
   };
 
   const handleSendMail = async () => {
-    if (!emailTemplates) {
-      alert('メールテンプレートが読み込まれていません。');
-      return;
-    }
-
     if (!customRecipient.trim()) {
       alert('宛先を入力してください。');
       return;
@@ -208,13 +144,15 @@ function App() {
 
     try {
       const mailRequest: MailSendRequest = {
-        recipient_email: customRecipient,
+        to: customRecipient,
         subject: selectedSubject,
-        html_content: selectedBodyTemplate,
+        html_content: selectedBodyTemplate + '\n\n' + editorContent,
+        body: selectedBodyTemplate + '\n\n' + editorContent,
+        text: editorContent.replace(/<[^>]*>/g, ''),
       };
 
       await sendMail(mailRequest);
-      alert('メールが正常に送信されました。');
+      alert('メールを送信しました。');
     } catch (error) {
       console.error('メール送信に失敗しました:', error);
       alert('メール送信に失敗しました。');
@@ -222,19 +160,14 @@ function App() {
   };
 
   const handleContentChange = (content: string) => {
-    console.log('Word editor content changed:', content);
-    setEditorContent(prev => ({
-      ...prev,
-      html: content,
-      text: content.replace(/<[^>]*>/g, ''),
-    }));
+    setEditorContent(content);
   };
 
   return (
     <div className="app">
       <header className="app-header">
         <div className="header-content">
-          <h1>HTMLエディタ</h1>
+          <h1>HTMLエディタ (TinyMCE版)</h1>
           <div className="header-import-box">
             <textarea
               value={importText}
@@ -263,20 +196,17 @@ function App() {
 
       <main className="app-main">
         <div className="main-content">
-          {/* Wordライクエディタのみ */}
-            <WordLikeEditor
-              initialContent={editorContent.content}
-              onContentChange={handleContentChange}
-              onSave={() => {
-                console.log('Word editor save');
-              }}
-              onTableInsert={() => {
-                console.log('Word editor table insert');
-              }}
-              onHtmlImport={(html) => {
-                console.log('Word editor HTML import:', html);
-              }}
-            />
+          {/* TinyMCEエディタ */}
+          <TinyMCEEditor
+            initialContent={editorContent}
+            onContentChange={handleContentChange}
+            onSave={() => {
+              console.log('TinyMCE editor save');
+            }}
+            height={600}
+            showFileOperations={true}
+            showTableOperations={true}
+          />
         </div>
       </main>
 

@@ -11,6 +11,9 @@ export interface MailSendRequest {
   subject: string;
   html_content: string;
   recipient_email?: string;
+  to?: string;
+  body?: string;
+  text?: string;
 }
 
 export interface MailSendResponse {
