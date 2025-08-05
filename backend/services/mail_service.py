@@ -6,8 +6,8 @@
 """
 
 import smtplib
+import logging
 from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
 from typing import Dict, Any
 
 
@@ -21,86 +21,58 @@ class MailService:
     
     def __init__(
         self,
-        smtp_server: str,
-        smtp_port: int,
-        smtp_username: str,
-        smtp_password: str,
-        sender_email: str,
-        sender_name: str
+        mail_from: str,
+        mail_host: str,
+        mail_port: int
     ):
         """
         メール送信サービスを初期化
         
         Args:
-            smtp_server: SMTPサーバーアドレス
-            smtp_port: SMTPポート番号
-            smtp_username: SMTPユーザー名
-            smtp_password: SMTPパスワード
-            sender_email: 送信者メールアドレス
-            sender_name: 送信者名
+            mail_from: 送信者メールアドレス
+            mail_host: SMTPサーバーアドレス
+            mail_port: SMTPポート番号
         """
-        self.smtp_server = smtp_server
-        self.smtp_port = smtp_port
-        self.smtp_username = smtp_username
-        self.smtp_password = smtp_password
-        self.sender_email = sender_email
-        self.sender_name = sender_name
+        self.mail_from = mail_from
+        self.mail_host = mail_host
+        self.mail_port = mail_port
     
-    def send_html_email(
+    def send_notification_email(
         self,
         to_email: str,
         subject: str,
-        html_content: str
+        body: str
     ) -> Dict[str, Any]:
         """
-        HTMLメールを送信
+        通知メールを送信（参考関数に基づく）
         
         Args:
             to_email: 宛先メールアドレス
             subject: 件名
-            html_content: HTML本文
+            body: 本文
             
         Returns:
             送信結果の辞書
         """
         try:
             # メールメッセージの作成
-            msg = MIMEMultipart('alternative')
-            msg['From'] = f"{self.sender_name} <{self.sender_email}>"
-            msg['To'] = to_email
-            msg['Subject'] = subject
-            
-            # HTML本文の追加
-            html_part = MIMEText(html_content, 'html', 'utf-8')
-            msg.attach(html_part)
-            
+            msg = MIMEText(body)
+            msg["Subject"] = subject
+            msg["From"] = self.mail_from
+            msg["To"] = to_email
+
             # SMTPサーバーに接続して送信
-            with smtplib.SMTP(self.smtp_server, self.smtp_port) as server:
-                server.starttls()
-                server.login(self.smtp_username, self.smtp_password)
-                server.send_message(msg)
+            with smtplib.SMTP(self.mail_host, self.mail_port) as server:
+                server.sendmail(self.mail_from, to_email, msg.as_string())
+                logging.info("Notification email sent successfully")
             
             return {
                 'success': True,
                 'message': f"メールを {to_email} に送信しました"
             }
             
-        except smtplib.SMTPAuthenticationError:
-            return {
-                'success': False,
-                'error': 'SMTP認証に失敗しました。ユーザー名とパスワードを確認してください。'
-            }
-        except smtplib.SMTPRecipientsRefused:
-            return {
-                'success': False,
-                'error': '宛先メールアドレスが拒否されました。'
-            }
-        except smtplib.SMTPServerDisconnected:
-            return {
-                'success': False,
-                'error': 'SMTPサーバーとの接続が切断されました。'
-            }
         except Exception as e:
+            logging.error(f"Failed to send notification email: {str(e)}")
             return {
                 'success': False,
                 'error': f'メール送信中にエラーが発生しました: {str(e)}'

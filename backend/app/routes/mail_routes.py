@@ -17,7 +17,7 @@ router = APIRouter(prefix="/mail", tags=["mail"])
 class MailSendRequest(BaseModel):
     """メール送信リクエスト"""
     subject: str
-    html_content: str
+    body: str
     recipient_email: Optional[str] = None
 
 
@@ -80,19 +80,16 @@ async def send_mail(
         
         # メール送信サービスの初期化
         mail_service = MailService(
-            smtp_server=smtp_config['server'],
-            smtp_port=smtp_config['port'],
-            smtp_username=smtp_config['username'],
-            smtp_password=smtp_config['password'],
-            sender_email=smtp_config['sender_email'],
-            sender_name=smtp_config['sender_name']
+            mail_from=smtp_config['mail_from'],
+            mail_host=smtp_config['mail_host'],
+            mail_port=smtp_config['mail_port']
         )
         
         # メール送信
-        result = mail_service.send_html_email(
+        result = mail_service.send_notification_email(
             to_email=recipient_email,
             subject=subject,
-            html_content=request.html_content
+            body=request.body
         )
         
         if result['success']:

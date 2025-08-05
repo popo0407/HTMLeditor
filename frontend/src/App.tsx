@@ -20,9 +20,6 @@ interface EmailTemplates {
 
 function App() {
   const [emailTemplates, setEmailTemplates] = useState<EmailTemplates | null>(null);
-  const [selectedSubject, setSelectedSubject] = useState<string>('');
-  const [selectedBodyTemplate, setSelectedBodyTemplate] = useState<string>('');
-  const [customRecipient, setCustomRecipient] = useState<string>('');
   const [importText, setImportText] = useState('');
   const [editorContent, setEditorContent] = useState<string>('');
 
@@ -37,13 +34,6 @@ function App() {
     try {
       const templates = await getEmailTemplates();
       setEmailTemplates(templates);
-      if (templates.subject_templates.length > 0) {
-        setSelectedSubject(templates.subject_templates[0]);
-      }
-      if (templates.body_templates.length > 0) {
-        setSelectedBodyTemplate(templates.body_templates[0]);
-      }
-      setCustomRecipient(templates.default_recipient || '');
     } catch (error) {
       console.error('メールテンプレートの読み込みに失敗しました:', error);
     }
@@ -107,11 +97,21 @@ function App() {
 
   const sanitizeHtml = (html: string): string => {
     // 基本的なHTMLサニタイズ
-    return html
+    let sanitized = html
       .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
       .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, '')
       .replace(/javascript:/gi, '')
       .replace(/on\w+\s*=/gi, '');
+    
+    // 表のスタイルを強制的に黒色に変更
+    sanitized = sanitized
+      .replace(/border:\s*[^;]+/gi, 'border: 1px solid #000')
+      .replace(/border-color:\s*[^;]+/gi, 'border-color: #000')
+      .replace(/<table([^>]*)>/gi, '<table$1 style="border-collapse: collapse; width: 100%; margin: 16px 0;">')
+      .replace(/<td([^>]*)>/gi, '<td$1 style="border: 1px solid #000; padding: 8px;">')
+      .replace(/<th([^>]*)>/gi, '<th$1 style="border: 1px solid #000; padding: 8px; background-color: #f8f9fa; font-weight: bold;">');
+    
+    return sanitized;
   };
 
   const handleDownloadHtml = async () => {
@@ -142,18 +142,11 @@ function App() {
   };
 
   const handleSendMail = async () => {
-    if (!customRecipient.trim()) {
-      alert('宛先を入力してください。');
-      return;
-    }
-
     try {
       const mailRequest: MailSendRequest = {
-        to: customRecipient,
-        subject: selectedSubject,
-        html_content: selectedBodyTemplate + '\n\n' + editorContent,
-        body: selectedBodyTemplate + '\n\n' + editorContent,
-        text: editorContent.replace(/<[^>]*>/g, ''),
+        subject: "HTML Editor からの送信",
+        body: "いつもお世話になっております。\n\n" + editorContent.replace(/<[^>]*>/g, ''),
+        recipient_email: emailTemplates?.default_recipient || '',
       };
 
       await sendMail(mailRequest);
@@ -213,46 +206,7 @@ function App() {
         </div>
       </main>
 
-      {/* メール送信設定 */}
-      {emailTemplates && (
-        <div className="email-settings">
-          <div className="email-setting-item">
-            <label>宛先:</label>
-            <input
-              type="email"
-              value={customRecipient}
-              onChange={(e) => setCustomRecipient(e.target.value)}
-              placeholder={emailTemplates.default_recipient || 'メールアドレスを入力'}
-            />
-          </div>
-          <div className="email-setting-item">
-            <label>件名:</label>
-            <select
-              value={selectedSubject}
-              onChange={(e) => setSelectedSubject(e.target.value)}
-            >
-              {emailTemplates.subject_templates.map((template, index) => (
-                <option key={index} value={template}>
-                  {template}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="email-setting-item">
-            <label>本文冒頭:</label>
-            <select
-              value={selectedBodyTemplate}
-              onChange={(e) => setSelectedBodyTemplate(e.target.value)}
-            >
-              {emailTemplates.body_templates.map((template, index) => (
-                <option key={index} value={template}>
-                  {template}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-      )}
+
     </div>
   );
 }

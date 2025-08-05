@@ -44,12 +44,9 @@ class Settings(BaseSettings):
     ]
     
     # === SMTP設定 ===
-    SMTP_SERVER: str = "smtp.gmail.com"
-    SMTP_PORT: int = 587
-    SMTP_USERNAME: str = ""
-    SMTP_PASSWORD: str = ""
-    SENDER_EMAIL: str = ""
-    SENDER_NAME: str = "HTML Editor"
+    MAIL_FROM: str = ""
+    MAIL_HOST: str = ""
+    MAIL_PORT: int = 587
     
     # === メール送信設定 ===
     DEFAULT_RECIPIENT_EMAIL: str = ""
@@ -116,12 +113,9 @@ class Settings(BaseSettings):
             SMTP設定の辞書
         """
         return {
-            'server': self.SMTP_SERVER,
-            'port': self.SMTP_PORT,
-            'username': self.SMTP_USERNAME,
-            'password': self.SMTP_PASSWORD,
-            'sender_email': self.SENDER_EMAIL,
-            'sender_name': self.SENDER_NAME,
+            'mail_from': self.MAIL_FROM,
+            'mail_host': self.MAIL_HOST,
+            'mail_port': self.MAIL_PORT,
         }
     
     def get_email_templates(self) -> dict:

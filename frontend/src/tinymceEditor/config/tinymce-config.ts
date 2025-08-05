@@ -48,8 +48,12 @@ export const tinymceConfig = {
     }
     .important { background-color: #fff3cd; color: #856404; padding: 8px; border-radius: 4px; }
     .action-item { background-color: #d1ecf1; color: #0c5460; padding: 8px; border-radius: 4px; }
+    table { border-collapse: collapse; width: 100%; margin: 16px 0 !important; }
+    table td, table th { border: 1px solid #000 !important; padding: 8px !important; }
+    table th { background-color: #f8f9fa !important; font-weight: bold !important; }
+    table[style*="border"] td, table[style*="border"] th { border: 1px solid #000 !important; }
     .custom-table { border-collapse: collapse; width: 100%; margin: 16px 0; }
-    .custom-table td, .custom-table th { border: 1px solid #ddd; padding: 8px; }
+    .custom-table td, .custom-table th { border: 1px solid #000; padding: 8px; }
     .custom-table th { background-color: #f8f9fa; font-weight: bold; }
   `,
   setup: function (editor: any) {
