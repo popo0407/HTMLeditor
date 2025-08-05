@@ -77,7 +77,6 @@ describe('TinyMCEEditor', () => {
     render(
       <TinyMCEEditor
         value=""
-        showFileOperations={true}
       />
     );
 
@@ -89,7 +88,6 @@ describe('TinyMCEEditor', () => {
     render(
       <TinyMCEEditor
         value=""
-        showTableOperations={true}
       />
     );
 

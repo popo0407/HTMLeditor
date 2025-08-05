@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TinyMCEエディタ読み込みサンプル</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1, h2, h3 {
+            color: #2c3e50;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 5px;
+        }
+        h1 { font-size: 2.5em; }
+        h2 { font-size: 2em; }
+        h3 { font-size: 1.5em; }
+        .highlight {
+            background-color: #f39c12;
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+        .important {
+            background-color: #e74c3c;
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .info-box {
+            background-color: #3498db;
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 20px 0;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+        th {
+            background-color: #3498db;
+            color: white;
+        }
+        tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+        blockquote {
+            border-left: 4px solid #3498db;
+            margin: 20px 0;
+            padding: 10px 20px;
+            background-color: #ecf0f1;
+            font-style: italic;
+        }
+        code {
+            background-color: #2c3e50;
+            color: #ecf0f1;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+        }
+        pre {
+            background-color: #2c3e50;
+            color: #ecf0f1;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+        .button {
+            background-color: #3498db;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            margin: 5px;
+        }
+        .button:hover {
+            background-color: #2980b9;
+        }
+        .warning {
+            background-color: #f39c12;
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .success {
+            background-color: #27ae60;
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>HTMLエディタ読み込みサンプル</h1>
+    
+    <div class="info-box">
+        <h2>📝 このHTMLファイルについて</h2>
+        <p>このHTMLファイルは、TinyMCEエディタの読み込み機能で対応しているすべての要素を含んでいます。以下の要素が含まれています：</p>
+        <ul>
+            <li>見出し（h1, h2, h3）</li>
+            <li>段落とテキスト</li>
+            <li>リスト（番号付き・番号なし）</li>
+            <li>テーブル</li>
+            <li>強調表示（太字・斜体）</li>
+            <li>引用</li>
+            <li>コードブロック</li>
+            <li>ボタン</li>
+            <li>色付きボックス</li>
+        </ul>
+    </div>
+    <h2>🎯 基本的なテキスト要素</h2>
+        <p>これは通常の段落です。TinyMCEエディタでは、このような基本的なテキストも適切に読み込まれます。</p>
+        <p><strong>太字のテキスト</strong>と<em>斜体のテキスト</em>も正しく表示されます。</p>
+        <p>また、<span class="highlight">ハイライト表示</span>や<span style="color: #e74c3c;">色付きテキスト</span>も対応しています。</p>
+    <h2>📋 リスト要素</h2>
+        <h3>番号なしリスト</h3>
+    <ul>
+        <li>リスト項目1</li>
+        <li>リスト項目2</li>
+        <li>リスト項目3
+            <ul>
+                <li>ネストしたリスト項目1</li>
+                <li>ネストしたリスト項目2</li>
+            </ul>
+        </li>
+    </ul>
+    <h3>番号付きリスト</h3>
+    <ol>
+        <li>最初の項目</li>
+        <li>二番目の項目</li>
+        <li>三番目の項目</li>
+    </ol>
+    <h2>📊 テーブル要素</h2>
+        <table>
+        <thead>
+            <tr>
+                <th>項目</th>
+                <th>説明</th>
+                <th>対応状況</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>見出し</td>
+                <td>h1, h2, h3タグ</td>
+                <td>✅ 対応</td>
+            </tr>
+            <tr>
+                <td>段落</td>
+                <td>pタグ</td>
+                <td>✅ 対応</td>
+            </tr>
+            <tr>
+                <td>リスト</td>
+                <td>ul, ol, liタグ</td>
+                <td>✅ 対応</td>
+            </tr>
+            <tr>
+                <td>テーブル</td>
+                <td>table, tr, th, tdタグ</td>
+                <td>✅ 対応</td>
+            </tr>
+            <tr>
+                <td>強調</td>
+                <td>strong, emタグ</td>
+                <td>✅ 対応</td>
+            </tr>
+        </tbody>
+    </table>
+    <h2>💬 引用とコード</h2>
+    <blockquote>
+        <p>これは引用文です。TinyMCEエディタでは、このような引用も適切に表示されます。</p>
+        <cite>— サンプル作者</cite>
+    </blockquote>
+    <h3>インラインコード</h3>
+    <p>インラインコードも表示できます：<code>console.log('Hello World');</code></p>
+    <h3>コードブロック</h3>
+    <pre><code>function greet(name) {
+    console.log('Hello, ' + name + '!');
+}
+greet('TinyMCE');</code></pre>
+    <h2>🎨 色付きボックス</h2>
+    <div class="important">
+        <h3>⚠️ 重要な注意事項</h3>
+        <p>このHTMLファイルは読み込みテスト用です。実際の使用時は適切なコンテンツに置き換えてください。</p>
+    </div>
+    <div class="warning">
+        <h3>⚠️ 警告メッセージ</h3>
+        <p>HTMLの読み込み時は、セキュリティ上の理由で一部のタグが除去される場合があります。</p>
+    </div>
+    <div class="success">
+        <h3>✅ 成功メッセージ</h3>
+        <p>すべての要素が正常に読み込まれました！</p>
+    </div>
+    <h2>🔗 ボタンとリンク</h2>
+    <p>ボタンやリンクも表示できます：</p>
+    <a href="#" class="button">プライマリボタン</a>
+    <a href="#" class="button" style="background-color: #27ae60;">成功ボタン</a>
+    <a href="#" class="button" style="background-color: #e74c3c;">警告ボタン</a>
+    <h2>📝 マークダウン変換例</h2>
+    <p>以下のマークダウンテキストも読み込み可能です：</p>
+    <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; font-family: monospace;">
+        <p># 見出し1</p>
+        <p>## 見出し2</p>
+        <p>### 見出し3</p>
+        <p></p>
+        <p>これは**太字**と*斜体*のテキストです。</p>
+        <p></p>
+        <p>- リスト項目1</p>
+        <p>- リスト項目2</p>
+        <p></p>
+        <p>1. 番号付きリスト1</p>
+        <p>2. 番号付きリスト2</p>
+    </div>
+    <h2>🎯 使用方法</h2>
+    <ol>
+        <li>このHTMLファイルをブラウザで開く</li>
+        <li>すべての内容を選択（Ctrl+A）</li>
+        <li>コピー（Ctrl+C）</li>
+        <li>TinyMCEエディタの読み込みテキストエリアに貼り付け</li>
+        <li>「読み込み」ボタンをクリック</li>
+    </ol>
+    <div class="info-box">
+        <h3>💡 ヒント</h3>
+        <p>このHTMLファイルは、TinyMCEエディタの機能をテストするのに最適です。すべての要素が正しく表示されることを確認してください。</p>
+    </div>
+    <hr style="margin: 40px 0; border: none; border-top: 2px solid #3498db;">
+    <footer style="text-align: center; color: #7f8c8d; margin-top: 40px;">
+        <p>© 2024 HTMLエディタサンプル - TinyMCE対応</p>
+    </footer>
+</body>
+</html> 

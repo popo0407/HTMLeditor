@@ -33,7 +33,19 @@ export const tinymceConfig = {
   branding: false,
   promotion: false,
   content_style: `
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 14px; }
+    body { 
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+      font-size: 14px; 
+      line-height: 1.1; 
+    }
+    p { 
+      line-height: 1.1; 
+      margin: 0 0 1em 0; 
+    }
+    h1, h2, h3, h4, h5, h6 { 
+      line-height: 1.1; 
+      margin: 1em 0 0.5em 0; 
+    }
     .important { background-color: #fff3cd; color: #856404; padding: 8px; border-radius: 4px; }
     .action-item { background-color: #d1ecf1; color: #0c5460; padding: 8px; border-radius: 4px; }
     .custom-table { border-collapse: collapse; width: 100%; margin: 16px 0; }

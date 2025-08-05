@@ -9,6 +9,7 @@ import './App.css';
 import { TinyMCEEditor } from './tinymceEditor/components/TinyMCEEditor';
 import { getEmailTemplates, sendMail, MailSendRequest } from './services/apiService';
 import { HtmlExportService } from './tinymceEditor/services/htmlExportService';
+import { WordExportService } from './services/wordExportService';
 
 interface EmailTemplates {
   default_recipient: string;
@@ -126,13 +127,17 @@ function App() {
     }
   };
 
-  const handleCopyToClipboard = async () => {
+  const handleDownloadWord = async () => {
     try {
-      await HtmlExportService.copyToClipboard(editorContent, 'html');
-      alert('HTMLをクリップボードにコピーしました。');
+      await WordExportService.downloadWord(
+        editorContent,
+        'document',
+        'エクスポートされたドキュメント'
+      );
+      alert('Wordファイルをダウンロードしました。');
     } catch (error) {
-      console.error('クリップボードへのコピーに失敗しました:', error);
-      alert('クリップボードへのコピーに失敗しました。');
+      console.error('Wordファイルのダウンロードに失敗しました:', error);
+      alert('Wordファイルのダウンロードに失敗しました。');
     }
   };
 
@@ -184,8 +189,8 @@ function App() {
             <button onClick={handleDownloadHtml} className="header-button">
               HTMLダウンロード
             </button>
-            <button onClick={handleCopyToClipboard} className="header-button">
-              クリップボードにコピー
+            <button onClick={handleDownloadWord} className="header-button">
+              Wordダウンロード
             </button>
             <button onClick={handleSendMail} className="header-button">
               メール送信
@@ -204,8 +209,6 @@ function App() {
               console.log('TinyMCE editor save');
             }}
             height={600}
-            showFileOperations={true}
-            showTableOperations={true}
           />
         </div>
       </main>
