@@ -6,7 +6,7 @@ import { TableOperations } from "./TableOperations";
 import "../styles/TinyMCEEditor.css";
 
 interface TinyMCEEditorProps {
-  initialContent?: string;
+  value?: string; // initialContentからvalueに変更
   onContentChange?: (content: string) => void;
   onSave?: (content: string) => void;
   height?: number;
@@ -16,7 +16,7 @@ interface TinyMCEEditorProps {
 }
 
 export const TinyMCEEditor: React.FC<TinyMCEEditorProps> = ({
-  initialContent = "",
+  value = "", // initialContentからvalueに変更
   onContentChange,
   onSave,
   height = 500,
@@ -25,8 +25,15 @@ export const TinyMCEEditor: React.FC<TinyMCEEditorProps> = ({
   showTableOperations = true,
 }) => {
   const editorRef = useRef<any>(null);
-  const [currentContent, setCurrentContent] = useState(initialContent);
+  const [currentContent, setCurrentContent] = useState(value);
   const [editorInstance, setEditorInstance] = useState<any>(null);
+
+  // valueプロパティの変更を監視してcurrentContentと同期
+  useEffect(() => {
+    if (value !== currentContent) {
+      setCurrentContent(value);
+    }
+  }, [value, currentContent]);
 
   const handleEditorChange = (content: string) => {
     setCurrentContent(content);
@@ -64,7 +71,7 @@ export const TinyMCEEditor: React.FC<TinyMCEEditorProps> = ({
         <Editor
           apiKey={apiKey}
           onInit={handleInit}
-          initialValue={initialContent}
+          value={currentContent} // initialValueからvalueに変更し、stateを直接渡す
           init={customConfig}
           onEditorChange={handleEditorChange}
         />

@@ -2,9 +2,8 @@
  * カスタムフックのエクスポート
  * 
  * 開発憲章の「関心の分離」に従い、
- * 各フックが明確な責務を持つ
+ * フックを独立したモジュールで管理
  */
 
-export { useAddressBookManager } from './useAddressBookManager';
-
-export type { UseAddressBookManagerReturn } from './useAddressBookManager'; 
+// 現在はTinyMCEエディタのみのため、カスタムフックは不要
+export {}; 

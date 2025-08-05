@@ -4,7 +4,7 @@
  * 開発憲章の「関心の分離」に従い、UIの状態管理をコンポーネントに閉じてカプセル化
  */
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import './App.css';
 import { TinyMCEEditor } from './tinymceEditor/components/TinyMCEEditor';
 import { getEmailTemplates, sendMail, MailSendRequest } from './services/apiService';
@@ -25,7 +25,7 @@ function App() {
   const [importText, setImportText] = useState('');
   const [editorContent, setEditorContent] = useState<string>('');
 
-  const htmlExportService = useRef(new HtmlExportService());
+  // HtmlExportServiceは直接使用するため、useRefは不要
 
   // メールテンプレートの読み込み
   useEffect(() => {
@@ -198,7 +198,7 @@ function App() {
         <div className="main-content">
           {/* TinyMCEエディタ */}
           <TinyMCEEditor
-            initialContent={editorContent}
+            value={editorContent}
             onContentChange={handleContentChange}
             onSave={() => {
               console.log('TinyMCE editor save');
