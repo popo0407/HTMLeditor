@@ -9,7 +9,7 @@ import './App.css';
 import { TinyMCEEditor } from './tinymceEditor/components/TinyMCEEditor';
 import { getEmailTemplates, sendMail, MailSendRequest } from './services/apiService';
 import { HtmlExportService } from './tinymceEditor/services/htmlExportService';
-import { WordExportService } from './services/wordExportService';
+import { PdfExportService } from './services/pdfExportService';
 
 interface EmailTemplates {
   default_recipient: string;
@@ -127,17 +127,17 @@ function App() {
     }
   };
 
-  const handleDownloadWord = async () => {
+  const handleDownloadPdf = async () => {
     try {
-      await WordExportService.downloadWord(
+      await PdfExportService.downloadPdf(
         editorContent,
         'document',
         'エクスポートされたドキュメント'
       );
-      alert('Wordファイルをダウンロードしました。');
+      alert('PDFファイルをダウンロードしました。');
     } catch (error) {
-      console.error('Wordファイルのダウンロードに失敗しました:', error);
-      alert('Wordファイルのダウンロードに失敗しました。');
+      console.error('PDFファイルのダウンロードに失敗しました:', error);
+      alert('PDFファイルのダウンロードに失敗しました。');
     }
   };
 
@@ -182,8 +182,8 @@ function App() {
             <button onClick={handleDownloadHtml} className="header-button">
               HTMLダウンロード
             </button>
-            <button onClick={handleDownloadWord} className="header-button">
-              Wordダウンロード
+            <button onClick={handleDownloadPdf} className="header-button">
+              PDFダウンロード
             </button>
             <button onClick={handleSendMail} className="header-button">
               メール送信

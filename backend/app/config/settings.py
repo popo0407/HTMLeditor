@@ -72,12 +72,7 @@ class Settings(BaseSettings):
                 return str(env_file)
         return v
     
-    @validator('SENDER_EMAIL', pre=True)
-    def set_sender_email(cls, v, values):
-        """送信者メールアドレスのデフォルト値を設定"""
-        if not v and 'SMTP_USERNAME' in values:
-            return values['SMTP_USERNAME']
-        return v
+
     
     @validator('CORS_ORIGINS')
     def parse_cors_origins(cls, v):
