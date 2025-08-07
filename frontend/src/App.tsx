@@ -22,6 +22,7 @@ function App() {
   const [emailTemplates, setEmailTemplates] = useState<EmailTemplates | null>(null);
   const [importText, setImportText] = useState('');
   const [editorContent, setEditorContent] = useState<string>('');
+  const [editorHeight, setEditorHeight] = useState<number>(window.innerHeight);
 
   // HtmlExportServiceは直接使用するため、useRefは不要
 
@@ -38,6 +39,16 @@ function App() {
       console.error('メールテンプレートの読み込みに失敗しました:', error);
     }
   };
+
+  // ウィンドウサイズの変更を監視
+  useEffect(() => {
+    const handleResize = () => {
+      setEditorHeight(window.innerHeight);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const handleImportFromTextBox = async () => {
     if (!importText.trim()) {
@@ -163,50 +174,56 @@ function App() {
 
   return (
     <div className="app">
-      <header className="app-header">
-        <div className="header-content">
-          <h1>HTMLエディタ (TinyMCE版)</h1>
-          <div className="header-import-box">
-            <textarea
-              value={importText}
-              onChange={e => setImportText(e.target.value)}
-              placeholder="ここにHTMLやマークダウンテキストを貼り付けてください"
-              rows={4}
-              style={{ width: '400px', resize: 'vertical', marginRight: '8px' }}
-            />
-            <button onClick={handleImportFromTextBox} className="header-button">
-              読み込み
-            </button>
+      <div className="app-layout">
+        <aside className="sidebar">
+          <div className="sidebar-header">
+            <h1>HTMLエディタ</h1>
           </div>
-          <div className="header-buttons">
-            <button onClick={handleDownloadHtml} className="header-button">
-              HTMLダウンロード
-            </button>
-            <button onClick={handleDownloadPdf} className="header-button">
-              PDFダウンロード
-            </button>
-            <button onClick={handleSendMail} className="header-button">
-              メール送信
-            </button>
+          <div className="sidebar-content">
+            <div className="sidebar-section">
+              <h3>テキスト読み込み</h3>
+              <textarea
+                value={importText}
+                onChange={e => setImportText(e.target.value)}
+                placeholder="HTMLやマークダウンテキストを貼り付けてください"
+                rows={4}
+                className="sidebar-textarea"
+              />
+              <button onClick={handleImportFromTextBox} className="sidebar-button">
+                読み込み
+              </button>
+            </div>
+            
+            <div className="sidebar-section">
+              <h3>エクスポート</h3>
+              <button onClick={handleDownloadHtml} className="sidebar-button">
+                HTMLダウンロード
+              </button>
+              <button onClick={handleDownloadPdf} className="sidebar-button">
+                PDFダウンロード
+              </button>
+            </div>
+            
+            <div className="sidebar-section">
+              <h3>メール</h3>
+              <button onClick={handleSendMail} className="sidebar-button">
+                メール送信
+              </button>
+            </div>
           </div>
-        </div>
-      </header>
-
-      <main className="app-main">
-        <div className="main-content">
-          {/* TinyMCEエディタ */}
+        </aside>
+        
+        <main className="editor-container">
           <TinyMCEEditor
             value={editorContent}
             onContentChange={handleContentChange}
             onSave={() => {
               console.log('TinyMCE editor save');
             }}
-            height={600}
+            height={editorHeight}
           />
-        </div>
-      </main>
-
-
+        </main>
+      </div>
     </div>
   );
 }
