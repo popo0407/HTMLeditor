@@ -7,7 +7,7 @@
 import React, { useState, useEffect } from 'react';
 import './App.css';
 import { TinyMCEEditor } from './tinymceEditor/components/TinyMCEEditor';
-import { getEmailTemplates, sendMail, MailSendRequest } from './services/apiService';
+import { getEmailTemplates, sendMail, sendPdfMail, MailSendRequest, PdfMailSendRequest } from './services/apiService';
 import { HtmlExportService } from './tinymceEditor/services/htmlExportService';
 import { PdfExportService } from './services/pdfExportService';
 
@@ -152,7 +152,7 @@ function App() {
     }
   };
 
-  const handleSendMail = async () => {
+  const handleSendHtmlMail = async () => {
     try {
       const mailRequest: MailSendRequest = {
         subject: "HTML Editor からの送信",
@@ -161,10 +161,28 @@ function App() {
       };
 
       await sendMail(mailRequest);
-      alert('メールを送信しました。');
+      alert('HTMLメールを送信しました。');
     } catch (error) {
-      console.error('メール送信に失敗しました:', error);
-      alert('メール送信に失敗しました。');
+      console.error('HTMLメール送信に失敗しました:', error);
+      alert('HTMLメール送信に失敗しました。');
+    }
+  };
+
+  const handleSendPdfMail = async () => {
+    try {
+      const pdfMailRequest: PdfMailSendRequest = {
+        subject: "議事録",
+        body: "議事録をお送りいたします。",
+        recipient_email: emailTemplates?.default_recipient || '',
+        html_content: editorContent,
+        filename: "minutes.pdf"
+      };
+
+      await sendPdfMail(pdfMailRequest);
+      alert('PDF添付メールを送信しました。');
+    } catch (error) {
+      console.error('PDFメール送信に失敗しました:', error);
+      alert('PDFメール送信に失敗しました。');
     }
   };
 
@@ -195,19 +213,22 @@ function App() {
             </div>
             
             <div className="sidebar-section">
-              <h3>エクスポート</h3>
+              <h3>ダウンロード</h3>
               <button onClick={handleDownloadHtml} className="sidebar-button">
-                HTMLダウンロード
+                HTML
               </button>
               <button onClick={handleDownloadPdf} className="sidebar-button">
-                PDFダウンロード
+                PDF
               </button>
             </div>
             
             <div className="sidebar-section">
-              <h3>メール</h3>
-              <button onClick={handleSendMail} className="sidebar-button">
-                メール送信
+              <h3>メール送信</h3>
+              <button onClick={handleSendHtmlMail} className="sidebar-button">
+                HTML
+              </button>
+              <button onClick={handleSendPdfMail} className="sidebar-button">
+                PDF
               </button>
             </div>
           </div>

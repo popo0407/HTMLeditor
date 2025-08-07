@@ -13,6 +13,14 @@ export interface MailSendRequest {
   recipient_email?: string;
 }
 
+export interface PdfMailSendRequest {
+  subject: string;
+  body: string;
+  recipient_email?: string;
+  html_content: string;
+  filename?: string;
+}
+
 export interface MailSendResponse {
   success: boolean;
   message: string;
@@ -67,9 +75,35 @@ export const sendMail = async (request: MailSendRequest): Promise<MailSendRespon
 };
 
 /**
+ * PDF添付メールを送信
+ */
+export const sendPdfMail = async (request: PdfMailSendRequest): Promise<MailSendResponse> => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/mail/send-pdf`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(request),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('PDFメール送信エラー:', error);
+    throw error;
+  }
+};
+
+/**
  * APIサービスオブジェクト
  */
 export const apiService = {
   getEmailTemplates,
   sendMail,
+  sendPdfMail,
 };

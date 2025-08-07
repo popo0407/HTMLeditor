@@ -21,6 +21,15 @@ class MailSendRequest(BaseModel):
     recipient_email: Optional[str] = None
 
 
+class PdfMailSendRequest(BaseModel):
+    """PDFメール送信リクエスト"""
+    subject: str
+    body: str
+    recipient_email: Optional[str] = None
+    html_content: str
+    filename: Optional[str] = "document.pdf"
+
+
 class MailSendResponse(BaseModel):
     """メール送信レスポンス"""
     success: bool
@@ -109,4 +118,75 @@ async def send_mail(
         raise HTTPException(
             status_code=500,
             detail=f"メール送信中にエラーが発生しました: {str(e)}"
+        )
+
+
+@router.post("/send-pdf", response_model=MailSendResponse)
+async def send_pdf_mail(
+    request: PdfMailSendRequest,
+    settings: Settings = Depends(get_settings)
+):
+    """
+    PDF添付メールを送信
+    
+    Args:
+        request: PDFメール送信リクエスト
+        settings: アプリケーション設定
+    
+    Returns:
+        送信結果
+    """
+    try:
+        # 設定からデフォルト値を取得
+        templates = settings.get_email_templates()
+        smtp_config = settings.get_smtp_config()
+        
+        # 宛先の決定（リクエスト > 設定ファイルのデフォルト）
+        recipient_email = request.recipient_email or templates['default_recipient']
+        if not recipient_email:
+            raise HTTPException(
+                status_code=400, 
+                detail="宛先メールアドレスが設定されていません"
+            )
+        
+        # 件名の決定（リクエスト > 設定ファイルのデフォルト）
+        subject = request.subject or templates['default_subject']
+        
+        # メール送信サービスの初期化
+        mail_service = MailService(
+            mail_from=smtp_config['mail_from'],
+            mail_host=smtp_config['mail_host'],
+            mail_port=smtp_config['mail_port']
+        )
+        
+        # PDFファイルを生成
+        from ..services.pdfExportService import PdfExportService
+        pdf_content = PdfExportService.create_pdf_from_html(request.html_content)
+        
+        # PDF添付メール送信
+        result = mail_service.send_pdf_email(
+            to_email=recipient_email,
+            subject=subject,
+            body=request.body,
+            pdf_content=pdf_content,
+            filename=request.filename
+        )
+        
+        if result['success']:
+            return MailSendResponse(
+                success=True,
+                message="PDF添付メールが正常に送信されました"
+            )
+        else:
+            raise HTTPException(
+                status_code=500,
+                detail=f"PDFメール送信に失敗しました: {result.get('error', '不明なエラー')}"
+            )
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"PDFメール送信中にエラーが発生しました: {str(e)}"
         )

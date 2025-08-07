@@ -5,8 +5,17 @@
  * サービスを独立したモジュールで管理
  */
 
-export { getEmailTemplates, sendMail } from './apiService';
+// API通信サービス
+export { getEmailTemplates, sendMail, sendPdfMail } from './apiService';
+
+// エラーハンドリングサービス
 export { ErrorHandlerService } from './errorHandlerService';
+
+// PDFエクスポートサービス
+export { PdfExportService } from './pdfExportService';
+
+// Wordエクスポートサービス
+export { WordExportService } from './wordExportService';
 
 // 型定義のエクスポート
 export type { ErrorInfo } from './errorHandlerService'; 

@@ -23,6 +23,20 @@ class PdfExportService:
     """
 
     @staticmethod
+    def create_pdf_from_html(html_content: str, title: str = "エクスポートされたドキュメント") -> bytes:
+        """
+        HTMLコンテンツからPDFファイルを生成
+        
+        Args:
+            html_content: HTMLコンテンツ
+            title: ドキュメントタイトル
+            
+        Returns:
+            PDFファイルのバイトデータ
+        """
+        return PdfExportService.html_to_pdf(html_content, title)
+
+    @staticmethod
     def html_to_pdf(html_content: str, title: str = "エクスポートされたドキュメント") -> bytes:
         """
         HTMLコンテンツをPDFファイルに変換
