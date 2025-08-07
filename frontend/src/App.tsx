@@ -155,13 +155,12 @@ function App() {
   const handleSendHtmlMail = async () => {
     try {
       const mailRequest: MailSendRequest = {
-        subject: "HTML Editor からの送信",
-        body: "いつもお世話になっております。\n\n" + editorContent.replace(/<[^>]*>/g, ''),
         recipient_email: emailTemplates?.default_recipient || '',
+        html_content: editorContent,
       };
 
       await sendMail(mailRequest);
-      alert('HTMLメールを送信しました。');
+      alert('HTML添付メールを送信しました。');
     } catch (error) {
       console.error('HTMLメール送信に失敗しました:', error);
       alert('HTMLメール送信に失敗しました。');
@@ -171,11 +170,8 @@ function App() {
   const handleSendPdfMail = async () => {
     try {
       const pdfMailRequest: PdfMailSendRequest = {
-        subject: "議事録",
-        body: "議事録をお送りいたします。",
         recipient_email: emailTemplates?.default_recipient || '',
         html_content: editorContent,
-        filename: "minutes.pdf"
       };
 
       await sendPdfMail(pdfMailRequest);

@@ -11,23 +11,19 @@ from typing import List, Optional
 from ..config.settings import get_settings, Settings
 from services.mail_service import MailService
 
-router = APIRouter(prefix="/mail", tags=["mail"])
+router = APIRouter(tags=["mail"])
 
 
 class MailSendRequest(BaseModel):
     """メール送信リクエスト"""
-    subject: str
-    body: str
     recipient_email: Optional[str] = None
+    html_content: str
 
 
 class PdfMailSendRequest(BaseModel):
     """PDFメール送信リクエスト"""
-    subject: str
-    body: str
     recipient_email: Optional[str] = None
     html_content: str
-    filename: Optional[str] = "document.pdf"
 
 
 class MailSendResponse(BaseModel):
@@ -62,7 +58,7 @@ async def send_mail(
     settings: Settings = Depends(get_settings)
 ):
     """
-    HTMLメールを送信
+    HTML添付メールを送信（固定のタイトルと本文）
     
     Args:
         request: メール送信リクエスト
@@ -84,8 +80,9 @@ async def send_mail(
                 detail="宛先メールアドレスが設定されていません"
             )
         
-        # 件名の決定（リクエスト > 設定ファイルのデフォルト）
-        subject = request.subject or templates['default_subject']
+        # 固定のタイトルと本文
+        subject = "議事録"
+        body = "議事録をお送りいたします。"
         
         # メール送信サービスの初期化
         mail_service = MailService(
@@ -94,22 +91,24 @@ async def send_mail(
             mail_port=smtp_config['mail_port']
         )
         
-        # メール送信
-        result = mail_service.send_notification_email(
+        # HTML添付メール送信
+        result = mail_service.send_html_email(
             to_email=recipient_email,
             subject=subject,
-            body=request.body
+            body=body,
+            html_content=request.html_content,
+            filename="minutes.html"
         )
         
         if result['success']:
             return MailSendResponse(
                 success=True,
-                message="メールが正常に送信されました"
+                message="HTML添付メールが正常に送信されました"
             )
         else:
             raise HTTPException(
                 status_code=500,
-                detail=f"メール送信に失敗しました: {result.get('error', '不明なエラー')}"
+                detail=f"HTMLメール送信に失敗しました: {result.get('error', '不明なエラー')}"
             )
             
     except HTTPException:
@@ -117,7 +116,7 @@ async def send_mail(
     except Exception as e:
         raise HTTPException(
             status_code=500,
-            detail=f"メール送信中にエラーが発生しました: {str(e)}"
+            detail=f"HTMLメール送信中にエラーが発生しました: {str(e)}"
         )
 
 
@@ -127,7 +126,7 @@ async def send_pdf_mail(
     settings: Settings = Depends(get_settings)
 ):
     """
-    PDF添付メールを送信
+    PDF添付メールを送信（固定のタイトルと本文）
     
     Args:
         request: PDFメール送信リクエスト
@@ -149,8 +148,9 @@ async def send_pdf_mail(
                 detail="宛先メールアドレスが設定されていません"
             )
         
-        # 件名の決定（リクエスト > 設定ファイルのデフォルト）
-        subject = request.subject or templates['default_subject']
+        # 固定のタイトルと本文
+        subject = "議事録"
+        body = "議事録をお送りいたします。"
         
         # メール送信サービスの初期化
         mail_service = MailService(
@@ -167,9 +167,9 @@ async def send_pdf_mail(
         result = mail_service.send_pdf_email(
             to_email=recipient_email,
             subject=subject,
-            body=request.body,
+            body=body,
             pdf_content=pdf_content,
-            filename=request.filename
+            filename="minutes.pdf"
         )
         
         if result['success']:

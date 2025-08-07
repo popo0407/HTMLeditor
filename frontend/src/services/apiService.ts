@@ -8,17 +8,13 @@
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8002';
 
 export interface MailSendRequest {
-  subject: string;
-  body: string;
   recipient_email?: string;
+  html_content: string;
 }
 
 export interface PdfMailSendRequest {
-  subject: string;
-  body: string;
   recipient_email?: string;
   html_content: string;
-  filename?: string;
 }
 
 export interface MailSendResponse {
@@ -50,7 +46,7 @@ export const getEmailTemplates = async (): Promise<EmailTemplatesResponse> => {
 };
 
 /**
- * HTMLメールを送信
+ * HTML添付メールを送信（固定のタイトルと本文）
  */
 export const sendMail = async (request: MailSendRequest): Promise<MailSendResponse> => {
   try {
@@ -69,13 +65,13 @@ export const sendMail = async (request: MailSendRequest): Promise<MailSendRespon
 
     return await response.json();
   } catch (error) {
-    console.error('メール送信エラー:', error);
+    console.error('HTMLメール送信エラー:', error);
     throw error;
   }
 };
 
 /**
- * PDF添付メールを送信
+ * PDF添付メールを送信（固定のタイトルと本文）
  */
 export const sendPdfMail = async (request: PdfMailSendRequest): Promise<MailSendResponse> => {
   try {
