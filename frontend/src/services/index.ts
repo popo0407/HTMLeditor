@@ -14,8 +14,5 @@ export { ErrorHandlerService } from './errorHandlerService';
 // PDFエクスポートサービス
 export { PdfExportService } from './pdfExportService';
 
-// Wordエクスポートサービス
-export { WordExportService } from './wordExportService';
-
 // 型定義のエクスポート
 export type { ErrorInfo } from './errorHandlerService'; 
