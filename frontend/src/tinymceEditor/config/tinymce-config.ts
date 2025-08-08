@@ -59,6 +59,14 @@ export const tinymceConfig = {
       padding: 15px; 
       margin: 15px 0; 
     }
+    /* UL要素のインデントを保持 */
+    ul.important, ul.action-item {
+      padding-left: 40px !important;
+      margin: 15px 0;
+    }
+    ul.important li, ul.action-item li {
+      margin: 5px 0;
+    }
     table { border-collapse: collapse; width: 100%; margin: 16px 0 !important; }
     table td, table th { border: 1px solid #000 !important; padding: 8px !important; }
     table th { background-color: #f8f9fa !important; font-weight: bold !important; }
@@ -132,9 +140,46 @@ export const tinymceConfig = {
       text: '重要',
       tooltip: '重要（黄色背景）',
       onAction: function () {
-        const node = editor.selection.getNode();
-        editor.dom.removeClass(node, 'action-item');
-        editor.dom.toggleClass(node, 'important');
+        const selection = editor.selection;
+        const node = selection.getNode();
+        
+        // ul要素を探す
+        let ulElement = node;
+        while (ulElement && ulElement !== editor.getBody()) {
+          if (ulElement.tagName === 'UL') {
+            break;
+          }
+          ulElement = ulElement.parentNode;
+        }
+        
+        // table要素を探す
+        let tableElement = node;
+        while (tableElement && tableElement !== editor.getBody()) {
+          if (tableElement.tagName === 'TABLE') {
+            break;
+          }
+          tableElement = tableElement.parentNode;
+        }
+        
+        if (ulElement && ulElement.tagName === 'UL') {
+          // ul全体に強調クラスを適用（インデントを保持）
+          editor.dom.removeClass(ulElement, 'action-item');
+          editor.dom.addClass(ulElement, 'important');
+        } else if (tableElement && tableElement.tagName === 'TABLE') {
+          // table全体に強調クラスを適用
+          editor.dom.removeClass(tableElement, 'action-item');
+          editor.dom.addClass(tableElement, 'important');
+        } else {
+          // ul/table以外の場合は従来の動作
+          const content = selection.getContent();
+          if (content) {
+            const wrappedContent = `<div class="important">${content}</div>`;
+            selection.setContent(wrappedContent);
+          } else {
+            editor.dom.removeClass(node, 'action-item');
+            editor.dom.toggleClass(node, 'important');
+          }
+        }
       }
     });
     
@@ -143,9 +188,46 @@ export const tinymceConfig = {
       text: 'アクション',
       tooltip: 'アクションアイテム（緑色背景）',
       onAction: function () {
-        const node = editor.selection.getNode();
-        editor.dom.removeClass(node, 'important');
-        editor.dom.toggleClass(node, 'action-item');
+        const selection = editor.selection;
+        const node = selection.getNode();
+        
+        // ul要素を探す
+        let ulElement = node;
+        while (ulElement && ulElement !== editor.getBody()) {
+          if (ulElement.tagName === 'UL') {
+            break;
+          }
+          ulElement = ulElement.parentNode;
+        }
+        
+        // table要素を探す
+        let tableElement = node;
+        while (tableElement && tableElement !== editor.getBody()) {
+          if (tableElement.tagName === 'TABLE') {
+            break;
+          }
+          tableElement = tableElement.parentNode;
+        }
+        
+        if (ulElement && ulElement.tagName === 'UL') {
+          // ul全体に強調クラスを適用（インデントを保持）
+          editor.dom.removeClass(ulElement, 'important');
+          editor.dom.addClass(ulElement, 'action-item');
+        } else if (tableElement && tableElement.tagName === 'TABLE') {
+          // table全体に強調クラスを適用
+          editor.dom.removeClass(tableElement, 'important');
+          editor.dom.addClass(tableElement, 'action-item');
+        } else {
+          // ul/table以外の場合は従来の動作
+          const content = selection.getContent();
+          if (content) {
+            const wrappedContent = `<div class="action-item">${content}</div>`;
+            selection.setContent(wrappedContent);
+          } else {
+            editor.dom.removeClass(node, 'important');
+            editor.dom.toggleClass(node, 'action-item');
+          }
+        }
       }
     });
     
@@ -154,9 +236,56 @@ export const tinymceConfig = {
       text: '標準',
       tooltip: '標準テキスト（強調なし）',
       onAction: function () {
-        const node = editor.selection.getNode();
-        editor.dom.removeClass(node, 'important');
-        editor.dom.removeClass(node, 'action-item');
+        const selection = editor.selection;
+        const node = selection.getNode();
+        
+        // ul要素を探す
+        let ulElement = node;
+        while (ulElement && ulElement !== editor.getBody()) {
+          if (ulElement.tagName === 'UL') {
+            break;
+          }
+          ulElement = ulElement.parentNode;
+        }
+        
+        // table要素を探す
+        let tableElement = node;
+        while (tableElement && tableElement !== editor.getBody()) {
+          if (tableElement.tagName === 'TABLE') {
+            break;
+          }
+          tableElement = tableElement.parentNode;
+        }
+        
+        if (ulElement && ulElement.tagName === 'UL') {
+          // ul全体から強調クラスを削除（インデントを保持）
+          editor.dom.removeClass(ulElement, 'important');
+          editor.dom.removeClass(ulElement, 'action-item');
+        } else if (tableElement && tableElement.tagName === 'TABLE') {
+          // table全体から強調クラスを削除
+          editor.dom.removeClass(tableElement, 'important');
+          editor.dom.removeClass(tableElement, 'action-item');
+        } else {
+          // ul/table以外の場合は従来の動作
+          let parentWithClass = node;
+          while (parentWithClass && parentWithClass !== editor.getBody()) {
+            if (editor.dom.hasClass(parentWithClass, 'important') || 
+                editor.dom.hasClass(parentWithClass, 'action-item')) {
+              break;
+            }
+            parentWithClass = parentWithClass.parentNode;
+          }
+          
+          if (parentWithClass && parentWithClass !== editor.getBody()) {
+            const content = parentWithClass.innerHTML;
+            editor.dom.removeClass(parentWithClass, 'important');
+            editor.dom.removeClass(parentWithClass, 'action-item');
+            parentWithClass.innerHTML = content;
+          } else {
+            editor.dom.removeClass(node, 'important');
+            editor.dom.removeClass(node, 'action-item');
+          }
+        }
       }
     });
   },
