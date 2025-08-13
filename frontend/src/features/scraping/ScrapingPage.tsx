@@ -18,10 +18,18 @@ const ScrapingPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [autoCopyStatus, setAutoCopyStatus] = useState<string | null>(null);
 
+  // 環境変数の確認（デバッグ用）
+  React.useEffect(() => {
+    console.log('=== ScrapingPage初期化時の環境変数確認 ===');
+    console.log('REACT_APP_BACKEND_URL:', process.env.REACT_APP_BACKEND_URL);
+    console.log('利用可能なREACT_APP_環境変数:', Object.keys(process.env).filter(key => key.startsWith('REACT_APP_')));
+  }, []);
+
   const handleScrapingSubmit = async (request: ScrapingRequest) => {
     setIsLoading(true);
     setError(null);
     setResponse(null);
+    setAutoCopyStatus(null);
 
     try {
       console.log('スクレイピング開始:', request);
@@ -29,28 +37,9 @@ const ScrapingPage: React.FC = () => {
       setResponse(result);
       console.log('スクレイピング完了:', result);
       
-      // スクレイピング完了時に自動的に構造化データをクリップボードにコピー
-      if (result.formatted_output) {
-        try {
-          const copySuccess = await copyToClipboard(result.formatted_output, 'formatted');
-          if (copySuccess) {
-            setAutoCopyStatus('success');
-            console.log('✅ 構造化データを自動的にクリップボードにコピーしました');
-            // 成功時は3秒後に通知をクリア
-            setTimeout(() => {
-              setAutoCopyStatus(null);
-            }, 3000);
-          } else {
-            setAutoCopyStatus('failed');
-            console.warn('⚠️ 自動コピーに失敗しました - フォーカス状態または権限の問題の可能性');
-            // 失敗時は通知を手動で閉じるまで表示し続ける
-          }
-        } catch (copyError) {
-          setAutoCopyStatus('failed');
-          console.warn('⚠️ 自動コピーでエラーが発生しました:', copyError);
-          // 失敗時は通知を手動で閉じるまで表示し続ける
-        }
-      }
+      // スクレイピング完了後は自動コピーを行わず、完了通知のみ表示
+      setAutoCopyStatus('completed');
+      
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'スクレイピング処理中にエラーが発生しました';
       setError(errorMessage);
@@ -140,6 +129,31 @@ const ScrapingPage: React.FC = () => {
     setAutoCopyStatus(null);
   };
 
+  // バックエンドの.envに記載のURLを新しいタブで開く関数
+  const openBackendUrl = () => {
+    console.log('=== 環境変数デバッグ ===');
+    console.log('process.env:', process.env);
+    console.log('REACT_APP_BACKEND_URL:', process.env.REACT_APP_BACKEND_URL);
+    console.log('NODE_ENV:', process.env.NODE_ENV);
+    
+    // 環境変数から取得を試行
+    let backendUrl = process.env.REACT_APP_BACKEND_URL;
+    
+    // 環境変数が読み込まれない場合の一時的な対処法
+    if (!backendUrl) {
+      console.warn('環境変数が読み込まれていないため、ハードコードされたURLを使用します');
+      backendUrl = 'http://localhost:8080/test_login.html';
+    }
+    
+    if (backendUrl) {
+      console.log('バックエンドURLを開きます:', backendUrl);
+      window.open(backendUrl, '_blank');
+    } else {
+      console.error('BACKEND_URLが設定されていません。');
+      console.error('利用可能な環境変数:', Object.keys(process.env).filter(key => key.startsWith('REACT_APP_')));
+    }
+  };
+
   return (
     <div className="scraping-page">
       <div className="scraping-page-header">
@@ -163,47 +177,18 @@ const ScrapingPage: React.FC = () => {
         </div>
       )}
 
-      {autoCopyStatus && (
-        <div className={`auto-copy-notification ${autoCopyStatus}`}>
-          <div className="auto-copy-content">
-            {autoCopyStatus === 'success' ? (
-              <>
-                <strong>✅ 自動コピー完了:</strong>
-                <span>構造化データがクリップボードにコピーされました</span>
-              </>
-            ) : (
-              <>
-                <strong>⚠️ 自動コピーに失敗しました</strong>
-                <span>
-                  ブラウザのフォーカスが失われている可能性があります。
-                  <br />
-                  <strong>対処法:</strong> 下の「構造化データをコピー」ボタンをクリックしてください。
-                </span>
-              </>
-            )}
-          </div>
-          <button 
-            onClick={() => setAutoCopyStatus(null)} 
-            className="auto-copy-dismiss"
-            aria-label="通知を閉じる"
-          >
-            ×
-          </button>
-        </div>
-      )}
-
       <div className="scraping-content">
         <ScrapingForm 
           onSubmit={handleScrapingSubmit}
           isLoading={isLoading}
         />
         
-        {/* 構造化データのクイックコピーボタン */}
-        {response && response.formatted_output && autoCopyStatus === 'failed' && (
+        {/* 会議情報のクリップボードコピーボタン */}
+        {response && response.formatted_output && autoCopyStatus === 'completed' && (
           <div className="quick-copy-section">
             <div className="quick-copy-header">
-              <h4>📋 構造化データのクイックコピー</h4>
-              <p>自動コピーが失敗した場合の代替手段です。このボタンをクリックして手動でコピーしてください。</p>
+              <h4>📋 会議情報のクリップボードコピー</h4>
+              <p>スクレイピングが完了しました。このボタンをクリックして会議情報をクリップボードにコピーしてください。</p>
             </div>
             <button 
               onClick={async () => {
@@ -213,6 +198,9 @@ const ScrapingPage: React.FC = () => {
                     setAutoCopyStatus('success');
                     // 成功時は3秒後に通知をクリア
                     setTimeout(() => setAutoCopyStatus(null), 3000);
+                    
+                    // バックエンドの.envに記載のURLを新しいタブで開く
+                    openBackendUrl();
                   } else {
                     setAutoCopyStatus('failed');
                     // 失敗時は通知を手動で閉じるまで表示し続ける
@@ -225,29 +213,8 @@ const ScrapingPage: React.FC = () => {
               className="quick-copy-button"
               disabled={isLoading}
             >
-              📋 構造化データをクリップボードにコピー
+              📋 会議情報をクリップボードにコピー
             </button>
-          </div>
-        )}
-        
-        {isLoading && (
-          <div className="scraping-notice">
-            <div className="notice-header">
-              <span className="notice-icon">⚠️</span>
-              <strong>スクレイピング実行中</strong>
-            </div>
-            <div className="notice-content">
-              <p>処理完了まで以下の操作は避けてください：</p>
-              <ul>
-                <li>ブラウザのタブを切り替えない</li>
-                <li>ブラウザウィンドウを最小化しない</li>
-                <li>他のブラウザウィンドウに切り替えない</li>
-                <li>PCをスリープ状態にしない</li>
-              </ul>
-              <p className="notice-tip">
-                💡 これらの操作を行うと、自動コピーが失敗する可能性があります
-              </p>
-            </div>
           </div>
         )}
         

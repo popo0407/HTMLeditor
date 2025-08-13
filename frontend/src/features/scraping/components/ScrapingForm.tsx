@@ -73,13 +73,6 @@ const ScrapingForm: React.FC<ScrapingFormProps> = ({ onSubmit, isLoading }) => {
       <div className="form-section">
         <h3>スクレイピング対象URL</h3>
         
-        <div className="form-notice">
-          <div className="notice-icon">ℹ️</div>
-          <div className="notice-text">
-            <strong>注意:</strong> スクレイピング実行中は、ブラウザのタブを切り替えたり、ウィンドウを最小化したりしないでください。
-          </div>
-        </div>
-        
         <div className="url-input-group">
           <label>
             URL1: タイトル・日時・参加者を取得

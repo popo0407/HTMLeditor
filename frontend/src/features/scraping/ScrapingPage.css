@@ -131,6 +131,11 @@
   border: 1px solid #bbf7d0;
 }
 
+.auto-copy-notification.completed {
+  background-color: #eff6ff;
+  border: 1px solid #bfdbfe;
+}
+
 .auto-copy-notification.failed {
   background-color: #fef3c7;
   border: 1px solid #fde68a;
@@ -160,6 +165,14 @@
   color: #16a34a;
 }
 
+.auto-copy-notification.completed .auto-copy-content strong {
+  color: #1e40af;
+}
+
+.auto-copy-notification.completed .auto-copy-content span {
+  color: #2563eb;
+}
+
 .auto-copy-notification.failed .auto-copy-content strong {
   color: #92400e;
 }
@@ -184,12 +197,20 @@
   color: #166534;
 }
 
+.auto-copy-notification.completed .auto-copy-dismiss {
+  color: #1e40af;
+}
+
 .auto-copy-notification.failed .auto-copy-dismiss {
   color: #92400e;
 }
 
 .auto-copy-dismiss:hover {
   background-color: rgba(22, 101, 52, 0.1);
+}
+
+.auto-copy-notification.completed .auto-copy-dismiss:hover {
+  background-color: rgba(30, 64, 175, 0.1);
 }
 
 .auto-copy-notification.failed .auto-copy-dismiss:hover {
@@ -261,64 +282,6 @@
   box-shadow: none;
 }
 
-.scraping-notice {
-  background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
-  border: 2px solid #fdcb6e;
-  border-radius: 12px;
-  padding: 20px;
-  margin: 20px 0;
-  box-shadow: 0 4px 15px rgba(253, 203, 110, 0.3);
-  animation: slideIn 0.4s ease-out;
-}
-
-.notice-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 16px;
-  padding-bottom: 12px;
-  border-bottom: 2px solid #fdcb6e;
-}
-
-.notice-icon {
-  font-size: 24px;
-  animation: pulse 2s infinite;
-}
-
-.notice-header strong {
-  color: #d63031;
-  font-size: 18px;
-  font-weight: 700;
-}
-
-.notice-content p {
-  margin: 0 0 12px 0;
-  color: #2d3436;
-  font-size: 14px;
-  line-height: 1.5;
-}
-
-.notice-content ul {
-  margin: 0 0 16px 0;
-  padding-left: 20px;
-}
-
-.notice-content li {
-  color: #2d3436;
-  font-size: 14px;
-  line-height: 1.6;
-  margin-bottom: 6px;
-}
-
-.notice-tip {
-  background-color: rgba(255, 255, 255, 0.7);
-  padding: 12px;
-  border-radius: 8px;
-  border-left: 4px solid #00b894;
-  font-weight: 600;
-  color: #00b894 !important;
-}
-
 /* アニメーション */
 @keyframes slideIn {
   from {
@@ -328,15 +291,6 @@
   to {
     opacity: 1;
     transform: translateY(0);
-  }
-}
-
-@keyframes pulse {
-  0%, 100% {
-    transform: scale(1);
-  }
-  50% {
-    transform: scale(1.1);
   }
 }
 
