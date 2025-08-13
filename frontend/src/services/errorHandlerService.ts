@@ -16,7 +16,7 @@ export enum ErrorCategory {
   FILE_OPERATION = 'FILE_OPERATION',
   MAIL_OPERATION = 'MAIL_OPERATION',
   CLIPBOARD_OPERATION = 'CLIPBOARD_OPERATION',
-  ADDRESS_BOOK_OPERATION = 'ADDRESS_BOOK_OPERATION',
+
   UNKNOWN = 'UNKNOWN'
 }
 
@@ -66,8 +66,7 @@ export class ErrorHandlerService {
         return `メール送信エラー: ${baseMessage}`;
       case ErrorCategory.CLIPBOARD_OPERATION:
         return `クリップボード操作エラー: ${baseMessage}`;
-      case ErrorCategory.ADDRESS_BOOK_OPERATION:
-        return `アドレス帳操作エラー: ${baseMessage}`;
+
       default:
         return baseMessage;
     }
@@ -104,9 +103,7 @@ export class ErrorHandlerService {
     if (message.includes('clipboard')) {
       return ErrorCategory.CLIPBOARD_OPERATION;
     }
-    if (message.includes('address') || message.includes('contact')) {
-      return ErrorCategory.ADDRESS_BOOK_OPERATION;
-    }
+
     
     return ErrorCategory.UNKNOWN;
   }

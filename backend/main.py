@@ -22,7 +22,7 @@ settings = get_settings()
 
 app = FastAPI(
     title="HTML Editor API",
-    description="ブロックエディタとメール送信機能を提供するAPI",
+    description="HTMLエディタとスクレイピング機能を提供するAPI",
     version="1.0.0"
 )
 

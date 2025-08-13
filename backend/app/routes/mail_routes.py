@@ -1,192 +1,164 @@
 """
 メール送信API
 
-開発憲章の「設定とロジックを分離」原則に従い、
-設定ファイルから宛先とテンプレートを取得
+開発憲章の「関心の分離」に従い、
+メール送信機能のみを担当
 """
 
 from fastapi import APIRouter, HTTPException, Depends
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr
 from typing import List, Optional
-from ..config.settings import get_settings, Settings
 from services.mail_service import MailService
+from app.config.settings import get_settings
 
-router = APIRouter(tags=["mail"])
+router = APIRouter()
 
-
-class MailSendRequest(BaseModel):
+class MailRequest(BaseModel):
     """メール送信リクエスト"""
-    recipient_email: Optional[str] = None
+    subject: str
     html_content: str
+    include_pdf: bool = False
 
-
-class PdfMailSendRequest(BaseModel):
-    """PDFメール送信リクエスト"""
-    recipient_email: Optional[str] = None
-    html_content: str
-
-
-class MailSendResponse(BaseModel):
+class MailResponse(BaseModel):
     """メール送信レスポンス"""
     success: bool
     message: str
+    message_id: Optional[str] = None
 
-
-class EmailTemplatesResponse(BaseModel):
-    """メールテンプレート取得レスポンス"""
-    default_recipient: str
-    subject_templates: List[str]
-    default_subject: str
-    body_templates: List[str]
-
-
-@router.get("/templates", response_model=EmailTemplatesResponse)
-async def get_email_templates(settings: Settings = Depends(get_settings)):
-    """
-    メールテンプレート設定を取得
-    
-    Returns:
-        設定ファイルから取得したテンプレート情報
-    """
-    templates = settings.get_email_templates()
-    return EmailTemplatesResponse(**templates)
-
-
-@router.post("/send", response_model=MailSendResponse)
-async def send_mail(
-    request: MailSendRequest,
-    settings: Settings = Depends(get_settings)
+@router.post("/send", response_model=MailResponse)
+async def send_html_email(
+    request: MailRequest,
+    settings = Depends(get_settings)
 ):
     """
-    HTML添付メールを送信（固定のタイトルと本文）
+    固定宛先にHTMLメールを送信
     
     Args:
         request: メール送信リクエスト
         settings: アプリケーション設定
     
     Returns:
-        送信結果
+        メール送信結果
     """
     try:
-        # 設定からデフォルト値を取得
-        templates = settings.get_email_templates()
-        smtp_config = settings.get_smtp_config()
-        
-        # 宛先の決定（リクエスト > 設定ファイルのデフォルト）
-        recipient_email = request.recipient_email or templates['default_recipient']
-        if not recipient_email:
-            raise HTTPException(
-                status_code=400, 
-                detail="宛先メールアドレスが設定されていません"
-            )
-        
-        # 固定のタイトルと本文
-        subject = "議事録"
-        body = "議事録をお送りいたします。"
-        
-        # メール送信サービスの初期化
+        # メールサービスの初期化
         mail_service = MailService(
-            mail_from=smtp_config['mail_from'],
-            mail_host=smtp_config['mail_host'],
-            mail_port=smtp_config['mail_port']
+            host=settings.MAIL_HOST,
+            port=settings.MAIL_PORT,
+            username=settings.SENDER_EMAIL,
+            password="",  # 環境変数から取得
+            default_recipient=settings.DEFAULT_RECIPIENT_EMAIL
         )
         
-        # HTML添付メール送信
-        result = mail_service.send_html_email(
-            to_email=recipient_email,
-            subject=subject,
-            body=body,
-            html_content=request.html_content,
-            filename="minutes.html"
+        # 固定宛先にメール送信
+        result = mail_service.send_fixed_email(
+            subject=request.subject,
+            html_content=request.html_content
         )
         
-        if result['success']:
-            return MailSendResponse(
+        if result["success"]:
+            return MailResponse(
                 success=True,
-                message="HTML添付メールが正常に送信されました"
+                message="メールが正常に送信されました",
+                message_id=result.get("message_id")
             )
         else:
             raise HTTPException(
                 status_code=500,
-                detail=f"HTMLメール送信に失敗しました: {result.get('error', '不明なエラー')}"
+                detail=f"メール送信に失敗しました: {result['error']}"
             )
             
-    except HTTPException:
-        raise
     except Exception as e:
         raise HTTPException(
             status_code=500,
-            detail=f"HTMLメール送信中にエラーが発生しました: {str(e)}"
+            detail=f"メール送信中にエラーが発生しました: {str(e)}"
         )
 
-
-@router.post("/send-pdf", response_model=MailSendResponse)
-async def send_pdf_mail(
-    request: PdfMailSendRequest,
-    settings: Settings = Depends(get_settings)
+@router.post("/send-pdf", response_model=MailResponse)
+async def send_pdf_email(
+    request: MailRequest,
+    settings = Depends(get_settings)
 ):
     """
-    PDF添付メールを送信（固定のタイトルと本文）
+    固定宛先にPDF添付メールを送信
     
     Args:
-        request: PDFメール送信リクエスト
+        request: メール送信リクエスト
         settings: アプリケーション設定
     
     Returns:
-        送信結果
+        メール送信結果
     """
     try:
-        # 設定からデフォルト値を取得
-        templates = settings.get_email_templates()
-        smtp_config = settings.get_smtp_config()
-        
-        # 宛先の決定（リクエスト > 設定ファイルのデフォルト）
-        recipient_email = request.recipient_email or templates['default_recipient']
-        if not recipient_email:
-            raise HTTPException(
-                status_code=400, 
-                detail="宛先メールアドレスが設定されていません"
-            )
-        
-        # 固定のタイトルと本文
-        subject = "議事録"
-        body = "議事録をお送りいたします。"
-        
-        # メール送信サービスの初期化
+        # メールサービスの初期化
         mail_service = MailService(
-            mail_from=smtp_config['mail_from'],
-            mail_host=smtp_config['mail_host'],
-            mail_port=smtp_config['mail_port']
+            host=settings.MAIL_HOST,
+            port=settings.MAIL_PORT,
+            username=settings.SENDER_EMAIL,
+            password="",  # 環境変数から取得
+            default_recipient=settings.DEFAULT_RECIPIENT_EMAIL
         )
         
-        # PDFファイルを生成
-        from ..services.pdfExportService import PdfExportService
-        pdf_content = PdfExportService.create_pdf_from_html(request.html_content)
-        
-        # PDF添付メール送信
-        result = mail_service.send_pdf_email(
-            to_email=recipient_email,
-            subject=subject,
-            body=body,
-            pdf_content=pdf_content,
-            filename="minutes.pdf"
+        # 固定宛先にPDFメール送信
+        result = mail_service.send_fixed_pdf_email(
+            subject=request.subject,
+            html_content=request.html_content
         )
         
-        if result['success']:
-            return MailSendResponse(
+        if result["success"]:
+            return MailResponse(
                 success=True,
-                message="PDF添付メールが正常に送信されました"
+                message="PDF添付メールが正常に送信されました",
+                message_id=result.get("message_id")
             )
         else:
             raise HTTPException(
                 status_code=500,
-                detail=f"PDFメール送信に失敗しました: {result.get('error', '不明なエラー')}"
+                detail=f"PDFメール送信に失敗しました: {result['error']}"
             )
             
-    except HTTPException:
-        raise
     except Exception as e:
         raise HTTPException(
             status_code=500,
             detail=f"PDFメール送信中にエラーが発生しました: {str(e)}"
         )
+
+@router.get("/test-connection")
+async def test_mail_connection(settings = Depends(get_settings)):
+    """
+    メールサーバー接続テスト
+    
+    Args:
+        settings: アプリケーション設定
+    
+    Returns:
+        接続テスト結果
+    """
+    try:
+        mail_service = MailService(
+            host=settings.MAIL_HOST,
+            port=settings.MAIL_PORT,
+            username=settings.SENDER_EMAIL,
+            password="",  # 環境変数から取得
+            default_recipient=settings.DEFAULT_RECIPIENT_EMAIL
+        )
+        
+        # 接続テスト
+        result = mail_service.test_connection()
+        
+        if result["success"]:
+            return {
+                "success": True,
+                "message": "メールサーバーに正常に接続できました"
+            }
+        else:
+            return {
+                "success": False,
+                "message": f"メールサーバー接続に失敗しました: {result['error']}"
+            }
+            
+    except Exception as e:
+        return {
+            "success": False,
+            "message": f"接続テスト中にエラーが発生しました: {str(e)}"
+        }

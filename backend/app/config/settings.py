@@ -47,6 +47,7 @@ class Settings(BaseSettings):
     MAIL_HOST: str = ""
     MAIL_PORT: int = 0
     DEFAULT_RECIPIENT_EMAIL: str = ""
+    SENDER_EMAIL: str = ""
     
     # === 静的ファイル設定 ===
     STATIC_DIR: str = ""
