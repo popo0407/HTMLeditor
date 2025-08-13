@@ -11,6 +11,34 @@
   border-radius: 8px;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
   margin-top: 20px;
+  max-height: 80vh; /* ビューポートの80%の高さに制限 */
+  overflow-y: auto; /* 縦方向のスクロールを有効化 */
+}
+
+/* 結果表示エリアのスクロールバースタイル */
+.result-display::-webkit-scrollbar {
+  width: 10px;
+}
+
+.result-display::-webkit-scrollbar-track {
+  background: #f8f9fa;
+  border-radius: 5px;
+}
+
+.result-display::-webkit-scrollbar-thumb {
+  background: #dee2e6;
+  border-radius: 5px;
+  border: 1px solid #f8f9fa;
+}
+
+.result-display::-webkit-scrollbar-thumb:hover {
+  background: #adb5bd;
+}
+
+/* Firefox用のスクロールバースタイル */
+.result-display {
+  scrollbar-width: thin;
+  scrollbar-color: #dee2e6 #f8f9fa;
 }
 
 .result-header {
@@ -27,6 +55,46 @@
   color: #374151;
   font-size: 20px;
   font-weight: 600;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.clipboard-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background-color: #f3f4f6;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.status-label {
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.status-indicator {
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.status-indicator.available {
+  background-color: #d1fae5;
+  color: #065f46;
+}
+
+.status-indicator.limited {
+  background-color: #fef3c7;
+  color: #92400e;
 }
 
 .clear-button {
@@ -199,18 +267,43 @@
 }
 
 .data-content {
-  background-color: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 4px;
-  padding: 12px;
+  background-color: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 6px;
+  padding: 16px;
   font-family: 'Courier New', monospace;
   font-size: 13px;
   line-height: 1.5;
+  color: #495057;
   white-space: pre-wrap;
   word-wrap: break-word;
-  max-height: 300px;
-  overflow-y: auto;
-  margin: 0;
+  max-height: 300px; /* 最大高さを制限 */
+  overflow-y: auto; /* 縦方向のスクロールを有効化 */
+}
+
+/* データ表示エリアのスクロールバースタイル */
+.data-content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.data-content::-webkit-scrollbar-track {
+  background: #f1f3f4;
+  border-radius: 4px;
+}
+
+.data-content::-webkit-scrollbar-thumb {
+  background: #dadce0;
+  border-radius: 4px;
+}
+
+.data-content::-webkit-scrollbar-thumb:hover {
+  background: #bdc1c6;
+}
+
+/* Firefox用のスクロールバースタイル */
+.data-content {
+  scrollbar-width: thin;
+  scrollbar-color: #dadce0 #f1f3f4;
 }
 
 .result-error {
@@ -252,18 +345,43 @@
 }
 
 .combined-data {
-  background-color: #f8fafc;
-  border: 2px solid #3b82f6;
+  background-color: #f8f9fa;
+  border: 1px solid #e9ecef;
   border-radius: 6px;
   padding: 16px;
   font-family: 'Courier New', monospace;
   font-size: 13px;
-  line-height: 1.6;
+  line-height: 1.5;
+  color: #495057;
   white-space: pre-wrap;
   word-wrap: break-word;
-  max-height: 400px;
-  overflow-y: auto;
-  margin: 0;
+  max-height: 400px; /* 最大高さを制限 */
+  overflow-y: auto; /* 縦方向のスクロールを有効化 */
+}
+
+/* 統合データ表示エリアのスクロールバースタイル */
+.combined-data::-webkit-scrollbar {
+  width: 8px;
+}
+
+.combined-data::-webkit-scrollbar-track {
+  background: #f1f3f4;
+  border-radius: 4px;
+}
+
+.combined-data::-webkit-scrollbar-thumb {
+  background: #dadce0;
+  border-radius: 4px;
+}
+
+.combined-data::-webkit-scrollbar-thumb:hover {
+  background: #bdc1c6;
+}
+
+/* Firefox用のスクロールバースタイル */
+.combined-data {
+  scrollbar-width: thin;
+  scrollbar-color: #dadce0 #f1f3f4;
 }
 
 .combined-data.raw-data {
