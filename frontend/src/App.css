@@ -101,6 +101,12 @@
   color: white;
 }
 
+.sidebar-button.active {
+  background-color: var(--accent-color);
+  color: white;
+  font-weight: 600;
+}
+
 .sidebar-button:last-child {
   margin-bottom: 0;
 }

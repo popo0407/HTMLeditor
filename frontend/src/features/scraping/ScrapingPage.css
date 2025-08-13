@@ -1,0 +1,163 @@
+/**
+ * スクレイピングページのスタイル
+ * 
+ * 開発憲章の「使いやすさを優先したデザイン」に従い、
+ * 優しい色合いと明確な視覚的フィードバックを提供
+ */
+
+.scraping-page {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+  min-height: 100vh;
+  background-color: #f8fafc;
+}
+
+.scraping-page-header {
+  text-align: center;
+  margin-bottom: 32px;
+  padding: 24px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.scraping-page-header h1 {
+  margin: 0 0 12px 0;
+  color: #1f2937;
+  font-size: 28px;
+  font-weight: 700;
+}
+
+.scraping-page-header p {
+  margin: 0;
+  color: #6b7280;
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+.error-notification {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin-bottom: 20px;
+  animation: slideIn 0.3s ease-out;
+}
+
+.error-content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+}
+
+.error-content strong {
+  color: #991b1b;
+  font-weight: 600;
+}
+
+.error-content span {
+  color: #dc2626;
+}
+
+.error-dismiss {
+  background: none;
+  border: none;
+  color: #991b1b;
+  font-size: 20px;
+  font-weight: bold;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+  line-height: 1;
+}
+
+.error-dismiss:hover {
+  background-color: rgba(185, 28, 28, 0.1);
+}
+
+.scraping-content {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* アニメーション */
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ローディング状態のスタイル */
+.scraping-page.loading {
+  pointer-events: none;
+}
+
+.scraping-page.loading::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+  cursor: wait;
+}
+
+/* レスポンシブ対応 */
+@media (max-width: 768px) {
+  .scraping-page {
+    padding: 16px;
+  }
+  
+  .scraping-page-header {
+    padding: 16px;
+    margin-bottom: 24px;
+  }
+  
+  .scraping-page-header h1 {
+    font-size: 24px;
+  }
+  
+  .scraping-page-header p {
+    font-size: 14px;
+  }
+  
+  .error-notification {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+  
+  .error-content {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+  
+  .error-dismiss {
+    align-self: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .scraping-page {
+    padding: 12px;
+  }
+  
+  .scraping-page-header h1 {
+    font-size: 22px;
+  }
+}

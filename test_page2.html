@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>test_page2</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen">
+    <div id="container" class="bg-white p-8 rounded-2xl shadow-xl w-full max-w-2xl mx-4 text-center">
+        <h2 class="text-3xl font-bold text-gray-800 mb-6">保護されたコンテンツ</h2>
+        <p class="text-lg text-gray-700">ログインに成功しました。このページは認証済みユーザーのみが閲覧できます。</p>
+        <div class="container">
+            <div class="rightColumn-container">
+                <div class="rightColumn-header">
+                    <h3>ダミーチャネル</h3>
+                </div>
+                <h1>会議情報</h1>
+                <div class="entry">
+                    <div class="Title">四半期業績報告会</div>
+                    <div class="date">開催日: 2025年7月15日</div>
+                    <div class="Participant">参加者: 山田太郎, 鈴木一郎, 佐藤花子</div>
+                </div>
+            </div>
+        </div>
+        <button id="logout-button" class="mt-6 inline-block py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors duration-200">
+            ログアウト
+        </button>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const isLoggedIn = sessionStorage.getItem('isLoggedIn');
+            const logoutButton = document.getElementById('logout-button');
+
+            if (!isLoggedIn) {
+                // ログインしていなければ、ログインページにリダイレクト
+                const currentUrl = window.location.href;
+                window.location.href = `test_login.html?redirectUrl=${encodeURIComponent(currentUrl)}`;
+            }
+
+            logoutButton.addEventListener('click', () => {
+                sessionStorage.removeItem('isLoggedIn');
+                window.location.href = 'test_login.html';
+            });
+        });
+    </script>
+</body>
+</html>
+    

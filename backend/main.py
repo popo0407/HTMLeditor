@@ -4,7 +4,7 @@ HTMLエディタ バックエンドアプリケーション
 開発憲章に従った3-Tier階層型アーキテクチャの実装
 - プレゼンテーション層: FastAPI Routes
 - ビジネスロジック層: Services
-- データアクセス層: Repositories + SQLAlchemy
+- データアクセス層: ファイルベース（HTML、PDF）
 
 設定管理:
 - 開発憲章の「設定とロジックを分離」原則に従い、設定クラスを使用
@@ -13,16 +13,12 @@ HTMLエディタ バックエンドアプリケーション
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from app.routes import mail_routes, pdf_routes
-from app.models.database import engine, Base
+from app.routes import mail_routes, pdf_routes, scraping_routes
 from app.config import get_settings
 from pathlib import Path
 
 # 設定インスタンスを取得
 settings = get_settings()
-
-# データベーステーブルの作成
-Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
     title="HTML Editor API",
@@ -52,6 +48,8 @@ if static_dir.exists():
 app.include_router(mail_routes.router, prefix="/api/mail", tags=["mail"])
 # PDF出力APIは /api/pdf を起点とする
 app.include_router(pdf_routes.router, prefix="/api/pdf", tags=["pdf"])
+# スクレイピングAPIは /api/scraping を起点とする
+app.include_router(scraping_routes.router, prefix="/api/scraping", tags=["scraping"])
 
 
 @app.get("/")

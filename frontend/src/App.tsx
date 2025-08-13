@@ -10,6 +10,7 @@ import { TinyMCEEditor } from './tinymceEditor/components/TinyMCEEditor';
 import { getEmailTemplates, sendMail, sendPdfMail, MailSendRequest, PdfMailSendRequest } from './services/apiService';
 import { HtmlExportService } from './tinymceEditor/services/htmlExportService';
 import { PdfExportService } from './services/pdfExportService';
+import ScrapingPage from './features/scraping/ScrapingPage';
 
 interface EmailTemplates {
   default_recipient: string;
@@ -23,6 +24,7 @@ function App() {
   const [importText, setImportText] = useState('');
   const [editorContent, setEditorContent] = useState<string>('');
   const [editorHeight, setEditorHeight] = useState<number>(window.innerHeight);
+  const [currentView, setCurrentView] = useState<'editor' | 'scraping'>('editor');
 
   // HtmlExportServiceは直接使用するため、useRefは不要
 
@@ -195,50 +197,76 @@ function App() {
           </div>
           <div className="sidebar-content">
             <div className="sidebar-section">
-              <h3>テキスト読み込み</h3>
-              <textarea
-                value={importText}
-                onChange={e => setImportText(e.target.value)}
-                placeholder="HTMLやマークダウンテキストを貼り付けてください"
-                rows={4}
-                className="sidebar-textarea"
-              />
-              <button onClick={handleImportFromTextBox} className="sidebar-button">
-                読み込み
+              <h3>機能選択</h3>
+              <button 
+                onClick={() => setCurrentView('editor')} 
+                className={`sidebar-button ${currentView === 'editor' ? 'active' : ''}`}
+              >
+                HTMLエディタ
+              </button>
+              <button 
+                onClick={() => setCurrentView('scraping')} 
+                className={`sidebar-button ${currentView === 'scraping' ? 'active' : ''}`}
+              >
+                テキスト読み込み
               </button>
             </div>
             
-            <div className="sidebar-section">
-              <h3>ダウンロード</h3>
-              <button onClick={handleDownloadHtml} className="sidebar-button">
-                HTML
-              </button>
-              <button onClick={handleDownloadPdf} className="sidebar-button">
-                PDF
-              </button>
-            </div>
+            {currentView === 'editor' && (
+              <div className="sidebar-section">
+                <h3>テキスト読み込み</h3>
+                <textarea
+                  value={importText}
+                  onChange={e => setImportText(e.target.value)}
+                  placeholder="HTMLやマークダウンテキストを貼り付けてください"
+                  rows={4}
+                  className="sidebar-textarea"
+                />
+                <button onClick={handleImportFromTextBox} className="sidebar-button">
+                  読み込み
+                </button>
+              </div>
+            )}
             
-            <div className="sidebar-section">
-              <h3>メール送信</h3>
-              <button onClick={handleSendHtmlMail} className="sidebar-button">
-                HTML
-              </button>
-              <button onClick={handleSendPdfMail} className="sidebar-button">
-                PDF
-              </button>
-            </div>
+            {currentView === 'editor' && (
+              <>
+                <div className="sidebar-section">
+                  <h3>ダウンロード</h3>
+                  <button onClick={handleDownloadHtml} className="sidebar-button">
+                    HTML
+                  </button>
+                  <button onClick={handleDownloadPdf} className="sidebar-button">
+                    PDF
+                  </button>
+                </div>
+                
+                <div className="sidebar-section">
+                  <h3>メール送信</h3>
+                  <button onClick={handleSendHtmlMail} className="sidebar-button">
+                    HTML
+                  </button>
+                  <button onClick={handleSendPdfMail} className="sidebar-button">
+                    PDF
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </aside>
         
         <main className="editor-container">
-          <TinyMCEEditor
-            value={editorContent}
-            onContentChange={handleContentChange}
-            onSave={() => {
-              console.log('TinyMCE editor save');
-            }}
-            height={editorHeight}
-          />
+          {currentView === 'editor' ? (
+            <TinyMCEEditor
+              value={editorContent}
+              onContentChange={handleContentChange}
+              onSave={() => {
+                console.log('TinyMCE editor save');
+              }}
+              height={editorHeight}
+            />
+          ) : (
+            <ScrapingPage />
+          )}
         </main>
       </div>
     </div>

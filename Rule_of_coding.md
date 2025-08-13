@@ -7,7 +7,7 @@ This charter establishes the fundamental principles for continuously developing 
 - The AI's internal thought process for analysis and strategy must be in English. However, explanations of the implementation plan, along with all other external responses and documentation, must be provided in Japanese.
 - Review this entire development charter and process all tasks according to it.
 - If any points are unclear, always seek clarification _before_ starting work.
-- Upon agent startup, read the entirety of `Rule_or_coding.md` and display all top-level principles in the chat.
+- Upon agent startup, read the entirety of `Rule_of_coding.md` and display all top-level principles in the chat.
 - Upon completion of all tasks, check for any violations of these principles, get confirmation, then update README.md and `git add`, `commit`, and `push` to GitHub.
 - Upon completion of every task, reflect on any bugs or issues that occurred. Conduct a self-review asking, "Why did this happen?" and "Could it have been prevented by following the development charter?". If necessary, propose improvements to the charter itself to enhance quality in the future.
 
@@ -150,7 +150,7 @@ Execute high- and medium-risk development tasks according to the following 6-ste
     - **Do**: Consolidate common setup logic in tests (e.g., creating test data, mocking DB connections) into shared utilities provided by the testing framework (e.g., `pytest` fixtures).
 
 21. **Ensure Safe Fallbacks and User Confirmation for Exceptions/Errors**
-    - **Do**: Guarantee safe default behavior even in abnormal situations, such as a corrupted configuration or an empty database. If the behavior for an error or exception is unclear, always confirm the desired course of action with the user.
+    - **Do**: Provide clear and informative error messages in abnormal situations, such as corrupted configurations or empty databases. Avoid implementing fallback behaviors that may mislead users. If the appropriate error handling is unclear, always confirm the desired course of action with the user.
 
 ---
 

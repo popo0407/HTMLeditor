@@ -94,6 +94,7 @@ __pycache__/
 .Python
 env/
 venv/
+.venv/
 ENV/
 
 # Cache
@@ -119,3 +120,8 @@ Thumbs.db
 *.temp
 temp/
 tmp/
+
+
+# github関連ファイル
+.git/
+git/

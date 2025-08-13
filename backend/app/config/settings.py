@@ -17,6 +17,8 @@ from pydantic_settings import BaseSettings
 from pydantic import validator
 from pathlib import Path
 
+# 現在のファイルのディレクトリを取得
+current_dir = Path(__file__).parent.parent.parent
 
 class Settings(BaseSettings):
     """
@@ -27,12 +29,9 @@ class Settings(BaseSettings):
     """
     
     # === サーバー設定 ===
-    PORT_NO: int = 8002
-    HOST: str = "0.0.0.0"
+    PORT_NO: int = 0
+    HOST: str = ""
     DEBUG: bool = False
-    
-    # === データベース設定 ===
-    DATABASE_URL: str = "sqlite:///./html_editor.db"
     
     # === CORS設定 ===
     CORS_ORIGINS: str = ""
@@ -43,36 +42,46 @@ class Settings(BaseSettings):
         "http://10.166.96.135:82",
     ]
     
-    # === SMTP設定 ===
+    # === メール送信設定（実際に使用されている項目のみ） ===
     MAIL_FROM: str = ""
     MAIL_HOST: str = ""
-    MAIL_PORT: int = 587
-    
-    # === メール送信設定 ===
+    MAIL_PORT: int = 0
     DEFAULT_RECIPIENT_EMAIL: str = ""
-    EMAIL_SUBJECT_TEMPLATES: str = ""
-    EMAIL_SUBJECT_DEFAULT: str = "HTML Editor からの送信"
-    EMAIL_BODY_TEMPLATES: str = ""  # 本文冒頭文のテンプレート（カンマ区切り）
     
     # === 静的ファイル設定 ===
-    STATIC_DIR: str = "static"
+    STATIC_DIR: str = ""
     
-    # === 環境設定 ===
-    ENV_FILE_PATH: Optional[str] = None
+    # === スクレイピング設定（実際に使用されている項目名に合わせて統合） ===
+    # Playwright設定
+    HEADLESS: bool = False
     
-    @validator('ENV_FILE_PATH', pre=True)
-    def set_env_file_path(cls, v):
-        """環境変数ファイルのパスを自動設定"""
-        if v is None:
-            # バックエンドディレクトリの親ディレクトリ（プロジェクトルート）を探す
-            backend_dir = Path(__file__).parent.parent.parent
-            project_root = backend_dir.parent
-            env_file = project_root / '.env'
-            if env_file.exists():
-                return str(env_file)
-        return v
+    # ページ表示設定
+    SHOW_BROWSER: bool = True
+    SLOW_MO: int = 100  # 動作を遅くして確認しやすくする（ミリ秒）
+    DEVTOOLS: bool = False  # 開発者ツールを開くかどうか
     
-
+    # タイムアウト設定
+    PAGE_LOAD_TIMEOUT: int = 45000
+    ELEMENT_WAIT_TIMEOUT: int = 15000
+    NAVIGATION_TIMEOUT: int = 30000
+    
+    # スクロール設定
+    SCROLL_DELAY: int = 1000
+    MAX_SCROLL_LOOPS: int = 8
+    
+    # 待機設定
+    INITIAL_WAIT: int = 3
+    
+    # セッション設定
+    SESSION_TIMEOUT: int = 1800
+    SESSION_CLEANUP_INTERVAL: int = 300
+    
+    # ブラウザインスタンス設定
+    MAX_BROWSER_INSTANCES: int = 2
+    
+    # セキュリティ設定
+    ENCRYPT_CREDENTIALS: bool = True
+    AUTO_DELETE_CREDENTIALS: bool = True
     
     @validator('CORS_ORIGINS')
     def parse_cors_origins(cls, v):
@@ -90,15 +99,6 @@ class Settings(BaseSettings):
         """
         all_origins = list(set(self.CORS_DEFAULT_ORIGINS + self.CORS_ORIGINS))
         return all_origins
-    
-    def get_database_url(self) -> str:
-        """
-        データベースURLを取得
-        
-        Returns:
-            データベース接続URL
-        """
-        return self.DATABASE_URL
     
     def get_smtp_config(self) -> dict:
         """
@@ -120,19 +120,33 @@ class Settings(BaseSettings):
         Returns:
             メールテンプレート設定の辞書
         """
-        subject_templates = []
-        if self.EMAIL_SUBJECT_TEMPLATES:
-            subject_templates = [template.strip() for template in self.EMAIL_SUBJECT_TEMPLATES.split(",") if template.strip()]
-        
-        body_templates = []
-        if self.EMAIL_BODY_TEMPLATES:
-            body_templates = [template.strip() for template in self.EMAIL_BODY_TEMPLATES.split(",") if template.strip()]
-        
         return {
             'default_recipient': self.DEFAULT_RECIPIENT_EMAIL,
-            'subject_templates': subject_templates,
-            'default_subject': self.EMAIL_SUBJECT_DEFAULT,
-            'body_templates': body_templates,
+            'subject_templates': [],
+            'default_subject': "HTML Editor からの送信",
+            'body_templates': [],
+        }
+    
+    def get_browser_config(self) -> dict:
+        """
+        ブラウザ設定を取得
+        
+        Returns:
+            ブラウザ設定の辞書
+        """
+        return {
+            "headless": self.HEADLESS,
+            "timeout": self.PAGE_LOAD_TIMEOUT,
+            "args": [
+                "--no-sandbox",
+                "--disable-dev-shm-usage",
+                "--disable-web-security",
+                "--disable-features=VizDisplayCompositor",
+                "--disable-background-timer-throttling",
+                "--disable-backgrounding-occluded-windows",
+                "--disable-renderer-backgrounding",
+                "--disable-ipc-flooding-protection"
+            ]
         }
     
     def is_development(self) -> bool:
@@ -155,7 +169,7 @@ class Settings(BaseSettings):
     
     class Config:
         """Pydantic設定"""
-        env_file = ".env"
+        env_file = [".env", "../.env"]  # バックエンドとプロジェクトルートの両方の.envを読み込み
         env_file_encoding = "utf-8"
         case_sensitive = True
 
