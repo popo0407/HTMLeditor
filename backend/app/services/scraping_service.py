@@ -133,22 +133,43 @@ class ScrapingService:
         """構造化されたデータとフォーマット済み出力を生成"""
         structured_data = StructuredData()
         
-        for result in results:
+        logger.info(f"Creating structured output from {len(results)} results")
+        
+        for i, result in enumerate(results):
+            logger.info(f"Processing result {i+1}: URL={result.url}, Mode={result.mode}, Status={result.status}")
+            
             if result.status == "success" and result.data:
+                logger.info(f"Result {i+1} data length: {len(result.data)} characters")
+                
                 if result.mode == ScrapingMode.TITLE_DATE_PARTICIPANT:
                     # Title, Date, Participantデータを解析
+                    logger.info(f"Processing TITLE_DATE_PARTICIPANT mode data")
                     lines = result.data.strip().split('\n\n')
                     for line in lines:
                         if line.startswith('Title: '):
                             structured_data.title = line.replace('Title: ', '').strip()
+                            logger.info(f"Set title: {structured_data.title}")
                         elif line.startswith('date: '):
                             structured_data.date = line.replace('date: ', '').strip()
+                            logger.info(f"Set date: {structured_data.date}")
                         elif line.startswith('Participant: '):
                             structured_data.participant = line.replace('Participant: ', '').strip()
+                            logger.info(f"Set participant: {structured_data.participant}")
                 
                 elif result.mode == ScrapingMode.CHAT_ENTRIES:
                     # チャットエントリーデータをトランスクリプトとして使用
-                    structured_data.transcript = result.data.strip()
+                    logger.info(f"Processing CHAT_ENTRIES mode data for transcript")
+                    transcript_data = result.data.strip()
+                    structured_data.transcript = transcript_data
+                    logger.info(f"Set transcript: {len(transcript_data)} characters")
+                    logger.debug(f"Transcript preview: {transcript_data[:100]}...")
+        
+        # 最終的な構造化データの状態をログ出力
+        logger.info(f"Final structured data:")
+        logger.info(f"  Title: {structured_data.title}")
+        logger.info(f"  Date: {structured_data.date}")
+        logger.info(f"  Participant: {structured_data.participant}")
+        logger.info(f"  Transcript: {len(structured_data.transcript) if structured_data.transcript else 0} characters")
         
         # 指定フォーマットでの出力生成
         formatted_parts = []
@@ -166,6 +187,8 @@ class ScrapingService:
             formatted_parts.append(f"<トランスクリプト>\n{structured_data.transcript}\n</トランスクリプト>")
         
         formatted_output = '\n'.join(formatted_parts)
+        
+        logger.info(f"Generated formatted output: {len(formatted_output)} characters")
         
         return structured_data, formatted_output
     
