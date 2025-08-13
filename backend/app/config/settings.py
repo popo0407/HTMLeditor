@@ -169,7 +169,7 @@ class Settings(BaseSettings):
     
     class Config:
         """Pydantic設定"""
-        env_file = [".env", "../.env"]  # バックエンドとプロジェクトルートの両方の.envを読み込み
+        env_file = ".env"  # バックエンドディレクトリの.envのみを読み込み
         env_file_encoding = "utf-8"
         case_sensitive = True
 
