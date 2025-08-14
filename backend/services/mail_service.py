@@ -15,8 +15,20 @@ from typing import List, Optional, Dict, Any
 import os
 from pathlib import Path
 import tempfile
-from weasyprint import HTML
 import logging
+import re
+
+# weasyprint は Windows / IIS 環境で cairo 依存を満たさず導入失敗しやすいためオプション化
+try:  # pragma: no cover - 環境差異による
+    from weasyprint import HTML  # type: ignore
+    WEASY_AVAILABLE = True
+except Exception:  # ImportError だけでなく DLL ロード失敗も握りつぶす
+    WEASY_AVAILABLE = False
+
+# フォールバック用 (reportlab は既に requirements に存在)
+from reportlab.pdfgen import canvas  # type: ignore
+from reportlab.lib.pagesizes import A4  # type: ignore
+from reportlab.lib.utils import simpleSplit  # type: ignore
 
 logger = logging.getLogger(__name__)
 
@@ -262,46 +274,84 @@ class MailService:
             }
     
     def _create_pdf_from_html(self, html_content: str) -> Optional[MIMEBase]:
-        """
-        HTMLからPDFを生成
-        
-        Args:
-            html_content: HTMLコンテンツ
-        
-        Returns:
-            PDF添付ファイル
+        """HTML から PDF を生成 (weasyprint 優先 / 無ければ簡易テキスト PDF)
+
+        weasyprint が利用可能: レイアウトを維持した PDF
+        フォールバック: HTML タグ除去後のテキストを A4 縦で単純出力
         """
         try:
-            # 一時ファイルにHTMLを保存
-            with tempfile.NamedTemporaryFile(mode='w', suffix='.html', delete=False, encoding='utf-8') as f:
-                f.write(html_content)
-                html_file = f.name
-            
-            # PDFファイルパス
-            pdf_file = html_file.replace('.html', '.pdf')
-            
-            # HTMLからPDFを生成
-            HTML(filename=html_file).write_pdf(pdf_file)
-            
-            # PDFファイルを添付
-            with open(pdf_file, "rb") as f:
-                attachment = MIMEBase("application", "octet-stream")
-                attachment.set_payload(f.read())
-            
-            encoders.encode_base64(attachment)
-            attachment.add_header(
-                "Content-Disposition",
-                f"attachment; filename= {Path(pdf_file).name}"
-            )
-            
-            # 一時ファイルの削除
-            os.unlink(html_file)
-            os.unlink(pdf_file)
-            
-            return attachment
-            
+            if WEASY_AVAILABLE:
+                with tempfile.NamedTemporaryFile(mode='w', suffix='.html', delete=False, encoding='utf-8') as f:
+                    f.write(html_content)
+                    html_file = f.name
+                pdf_file = html_file.replace('.html', '.pdf')
+                try:
+                    HTML(filename=html_file).write_pdf(pdf_file)  # type: ignore
+                except Exception as we_err:  # weasy が存在しても描画失敗時はフォールバック
+                    logger.warning(f"weasyprint PDF 生成失敗 (fallback使用): {we_err}")
+                    os.unlink(html_file)
+                    return self._fallback_pdf(html_content)
+
+                with open(pdf_file, "rb") as f:
+                    attachment = MIMEBase("application", "octet-stream")
+                    attachment.set_payload(f.read())
+                encoders.encode_base64(attachment)
+                attachment.add_header(
+                    "Content-Disposition",
+                    f"attachment; filename= {Path(pdf_file).name}"
+                )
+                os.unlink(html_file)
+                os.unlink(pdf_file)
+                return attachment
+            else:
+                return self._fallback_pdf(html_content)
         except Exception as e:
-            logger.error(f"PDF生成エラー: {str(e)}")
+            logger.error(f"PDF生成エラー: {e}")
+            return None
+
+    def _fallback_pdf(self, html_content: str) -> Optional[MIMEBase]:
+        """weasyprint が使えない場合の簡易テキスト PDF 生成"""
+        try:
+            # タグ除去 (極めて単純) & HTML エンティティ簡易置換
+            text = re.sub(r'<[^>]+>', '', html_content)
+            text = text.replace('&nbsp;', ' ').replace('&lt;', '<').replace('&gt;', '>').replace('&amp;', '&')
+
+            with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as f:
+                pdf_path = f.name  # reportlab は直接書き込むので一度閉じる
+
+            c = canvas.Canvas(pdf_path, pagesize=A4)
+            width, height = A4
+            margin = 40
+            max_width = width - margin * 2
+            y = height - margin
+            font_name = 'Helvetica'
+            font_size = 10
+            c.setFont(font_name, font_size)
+
+            # 行分割 (reportlab の simpleSplit で横幅に合わせる)
+            for paragraph in text.splitlines():
+                if not paragraph.strip():
+                    y -= font_size * 1.2
+                    if y < margin:
+                        c.showPage(); c.setFont(font_name, font_size); y = height - margin
+                    continue
+                lines = simpleSplit(paragraph, font_name, font_size, max_width)
+                for line in lines:
+                    c.drawString(margin, y, line)
+                    y -= font_size * 1.2
+                    if y < margin:
+                        c.showPage(); c.setFont(font_name, font_size); y = height - margin
+            c.save()
+
+            with open(pdf_path, 'rb') as rf:
+                attachment = MIMEBase('application', 'octet-stream')
+                attachment.set_payload(rf.read())
+            encoders.encode_base64(attachment)
+            attachment.add_header('Content-Disposition', f'attachment; filename=export.pdf')
+            os.unlink(pdf_path)
+            return attachment
+        except Exception as e:
+            logger.error(f"フォールバック PDF 生成失敗: {e}")
             return None
     
     def test_connection(self) -> Dict[str, Any]:

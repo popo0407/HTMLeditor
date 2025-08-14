@@ -56,6 +56,7 @@ class BrowserService:
     
     async def create_session(self, credentials: dict) -> str:
         """新しいブラウザセッションを作成"""
+        logger.info(f"Launching browser headless={self.settings.HEADLESS}")
         try:
             if not self.playwright:
                 logger.info("Initializing Playwright...")
