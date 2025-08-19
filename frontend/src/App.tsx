@@ -10,7 +10,6 @@ import { TinyMCEEditor } from './tinymceEditor/components/TinyMCEEditor';
 import { getEmailTemplates, sendMail, sendPdfMail, MailSendRequest, PdfMailSendRequest } from './services/apiService';
 import { HtmlExportService } from './tinymceEditor/services/htmlExportService';
 import { PdfExportService } from './services/pdfExportService';
-import ScrapingPage from './features/scraping/ScrapingPage';
 
 interface EmailTemplates {
   default_recipient: string;
@@ -24,7 +23,8 @@ function App() {
   const [importText, setImportText] = useState('');
   const [editorContent, setEditorContent] = useState<string>('');
   const [editorHeight, setEditorHeight] = useState<number>(window.innerHeight);
-  const [currentView, setCurrentView] = useState<'editor' | 'scraping'>('editor');
+  const [currentStep, setCurrentStep] = useState<'url-input' | 'editor' | 'output'>('url-input');
+  const [teamsUrl, setTeamsUrl] = useState('');
 
   // HtmlExportServiceは直接使用するため、useRefは不要
 
@@ -52,6 +52,42 @@ function App() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  // TeamsのURLを編集してチャットページに変換する
+  const convertTeamsUrl = (originalUrl: string): string => {
+    try {
+      // meetup-joinのURLからmeeting IDを抽出
+      const meetingMatch = originalUrl.match(/19%3ameeting_([^%]+)%40thread\.v2/);
+      if (!meetingMatch) {
+        throw new Error('有効なTeams会議URLではありません');
+      }
+      
+      const meetingId = meetingMatch[1];
+      
+      // 新しいチャットURLを構築
+      const newUrl = `https://teams.microsoft.com/l/message/19:meeting_${meetingId}@thread.v2?context=%7B%22contextType%22%3A%22chat%22%7D`;
+      
+      return newUrl;
+    } catch (error) {
+      console.error('URL変換エラー:', error);
+      throw error;
+    }
+  };
+
+  const handleOpenTeamsChat = () => {
+    if (!teamsUrl.trim()) {
+      alert('Teams会議のURLを入力してください。');
+      return;
+    }
+
+    try {
+      const convertedUrl = convertTeamsUrl(teamsUrl);
+      window.open(convertedUrl, '_blank');
+      setCurrentStep('editor');
+    } catch (error) {
+      alert('URLの変換に失敗しました。正しいTeams会議URLを入力してください。');
+    }
+  };
+
   const handleImportFromTextBox = async () => {
     if (!importText.trim()) {
       alert('インポートするテキストを入力してください。');
@@ -73,6 +109,7 @@ function App() {
       
       setEditorContent(processedContent);
       setImportText(''); // 読み込み後クリア
+      setCurrentStep('output'); // HTMLが読み込まれたら出力ステップに移行
     } catch (error) {
       console.error('テキストのインポートに失敗しました:', error);
       alert('テキストのインポートに失敗しました。');
@@ -186,89 +223,169 @@ function App() {
 
   const handleContentChange = (content: string) => {
     setEditorContent(content);
+    // エディターでコンテンツが変更されたら出力ステップに移行
+    if (content.trim() && currentStep === 'editor') {
+      setCurrentStep('output');
+    }
   };
+
+  // URL入力画面
+  const renderUrlInputStep = () => (
+    <div className="url-input-container">
+      <div className="url-input-content">
+        <h2>議事録編集ツール</h2>
+        <p>Teams会議の議事録を編集するためのツールです。</p>
+        
+        <div className="url-input-section">
+          <h3>1. Teams会議URLを入力</h3>
+          <p>新しいタブでTeamsチャットページが開きます。</p>
+          <input
+            type="url"
+            value={teamsUrl}
+            onChange={e => setTeamsUrl(e.target.value)}
+            placeholder="https://teams.microsoft.com/l/meetup-join/..."
+            className="url-input"
+          />
+          <button onClick={handleOpenTeamsChat} className="url-button">
+            チャットページを開く
+          </button>
+        </div>
+        
+        <div className="instruction-section">
+          <h3>2. Teamsチャットページでの操作</h3>
+          <p><strong>「会議情報取得」ブックマークレット</strong>を実行して、会議情報を取得してください。</p>
+          <p>クリップボードに会議情報が自動でコピーされて、議事録生成用のGenAIが新しいタブで開きます。</p>
+        </div>
+        <div className="instruction-section">
+          <h3>3. GenAI ページでの操作</h3>
+          <p><strong>文字起こし入力部</strong>にクリップボードの内容を貼り付けて、議事録の形式を選択して実行してください。</p>
+          <p>文字起こしされた内容をコピーしてこのサイトに戻ってきてください。</p>
+        </div>
+          <button 
+            onClick={() => setCurrentStep('editor')} 
+            className="back-button"
+          >
+            エディタに移動する →
+          </button>
+      </div>
+    </div>
+  );
+
+  // エディター画面
+  const renderEditorStep = () => (
+    <div className="app-layout">
+      <aside className="sidebar">
+        <div className="sidebar-header">
+          <h1>HTMLエディタ</h1>
+          <button 
+            onClick={() => setCurrentStep('url-input')} 
+            className="back-button"
+          >
+            ← URL入力に戻る
+          </button>
+        </div>
+        <div className="sidebar-content">
+          <div className="sidebar-section">
+            <h3>議事録データ読み込み</h3>
+            <p className="instruction-text">
+              Teamsチャットページで「会議情報取得」ブックマークレットを実行し、
+              取得したHTMLをここに貼り付けてください。
+            </p>
+            <textarea
+              value={importText}
+              onChange={e => setImportText(e.target.value)}
+              placeholder="ブックマークレットで取得したHTMLを貼り付けてください"
+              rows={6}
+              className="sidebar-textarea"
+            />
+            <button onClick={handleImportFromTextBox} className="sidebar-button">
+              議事録を読み込み
+            </button>
+          </div>
+        </div>
+      </aside>
+      
+      <main className="editor-container">
+        <TinyMCEEditor
+          value={editorContent}
+          onContentChange={handleContentChange}
+          onSave={() => {
+            console.log('TinyMCE editor save');
+          }}
+          height={editorHeight}
+        />
+      </main>
+    </div>
+  );
+
+  // 出力画面
+  const renderOutputStep = () => (
+    <div className="app-layout">
+      <aside className="sidebar">
+        <div className="sidebar-header">
+          <h1>HTMLエディタ</h1>
+          <button 
+            onClick={() => setCurrentStep('editor')} 
+            className="back-button"
+          >
+            ← 編集に戻る
+          </button>
+        </div>
+        <div className="sidebar-content">
+          <div className="sidebar-section">
+            <h3>議事録データ読み込み</h3>
+            <textarea
+              value={importText}
+              onChange={e => setImportText(e.target.value)}
+              placeholder="追加のHTMLやマークダウンテキストを貼り付けてください"
+              rows={4}
+              className="sidebar-textarea"
+            />
+            <button onClick={handleImportFromTextBox} className="sidebar-button">
+              追加読み込み
+            </button>
+          </div>
+          
+          <div className="sidebar-section">
+            <h3>ダウンロード</h3>
+            <button onClick={handleDownloadHtml} className="sidebar-button">
+              HTML形式
+            </button>
+            <button onClick={handleDownloadPdf} className="sidebar-button">
+              PDF形式
+            </button>
+          </div>
+          
+          <div className="sidebar-section">
+            <h3>メール送信</h3>
+            <button onClick={handleSendHtmlMail} className="sidebar-button">
+              HTML添付
+            </button>
+            <button onClick={handleSendPdfMail} className="sidebar-button">
+              PDF添付
+            </button>
+          </div>
+        </div>
+      </aside>
+      
+      <main className="editor-container">
+        <TinyMCEEditor
+          value={editorContent}
+          onContentChange={handleContentChange}
+          onSave={() => {
+            console.log('TinyMCE editor save');
+          }}
+          height={editorHeight}
+        />
+      </main>
+    </div>
+  );
 
   return (
     <div className="app">
-      <div className="app-layout">
-        <aside className="sidebar">
-          <div className="sidebar-header">
-            <h1>HTMLエディタ</h1>
-          </div>
-          <div className="sidebar-content">
-            <div className="sidebar-section">
-              <h3>機能選択</h3>
-              <button 
-                onClick={() => setCurrentView('editor')} 
-                className={`sidebar-button ${currentView === 'editor' ? 'active' : ''}`}
-              >
-                HTMLエディタ
-              </button>
-              <button 
-                onClick={() => setCurrentView('scraping')} 
-                className={`sidebar-button ${currentView === 'scraping' ? 'active' : ''}`}
-              >
-                テキスト読み込み
-              </button>
-            </div>
-            
-            {currentView === 'editor' && (
-              <div className="sidebar-section">
-                <h3>テキスト読み込み</h3>
-                <textarea
-                  value={importText}
-                  onChange={e => setImportText(e.target.value)}
-                  placeholder="HTMLやマークダウンテキストを貼り付けてください"
-                  rows={4}
-                  className="sidebar-textarea"
-                />
-                <button onClick={handleImportFromTextBox} className="sidebar-button">
-                  読み込み
-                </button>
-              </div>
-            )}
-            
-            {currentView === 'editor' && (
-              <>
-                <div className="sidebar-section">
-                  <h3>ダウンロード</h3>
-                  <button onClick={handleDownloadHtml} className="sidebar-button">
-                    HTML
-                  </button>
-                  <button onClick={handleDownloadPdf} className="sidebar-button">
-                    PDF
-                  </button>
-                </div>
-                
-                <div className="sidebar-section">
-                  <h3>メール送信</h3>
-                  <button onClick={handleSendHtmlMail} className="sidebar-button">
-                    HTML
-                  </button>
-                  <button onClick={handleSendPdfMail} className="sidebar-button">
-                    PDF
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
-        </aside>
-        
-        <main className="editor-container">
-          {currentView === 'editor' ? (
-            <TinyMCEEditor
-              value={editorContent}
-              onContentChange={handleContentChange}
-              onSave={() => {
-                console.log('TinyMCE editor save');
-              }}
-              height={editorHeight}
-            />
-          ) : (
-            <ScrapingPage />
-          )}
-        </main>
-      </div>
+      {currentStep === 'url-input' && renderUrlInputStep()}
+      {currentStep === 'editor' && renderEditorStep()}
+      {currentStep === 'output' && renderOutputStep()}
     </div>
   );
 }

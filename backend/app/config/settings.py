@@ -15,6 +15,7 @@ import os
 from typing import List, Optional
 from pydantic_settings import BaseSettings
 from pydantic import validator
+from pydantic import ConfigDict
 from pathlib import Path
 
 # 現在のファイルのディレクトリを取得
@@ -168,11 +169,13 @@ class Settings(BaseSettings):
         """
         return not self.is_development()
     
-    class Config:
-        """Pydantic設定"""
-        env_file = ".env"  # バックエンドディレクトリの.envのみを読み込み
-        env_file_encoding = "utf-8"
-        case_sensitive = True
+    # Pydantic v2 設定: 余分な環境変数(REACT_APP_*)を無視
+    model_config = ConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        case_sensitive=True,
+        extra="ignore"
+    )
 
 
 # グローバル設定インスタンス

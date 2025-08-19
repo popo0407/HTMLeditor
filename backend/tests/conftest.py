@@ -14,28 +14,11 @@ project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
 from backend.app.config.settings import get_settings
-from backend.app.services.scraping_service import ScrapingService
 
 @pytest.fixture
 def settings():
     """設定インスタンスのフィクスチャ"""
     return get_settings()
-
-@pytest.fixture
-def scraping_service():
-    """ScrapingServiceインスタンスのフィクスチャ"""
-    return ScrapingService()
-
-@pytest.fixture
-def test_credentials():
-    """テスト用認証情報のフィクスチャ"""
-    from backend.app.models.scraping_schemas import LoginCredentials
-    
-    return LoginCredentials(
-        username="testuser",
-        password="testpass",
-        login_url="http://localhost:8080/test_login.html"
-    )
 
 @pytest.fixture
 def test_urls():

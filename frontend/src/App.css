@@ -23,6 +23,130 @@
   overflow: hidden;
 }
 
+/* URL入力画面のスタイル */
+.url-input-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  background-color: #f8f9fa;
+}
+
+.url-input-content {
+  max-width: 600px;
+  padding: 40px;
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.url-input-content h2 {
+  margin-top: 0;
+  color: #212529;
+  font-size: 28px;
+  text-align: center;
+}
+
+.url-input-content > p {
+  text-align: center;
+  color: #6c757d;
+  margin-bottom: 30px;
+}
+
+.url-input-section {
+  margin-bottom: 30px;
+}
+
+.url-input-section h3 {
+  margin-bottom: 15px;
+  color: #495057;
+}
+
+.url-input {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  font-size: 14px;
+  margin-bottom: 15px;
+  box-sizing: border-box;
+}
+
+.url-input:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+.url-button {
+  background-color: #007bff;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background-color 0.2s;
+}
+
+.url-button:hover {
+  background-color: #0056b3;
+}
+
+.instruction-section {
+  background-color: #f8f9fa;
+  padding: 20px;
+  border-radius: 4px;
+  border-left: 4px solid #007bff;
+}
+
+.instruction-section h3 {
+  margin-top: 0;
+  color: #495057;
+}
+
+.instruction-section p {
+  margin-bottom: 10px;
+  color: #6c757d;
+}
+
+.note {
+  background-color: #fff3cd;
+  border: 1px solid #ffeaa7;
+  border-radius: 4px;
+  padding: 12px;
+  margin-top: 15px;
+}
+
+.note p {
+  margin: 0;
+  color: #856404;
+}
+
+.back-button {
+  background-color: #6c757d;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  margin-top: 10px;
+  transition: background-color 0.2s;
+}
+
+.back-button:hover {
+  background-color: #545b62;
+}
+
+.instruction-text {
+  font-size: 12px;
+  color: #6c757d;
+  margin-bottom: 10px;
+  line-height: 1.4;
+}
+
 .app-layout {
   display: flex;
   height: 100vh;

@@ -1,4 +1,4 @@
-# HTMLエディタシステム デプロイパッケージ作成スクリプト (簡易版)
+﻿# HTMLエディタシステム デプロイパッケージ作成スクリプト (簡易版)
 
 # 設定
 $sourceProjectRoot = "C:\Users\user\Downloads\HTMLEditer"
