@@ -3,6 +3,7 @@
  * 
  * 開発憲章の「関心の分離」に従い、UIの状態管理をコンポーネントに閉じてカプセル化
  */
+/* eslint-disable no-script-url */
 
 import React, { useState, useEffect } from 'react';
 import './App.css';
@@ -23,7 +24,7 @@ function App() {
   const [importText, setImportText] = useState('');
   const [editorContent, setEditorContent] = useState<string>('');
   const [editorHeight, setEditorHeight] = useState<number>(window.innerHeight);
-  const [currentStep, setCurrentStep] = useState<'url-input' | 'editor' | 'output'>('url-input');
+  const [currentStep, setCurrentStep] = useState<'url-input' | 'editor' | 'output' | 'bookmarklet-install'>('url-input');
   const [teamsUrl, setTeamsUrl] = useState('');
 
   // HtmlExportServiceは直接使用するため、useRefは不要
@@ -234,11 +235,20 @@ function App() {
     <div className="url-input-container">
       <div className="url-input-content">
         <h2>議事録編集ツール</h2>
-        <p>Teams会議の議事録を編集するためのツールです。</p>
+        
+          <p>
+            ブックマークレットの登録がまだの方→
+            <button 
+              onClick={() => setCurrentStep('bookmarklet-install')} 
+              className="text-button"
+            >
+              ブックマークレットの登録
+            </button>
+          </p>
         
         <div className="url-input-section">
           <h3>1. Teams会議URLを入力</h3>
-          <p>新しいタブでTeamsチャットページが開きます。</p>
+          <p>新しいタブで開いたTeamsで「Webアプリで開く」を選択すると、Teamsチャットページが開きます。</p>
           <input
             type="url"
             value={teamsUrl}
@@ -251,12 +261,12 @@ function App() {
           </button>
         </div>
         
-        <div className="instruction-section">
+        <div className="url-input-section">
           <h3>2. Teamsチャットページでの操作</h3>
           <p><strong>「会議情報取得」ブックマークレット</strong>を実行して、会議情報を取得してください。</p>
           <p>クリップボードに会議情報が自動でコピーされて、議事録生成用のGenAIが新しいタブで開きます。</p>
         </div>
-        <div className="instruction-section">
+        <div className="url-input-section">
           <h3>3. GenAI ページでの操作</h3>
           <p><strong>文字起こし入力部</strong>にクリップボードの内容を貼り付けて、議事録の形式を選択して実行してください。</p>
           <p>文字起こしされた内容をコピーしてこのサイトに戻ってきてください。</p>
@@ -270,6 +280,53 @@ function App() {
       </div>
     </div>
   );
+
+  // ▼▼▼ ここから追加 (新しい画面用の関数) ▼▼▼
+  // ブックマークレット登録ページ
+  const renderBookmarkletInstallStep = () => {
+    // ▼▼▼ ブックマークレットのコードを定数として分離 ▼▼▼
+    const bookmarkletCode = `javascript:(function(){const wait=(ms)=>new Promise(res=>setTimeout(res,ms));(async()=>{try{let detailBtn=document.querySelector('button[data-tid="chat-meeting-details"]');if(detailBtn){detailBtn.click();}
+await wait(5000);let titleEl=document.querySelector('span[data-tid="calv2-sf-meeting-subject-view"]');let title=titleEl?.innerText||null;let participants=[...document.querySelectorAll('div.ms-TooltipHost')].map(el=>el.innerText);let summaryBtn=document.querySelector('div[data-tid="data-tid-まとめ"]');if(summaryBtn){summaryBtn.click();}
+await wait(5000);let datetime=[...document.querySelectorAll('span.fui-StyledText')].map(el=>el.innerText).filter(t=>/\\d/.test(t));let transcriptBtn=document.querySelector('button[data-tid="Transcript"]');if(transcriptBtn){transcriptBtn.click();}
+await wait(5000);const c=document.querySelector('[data-is-scrollable="true"]');let transcript='';if(c){let entries=[];let processedContent=new Set();const addEntries=(elements)=>{let newCount=0,skipCount=0;for(const e of elements){let s='（システム）',t='',msg='';const a=e.getAttribute('aria-label')||'';const m=a.match(/^(.+?)\\s+\\d/);if(m){s=m[1].trim();}else{const n=e.closest('[class*="rightColumn-"]')?.querySelector('[class*="itemDisplayName-"]');if(n)s=n.textContent.trim();}
+const tsEl=e.closest('[class*="rightColumn-"]')?.querySelector('[id^="Header-timestamp-"]');if(tsEl)t=tsEl.textContent.trim();const msgEl=e.querySelector('[id^="sub-entry-"]');if(msgEl){msg=Array.from(msgEl.childNodes).filter(n=>n.nodeType===3).map(n=>n.textContent.trim()).join(' ');}
+if(!msg)continue;const uniqueKey=\`\${s}|\${t}|\${msg}\`;if(processedContent.has(uniqueKey)){skipCount++;continue;}
+processedContent.add(uniqueKey);newCount++;entries.push({speaker:s,time:t,content:msg});}
+return{newCount,skipCount};};c.scrollTop=0;await wait(1000);let res=addEntries(c.querySelectorAll('div[class*="rightColumn-"]'));console.log(\`初回: 新規 \${res.newCount} 件, 重複スキップ \${res.skipCount} 件\`);const totalHeight=c.scrollHeight;const viewHeight=c.clientHeight;const scrollStep=viewHeight*0.8;let currentScroll=0,loop=0;while(currentScroll<totalHeight&&loop<100){loop++;currentScroll+=scrollStep;c.scrollTop=currentScroll;await wait(300);if(Math.abs(c.scrollTop-currentScroll)>100){console.log(\`位置修正: 目標 \${currentScroll} → 実際 \${c.scrollTop}\`);c.scrollTop=currentScroll;await wait(300);}
+res=addEntries(c.querySelectorAll('div[class*="rightColumn-"]'));console.log(\`スクロール \${loop}: 新規 \${res.newCount} 件, 重複スキップ \${res.skipCount} 件\`);if(currentScroll>=totalHeight-viewHeight)break;}
+c.scrollTop=c.scrollHeight;await wait(2000);res=addEntries(c.querySelectorAll('div[class*="rightColumn-"]'));console.log(\`最終: 新規 \${res.newCount} 件, 重複スキップ \${res.skipCount} 件\`);entries.sort((a,b)=>{const timeA=a.time.split(':').reduce((acc,time)=>60*acc+parseInt(time,10),0);const timeB=b.time.split(':').reduce((acc,time)=>60*acc+parseInt(time,10),0);return timeA-timeB;});let lastSpeaker='';for(const entry of entries){if(entry.speaker==='（システム）'&&lastSpeaker){transcript+=\`\${entry.content}\\n\\n\`;}else{if(entry.speaker!=='（システム）'){lastSpeaker=entry.speaker;}
+transcript+=\`\${entry.speaker}\${entry.time?' ['+entry.time+']':''}:\\n\${entry.content}\\n\\n\`;}}
+}
+let result={title,participants,datetime,transcript};if(!transcript){alert("❌ 会議情報を取得できませんでした");}else{try{const jsonString=JSON.stringify(result,null,2);await navigator.clipboard.writeText(jsonString);const lineCount=transcript.split('\\n').filter(l=>l.includes(':')).length;alert(\`✅ 完了！会議情報を取得し、クリップボードにコピーしました\`);window.open('https://d3r0xupf0a2onu.cloudfront.net/use-case-builder/execute/6fadf23d-6d52-4029-a3bb-73a3b9f09cb2','_blank');}catch(clipboardError){const lineCount=transcript.split('\\n').filter(l=>l.includes(':')).length;alert(\`❌ クリップボードコピー失敗\`);window.open('https://d3r0xupf0a2onu.cloudfront.net/use-case-builder/execute/6fadf23d-6d52-4029-a3bb-73a3b9f09cb2','_blank');}}
+console.log("最終結果:",result);}catch(e){console.error("詳細エラー:",e);alert(\`❌ 取得失敗: \${e.message||'unknown error'}\`);}})().catch(e=>{console.error("❌ 外側Promiseエラー:",e);});})();`;
+
+    return (
+      <div className="url-input-container">
+        <div className="url-input-content">
+          <h2>ブックマークレットの登録</h2>
+          <p>お使いのブラウザ（PC）のブックマークバーに、緑のボタンをドラッグ＆ドロップして登録してください。</p>
+          {/* eslint-disable-next-line jsx-a11y/anchor-is-valid, no-script-url */}
+          {/* ▼▼▼ hrefに定数を渡すように修正 ▼▼▼ */}
+          <a 
+            href={bookmarkletCode}
+            className="bookmarklet-link"
+            onClick={(e) => e.preventDefault()} // 誤クリックで実行されないようにする
+          >
+            会議情報取得
+          </a>
+          <p>ブックマークバーが出ていない、わからない人は ctrl+shift+B を押してください。</p>
+          <p>ブックマークバーが表示されます。</p>
+          <button 
+            onClick={() => setCurrentStep('url-input')} 
+            className="back-button"
+          >
+            ← URL入力に戻る
+          </button>
+        </div>
+      </div>
+    );
+  };
+  // ▲▲▲ ここまで追加 ▲▲▲
 
   // エディター画面
   const renderEditorStep = () => (
@@ -386,6 +443,8 @@ function App() {
       {currentStep === 'url-input' && renderUrlInputStep()}
       {currentStep === 'editor' && renderEditorStep()}
       {currentStep === 'output' && renderOutputStep()}
+      {/* ▼▼▼ ここを追加 ▼▼▼ */}
+      {currentStep === 'bookmarklet-install' && renderBookmarkletInstallStep()}
     </div>
   );
 }

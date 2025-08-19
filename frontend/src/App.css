@@ -33,7 +33,7 @@
 }
 
 .url-input-content {
-  max-width: 600px;
+  max-width: 900px;
   padding: 40px;
   background-color: white;
   border-radius: 8px;
@@ -504,3 +504,65 @@
     height: calc(100vh - 300px);
   }
 }
+
+/* ▼▼▼ ここから追加 ▼▼▼ */
+/* テキストスタイルのボタン */
+.text-button {
+  background: none;
+  border: none;
+  color: #007bff;
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 0;
+  font-size: inherit;
+  font-family: inherit;
+}
+
+.text-button:hover {
+  color: #0056b3;
+}
+
+/* ブックマークレット登録用のリンクボタン */
+.instruction-section {
+  text-align: center;
+}
+.bookmarklet-link {
+  display: block;
+  padding: 12px 24px;
+  background-color: #28a745;
+  color: white;
+  text-decoration: none;
+  border-radius: 5px;
+  font-weight: bold;
+  margin: 10px auto;
+  border: 1px solid #218838;
+  cursor: grab;
+  text-align: center;
+  width: fit-content;
+}
+
+.bookmarklet-link:hover {
+  background-color: #218838;
+}
+
+/* 注意書き用のスタイル */
+.note {
+  background-color: #e7f3ff;
+  border-left: 4px solid #007bff;
+  padding: 15px;
+  margin-bottom: 20px;
+  border-radius: 4px;
+}
+
+.note p {
+  margin: 0;
+  color: #004085;
+}
+
+/* 説明テキスト用のスタイル */
+.instruction-text {
+  color: #495057;
+  line-height: 1.6;
+  margin: 10px 0;
+}
+/* ▲▲▲ ここまで追加 ▲▲▲ */
