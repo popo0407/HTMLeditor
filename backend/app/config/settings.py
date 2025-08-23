@@ -44,7 +44,6 @@ class Settings(BaseSettings):
     ]
     
     # === メール送信設定（実際に使用されている項目のみ） ===
-    MAIL_FROM: str = ""
     MAIL_HOST: str = ""
     MAIL_PORT: int = 0
     DEFAULT_RECIPIENT_EMAIL: str = ""
@@ -110,7 +109,6 @@ class Settings(BaseSettings):
             SMTP設定の辞書
         """
         return {
-            'mail_from': self.MAIL_FROM,
             'mail_host': self.MAIL_HOST,
             'mail_port': self.MAIL_PORT,
         }

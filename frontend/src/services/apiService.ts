@@ -30,22 +30,6 @@ export interface EmailTemplatesResponse {
 }
 
 /**
- * メールテンプレート設定を取得
- */
-export const getEmailTemplates = async (): Promise<EmailTemplatesResponse> => {
-  try {
-    const response = await fetch(`${API_BASE_URL}/mail/templates`);
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    return await response.json();
-  } catch (error) {
-    console.error('メールテンプレート取得エラー:', error);
-    throw error;
-  }
-};
-
-/**
  * HTML添付メールを送信（固定のタイトルと本文）
  */
 export const sendMail = async (request: MailSendRequest): Promise<MailSendResponse> => {
@@ -99,7 +83,6 @@ export const sendPdfMail = async (request: PdfMailSendRequest): Promise<MailSend
  * APIサービスオブジェクト
  */
 export const apiService = {
-  getEmailTemplates,
   sendMail,
   sendPdfMail,
 };

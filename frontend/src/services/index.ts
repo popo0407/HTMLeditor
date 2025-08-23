@@ -6,7 +6,7 @@
  */
 
 // API通信サービス
-export { getEmailTemplates, sendMail, sendPdfMail } from './apiService';
+export { sendMail, sendPdfMail } from './apiService';
 
 // エラーハンドリングサービス
 export { ErrorHandlerService } from './errorHandlerService';

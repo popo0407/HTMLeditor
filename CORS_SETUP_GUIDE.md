@@ -10,6 +10,7 @@
 
 開発 PC で、React アプリケーションを本番公開用の静的なファイル群に変換（ビルド）します。
 これにより、`frontend`フォルダ内に`build`フォルダが作成されます。この中には HTML、CSS、JavaScript ファイルが含まれており、Web サーバーに置くだけで動作します。
+デプロイ済みの静的ファイルに直接環境変数を埋める場合は、ビルド前に `.env` を本番値で用意してから `npm run build` を実行してください。
 
 ```powershell
 # フロントエンドのプロジェクトフォルダに移動
@@ -47,7 +48,7 @@ Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process -Force
 
 ここからの作業は、すべて会社の PC（本番サーバー）で行います。
 
-### 2-1. IIS の機能と必須モジュールの有効化とプロキシ設定(最初のアプリのみ)
+### 2-1. deploy-to-iis.ps1 を実行する前のチェックリスト (必須)
 
 コントロールパネルの「Windows の機能の有効化または無効化」で、以下の項目にチェックが入っていることを確認してください。
 
@@ -58,6 +59,19 @@ Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process -Force
 1.  **[Rewrite](https://www.iis.net/downloads/microsoft/url-rewrite)** をインストールします。
 2.  **[Application Request Routing (ARR)](https://www.iis.net/downloads/microsoft/application-request-routing)** をインストールします。
 
+- IIS の WebAdministration モジュールが利用可能であること（スクリプトはこれを使います）。
+- URL Rewrite と Application Request Routing (ARR) がサーバーにインストール済みであること。
+- Python がインストールされており、バックエンドで使用するバージョンが動作すること。
+- 実行ポリシーを一時的に許可してスクリプトを実行する（例: PowerShell を管理者で起動し、ExecutionPolicy を Bypass にする）。
+
+必要に応じて、`deploy-to-iis.ps1` のパラメータ（ポート番号、サービス名、デプロイパスなど）を実行時に渡してください。
+
+> **Note** > `deploy-to-iis.ps1`は、バックエンドを**NSSM (Non-Sucking Service Manager)** というツールで Windows サービス化しようと試みます。
+> NSSM が見つからない場合、手動での起動を促すメッセージが表示されます。
+> 安定運用のために、[NSSM 公式サイト](https://nssm.cc/download)からダウンロードし、
+> `nssm.exe`を環境変数 PATH の通ったフォルダに配置しておくことを強く推奨します。
+
+
 #### プロキシの設定 🔐
 
 設定＞ネットワークとインターネット＞プロキシ＞プロキシサーバーを使う＞　サーバー IP を;区切りで追加
@@ -66,13 +80,11 @@ Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process -Force
 
 **スクリプトの実行**:
 Powershell を管理者で開いて以下のコードを実行します。処理内容は後述
-`    PowerShell.exe -ExecutionPolicy Bypass -File "C:\webapp\HTMLEditor\deploy-to-iis.ps1"
-   `
+`
+Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process -Force
 
-> **Note** > `deploy-to-iis.ps1`は、バックエンドを**NSSM (Non-Sucking Service Manager)** というツールで Windows サービス化しようと試みます。
-> NSSM が見つからない場合、手動での起動を促すメッセージが表示されます。
-> 安定運用のために、[NSSM 公式サイト](https://nssm.cc/download)からダウンロードし、
-> `nssm.exe`を環境変数 PATH の通ったフォルダに配置しておくことを強く推奨します。
+PowerShell.exe -ExecutionPolicy Bypass -File "C:\webapp\HTMLEditor\deploy-to-iis.ps1"
+`
 
 ---
 
@@ -86,11 +98,13 @@ Powershell を管理者で開いて以下のコードを実行します。処理
 
 1. `backend/.env.example` をコピーして `backend/.env` を作成
 2. `.env` ファイルにサーバーの IP アドレスを設定:
+3. 本番用の値（`CORS_ORIGINS` 等）を設定してください。
 
 # IIS 環境用設定（例: サーバー IP = 192.168.1.10）
 
 ```
 CORS_ORIGINS=http://192.168.1.10,http://192.168.1.10:3000,http://localhost:3000,http://localhost:82
+
 ```
 
 ---

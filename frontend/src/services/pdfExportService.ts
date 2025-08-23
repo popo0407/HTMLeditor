@@ -19,8 +19,8 @@ export class PdfExportService {
   ): Promise<void> {
     try {
       // バックエンドAPIにリクエスト（絶対URLを使用）
-      const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8002';
-      const response = await fetch(`${API_BASE_URL}/api/pdf/export`, {
+      const API_BASE_URL = process.env.REACT_APP_API_URL;
+      const response = await fetch(`${API_BASE_URL}/pdf/export`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -67,8 +67,8 @@ export class PdfExportService {
     title: string = 'エクスポートされたドキュメント'
   ): Promise<Blob> {
     try {
-      const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8002';
-      const response = await fetch(`${API_BASE_URL}/api/pdf/export`, {
+      const API_BASE_URL = process.env.REACT_APP_API_URL ;
+      const response = await fetch(`${API_BASE_URL}/pdf/export`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

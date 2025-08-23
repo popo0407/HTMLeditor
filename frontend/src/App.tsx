@@ -8,19 +8,12 @@
 import React, { useState, useEffect } from 'react';
 import './App.css';
 import { TinyMCEEditor } from './tinymceEditor/components/TinyMCEEditor';
-import { getEmailTemplates, sendMail, sendPdfMail, MailSendRequest, PdfMailSendRequest } from './services/apiService';
+import { sendMail, sendPdfMail, MailSendRequest, PdfMailSendRequest } from './services/apiService';
 import { HtmlExportService } from './tinymceEditor/services/htmlExportService';
 import { PdfExportService } from './services/pdfExportService';
 
-interface EmailTemplates {
-  default_recipient: string;
-  subject_templates: string[];
-  default_subject: string;
-  body_templates: string[];
-}
-
 function App() {
-  const [emailTemplates, setEmailTemplates] = useState<EmailTemplates | null>(null);
+  // emailTemplates removed: backend provides fixed recipient via settings
   const [importText, setImportText] = useState('');
   const [editorContent, setEditorContent] = useState<string>('');
   const [editorHeight, setEditorHeight] = useState<number>(window.innerHeight);
@@ -29,19 +22,7 @@ function App() {
 
   // HtmlExportServiceは直接使用するため、useRefは不要
 
-  // メールテンプレートの読み込み
-  useEffect(() => {
-    loadEmailTemplates();
-  }, []);
-
-  const loadEmailTemplates = async () => {
-    try {
-      const templates = await getEmailTemplates();
-      setEmailTemplates(templates);
-    } catch (error) {
-      console.error('メールテンプレートの読み込みに失敗しました:', error);
-    }
-  };
+  // No client-side template loading. Backend uses DEFAULT_RECIPIENT_EMAIL from .env.
 
   // ウィンドウサイズの変更を監視
   useEffect(() => {
@@ -195,7 +176,8 @@ function App() {
   const handleSendHtmlMail = async () => {
     try {
       const mailRequest: MailSendRequest = {
-        recipient_email: emailTemplates?.default_recipient || '',
+  // recipient_email is optional; backend will use DEFAULT_RECIPIENT_EMAIL when empty
+  recipient_email: '',
         html_content: editorContent,
       };
 
@@ -210,7 +192,8 @@ function App() {
   const handleSendPdfMail = async () => {
     try {
       const pdfMailRequest: PdfMailSendRequest = {
-        recipient_email: emailTemplates?.default_recipient || '',
+  // recipient_email is optional; backend will use DEFAULT_RECIPIENT_EMAIL when empty
+  recipient_email: '',
         html_content: editorContent,
       };
 
@@ -248,7 +231,7 @@ function App() {
         
         <div className="url-input-section">
           <h3>1. Teams会議URLを入力</h3>
-          <p>新しいタブで開いたTeamsで「Webアプリで開く」を選択すると、Teamsチャットページが開きます。</p>
+          <p>新しいタブで開いたTeamsで「代わりにWebアプリを実行」を選択すると、Teamsチャットページが開きます。</p>
           <input
             type="url"
             value={teamsUrl}

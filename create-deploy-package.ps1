@@ -1,22 +1,43 @@
-﻿# HTMLエディタシステム デプロイパッケージ作成スクリプト (簡易版)
+﻿# デプロイパッケージ作成スクリプト 
 
 # 設定
 $sourceProjectRoot = "C:\Users\user\Downloads\HTMLEditer"
+$FrontendPath = Join-Path $sourceProjectRoot "frontend"
+$BackendPath = Join-Path $sourceProjectRoot "backend"
 $tempDir = "C:\Users\user\Downloads\HTMLEditor_for_deploy"
-$destinationZip = "C:\Users\user\Downloads\DEPLOY_PACKAGE.zip"
+$destinationZip = "C:\Users\user\Downloads\DATAZIP_summary.zip"
 
-Write-Host "======================================" -ForegroundColor Cyan
-Write-Host "  HTMLエディタ デプロイパッケージ作成" -ForegroundColor Cyan
-Write-Host "======================================" -ForegroundColor Cyan
+# フロントエンドを常に再ビルドする（.env を本番用にコピーしてビルド）
+Write-Host "フロントエンドのビルド準備を開始します..." -ForegroundColor Yellow
 
-# フロントエンドのビルド確認
-if (-not (Test-Path "$sourceProjectRoot\frontend\build")) {
-    Write-Host "ERROR: フロントエンドがビルドされていません。" -ForegroundColor Red
-    Write-Host "以下を実行してからやり直してください：" -ForegroundColor Yellow
-    Write-Host "cd $sourceProjectRoot\frontend" -ForegroundColor White
-    Write-Host "npm run build" -ForegroundColor White
+# .env.production を削除（存在する場合）
+$envProd = Join-Path $FrontendPath ".env.production"
+if (Test-Path $envProd) {
+    Write-Host "既存の .env.production を削除します: $envProd" -ForegroundColor Yellow
+    Remove-Item $envProd -Force
+}
+
+# frontend/.env を frontend/.env.production としてコピー（.env が存在する場合）
+$envFile = Join-Path $FrontendPath ".env"
+if (Test-Path $envFile) {
+    Write-Host "frontend/.env を .env.production にコピーします" -ForegroundColor Green
+    Copy-Item -Path $envFile -Destination $envProd -Force
+} else {
+    Write-Host "警告: frontend/.env が見つかりません。ビルド時の環境変数が不足している可能性があります。" -ForegroundColor Yellow
+}
+
+# npm run build を実行
+Write-Host "npm run build を実行します（$FrontendPath）" -ForegroundColor Yellow
+Push-Location $FrontendPath
+try {
+    # npm が存在することを前提にビルドを実行
+    npm run build
+} catch {
+    Write-Host "ERROR: npm run build に失敗しました。出力を確認してください。" -ForegroundColor Red
+    Pop-Location
     exit 1
 }
+Pop-Location
 
 # 準備
 Write-Host "作業ディレクトリを準備中..." -ForegroundColor Yellow

@@ -1,4 +1,5 @@
-﻿# HTMLエディタ IIS デプロイメント自動化スクリプト
+﻿
+# IIS デプロイメント自動化スクリプト
 # サーバー設定専用バージョン (HTTPS対応)
 #
 # 前提条件:
@@ -11,11 +12,14 @@
 #    PowerShell.exe -ExecutionPolicy Bypass -File "C:\webapp\HTMLEditor\deploy-to-iis.ps1"
 
 param(
-    [string]$SiteName = "HTMLEditor",
-    [string]$FrontendPort = "82",
-    [string]$BackendPort = "8002",
-    [string]$DeployPath = "C:\webapp\HTMLEditor",
-    [string]$HttpsPort = "443"
+        [string]$SiteName = "HTMLEditor",
+        [string]$FrontendPort = "82",
+        [string]$BackendPort = "8002",
+        [string]$DeployPath = "C:\webapp\HTMLEditor",
+        [string]$HttpsPort = "443",
+        [string]$ServiceName = "HTMLEditorAPI",
+        [string]$ServiceDisplayName = "HTML Editor API Service",
+        [string]$ServiceDescription = "FastAPI backend for HTML Editor"
 )
 
 # カラー出力用関数
@@ -24,8 +28,8 @@ function Write-ColorOutput($ForegroundColor, $Message) {
 }
 
 Write-ColorOutput Green "==================================================="
-Write-ColorOutput Green "HTMLエディタ IIS サーバー設定スクリプト開始"
-Write-ColorOutput Green "前提：ファイルは C:\webapp\HTMLEditor に配置済み"
+Write-ColorOutput Green "サーバー設定スクリプト開始"
+Write-ColorOutput Green "前提：ファイルは C:\webapp\*** に配置済み"
 Write-ColorOutput Green "==================================================="
 
 # 1. 管理者権限チェック
@@ -134,7 +138,8 @@ Write-ColorOutput Green "ファイル権限を設定しました。"
 # 8. HTTPS設定 (自己署名証明書)
 Write-ColorOutput Yellow "ステップ 7: HTTPS設定 (自己署名証明書)..."
 $certName = "$SiteName Self-Signed Cert"
-$dnsName = "localhost" # 証明書の対象ホスト名
+$serverIP = (Get-NetIPAddress -AddressFamily IPv4 | Where-Object { $_.IPAddress -notlike "127.*" -and $_.IPAddress -notlike "169.254.*" }).IPAddress | Select-Object -First 1
+$dnsNames = @("localhost", $serverIP) # localhostとサーバーIPの両方を含める
 $certStorePath = "Cert:\LocalMachine\My"
 
 # 既存の同名証明書を削除
@@ -144,8 +149,8 @@ Get-ChildItem -Path $certStorePath | Where-Object { $_.FriendlyName -eq $certNam
 }
 
 # 自己署名証明書を作成
-Write-ColorOutput Yellow "  - 自己署名証明書を作成中: $certName"
-$newCert = New-SelfSignedCertificate -DnsName $dnsName -CertStoreLocation $certStorePath -FriendlyName $certName
+Write-ColorOutput Yellow "  - 自己署名証明書を作成中: $certName (DNS: $($dnsNames -join ', '))"
+$newCert = New-SelfSignedCertificate -DnsName $dnsNames -CertStoreLocation $certStorePath -FriendlyName $certName
 $certThumbprint = $newCert.Thumbprint
 
 # HTTPSバインドの作成
@@ -197,13 +202,33 @@ if (-not $rewriteModuleInstalled) {
 }
 Write-ColorOutput Green "HTTPS設定が完了しました。"
 
+# 8.5. ARRリバースプロキシ設定
+Write-ColorOutput Yellow "ステップ 7.5: ARRリバースプロキシ設定..."
+
+# ARR（Application Request Routing）を有効化
+Set-WebConfigurationProperty -Filter "system.webServer/proxy" -PSPath "IIS:\Sites\$siteFullName" -Name "enabled" -Value "True"
+
+# URL Rewriteルール追加（/api/pdf/* → http://localhost:8002/api/pdf/）
+$rewriteRule = @"
+<rule name="ReverseProxyApiAll" stopProcessing="true">
+    <match url="^api/(.*)" />
+    <action type="Rewrite" url="http://localhost:$BackendPort/api/{R:1}" logRewrittenUrl="true" />
+</rule>
+"@
+
+Add-WebConfigurationProperty -pspath "IIS:\Sites\$siteFullName" `
+    -filter "system.webServer/rewrite/rules" `
+    -name "." `
+    -value ([xml]$rewriteRule).rule
+
+Write-ColorOutput Green "ARRリバースプロキシルール（/api/pdf/* → バックエンド）を追加しました。"
 
 # 9. Windowsサービスとしてバックエンドを起動（NSSM使用）
 Write-ColorOutput Yellow "ステップ 8: バックエンドサービスの登録..."
 
-$serviceName = "HTMLEditorAPI"
-$serviceDisplayName = "HTML Editor API Service"
-$serviceDescription = "FastAPI backend for HTML Editor"
+$serviceName = $ServiceName
+$serviceDisplayName = $ServiceDisplayName
+$serviceDescription = $ServiceDescription
 
 # 既存サービスの停止・削除
 $existingService = Get-Service -Name $serviceName -ErrorAction SilentlyContinue
