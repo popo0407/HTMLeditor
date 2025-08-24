@@ -8,11 +8,13 @@
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8002';
 
 export interface MailSendRequest {
+  subject: string;
   recipient_email?: string;
   html_content: string;
 }
 
 export interface PdfMailSendRequest {
+  subject: string;
   recipient_email?: string;
   html_content: string;
 }

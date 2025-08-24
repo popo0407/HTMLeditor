@@ -189,18 +189,26 @@ export class HtmlExportService {
 
   // 会議情報と議事録を結合して出力するHTMLフラグメントを作成
   static buildCombinedFragment(meetingInfo: {
-    会議タイトル?: string;
-    参加者?: string[] | string;
-    会議日時?: string;
-    会議場所?: string;
-    要約?: string;
+  会議タイトル?: string;
+  参加者?: string[] | string;
+  会議日時?: string;
+  会議場所?: string;
+  要約?: string;
+  部門?: string;
+  大分類?: string;
+  中分類?: string;
+  小分類?: string;
   } | null | undefined, minutesHtml: string): string {
     if (!meetingInfo) return minutesHtml || '';
 
     const title = meetingInfo.会議タイトル || '';
     const datetime = meetingInfo.会議日時 || '';
     const location = meetingInfo.会議場所 || '';
-    const summary = (meetingInfo.要約 || '').toString();
+  const summary = (meetingInfo.要約 || '').toString();
+  const department = meetingInfo.部門 || '';
+  const category1 = meetingInfo.大分類 || '';
+  const category2 = meetingInfo.中分類 || '';
+  const category3 = meetingInfo.小分類 || '';
     let participants: string[] | string = meetingInfo.参加者 || [];
     if (typeof participants === 'string') {
       participants = participants.split(/\r?\n/).filter(Boolean);
@@ -212,10 +220,21 @@ export class HtmlExportService {
 
     const summaryHtml = HtmlExportService.escapeHtml(summary).replace(/\r?\n/g, '<br/>');
 
+    const classificationHtml = (department || category1 || category2 || category3) ? `
+      <h3>分類</h3>
+      <table class="custom-table">
+        <tr><th>部門</th><td>${HtmlExportService.escapeHtml(department)}</td></tr>
+        <tr><th>大分類</th><td>${HtmlExportService.escapeHtml(category1)}</td></tr>
+        <tr><th>中分類</th><td>${HtmlExportService.escapeHtml(category2)}</td></tr>
+        <tr><th>小分類</th><td>${HtmlExportService.escapeHtml(category3)}</td></tr>
+      </table>
+    ` : '';
+
     const fragment = `
       <h1>${HtmlExportService.escapeHtml(title)}</h1>
       <h3>会議日時: ${HtmlExportService.escapeHtml(datetime)}</h3>
       <h3>場所: ${HtmlExportService.escapeHtml(location)}</h3>
+      ${classificationHtml}
       <h3>参加者</h3>
       <p>${participantsHtml}</p>
       <h3>会議概要</h3>

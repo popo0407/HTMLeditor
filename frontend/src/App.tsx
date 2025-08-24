@@ -96,6 +96,11 @@ function App() {
           会議日時: parsedJson['会議日時'] || parsedJson['datetime'] || '',
           会議場所: parsedJson['会議場所'] || parsedJson['会議場所'] || '',
           要約: parsedJson['要約'] || parsedJson['summary'] || '',
+          // 以下は読み取り専用で表示する分類情報
+          部門: parsedJson['部門'] || parsedJson['department'] || '',
+          大分類: parsedJson['大分類'] || parsedJson['category1'] || '',
+          中分類: parsedJson['中分類'] || parsedJson['category2'] || '',
+          小分類: parsedJson['小分類'] || parsedJson['category3'] || '',
         };
 
         const minutesHtml = parsedJson['議事録'] || '';
@@ -215,15 +220,24 @@ function App() {
 
   const handleSendHtmlMail = async () => {
     try {
-      let contentToSend = editorContent;
-      if (meetingInfo) {
-        contentToSend = HtmlExportService.buildCombinedFragment(meetingInfo, editorContent);
-      }
+  // Build JSON body template from meetingInfo (only the requested fields)
+      const bodyObject = {
+        会議タイトル: meetingInfo?.会議タイトル || '',
+        参加者: meetingInfo?.参加者 || [],
+        会議日時: meetingInfo?.会議日時 || '',
+        会議場所: meetingInfo?.会議場所 || '',
+        部門: meetingInfo?.部門 || '',
+        大分類: meetingInfo?.大分類 || '',
+        中分類: meetingInfo?.中分類 || '',
+        小分類: meetingInfo?.小分類 || '',
+      };
 
       const mailRequest: MailSendRequest = {
-  // recipient_email is optional; backend will use DEFAULT_RECIPIENT_EMAIL when empty
-  recipient_email: '',
-  html_content: contentToSend,
+        subject: '議事録',
+        // recipient_email is optional; backend will use DEFAULT_RECIPIENT_EMAIL when empty
+        recipient_email: '',
+        // send JSON as plain text in html_content field (backend will treat as HTML body)
+        html_content: JSON.stringify(bodyObject, null, 2),
       };
 
       await sendMail(mailRequest);
@@ -236,15 +250,22 @@ function App() {
 
   const handleSendPdfMail = async () => {
     try {
-      let contentToSend = editorContent;
-      if (meetingInfo) {
-        contentToSend = HtmlExportService.buildCombinedFragment(meetingInfo, editorContent);
-      }
+  const bodyObject = {
+        会議タイトル: meetingInfo?.会議タイトル || '',
+        参加者: meetingInfo?.参加者 || [],
+        会議日時: meetingInfo?.会議日時 || '',
+        会議場所: meetingInfo?.会議場所 || '',
+        部門: meetingInfo?.部門 || '',
+        大分類: meetingInfo?.大分類 || '',
+        中分類: meetingInfo?.中分類 || '',
+        小分類: meetingInfo?.小分類 || '',
+      };
 
       const pdfMailRequest: PdfMailSendRequest = {
-  // recipient_email is optional; backend will use DEFAULT_RECIPIENT_EMAIL when empty
-  recipient_email: '',
-  html_content: contentToSend,
+        subject: '議事録',
+        // recipient_email is optional; backend will use DEFAULT_RECIPIENT_EMAIL when empty
+        recipient_email: '',
+        html_content: JSON.stringify(bodyObject, null, 2),
       };
 
       await sendPdfMail(pdfMailRequest);
@@ -433,10 +454,19 @@ console.log("最終結果:",result);}catch(e){console.error("詳細エラー:",e
                   <input type="text" value={meetingInfo.会議日時 || ''} onChange={e => setMeetingInfo({...meetingInfo, 会議日時: e.target.value})} />
                   <label>会議場所</label>
                   <input type="text" value={meetingInfo.会議場所 || ''} onChange={e => setMeetingInfo({...meetingInfo, 会議場所: e.target.value})} />
-                  <label>参加者（改行で区切ってください）</label>
+                  <label>参加者</label>
                   <textarea rows={4} value={Array.isArray(meetingInfo.参加者) ? meetingInfo.参加者.join('\n') : meetingInfo.参加者 || ''} onChange={e => setMeetingInfo({...meetingInfo, 参加者: e.target.value})} />
                   <label>要約</label>
                   <textarea rows={6} value={meetingInfo.要約 || ''} onChange={e => setMeetingInfo({...meetingInfo, 要約: e.target.value})} />
+                  {/* 表示はするが編集不可の分類フィールド */}
+                  <label>部門(編集不可)</label>
+                  <input type="text" value={meetingInfo.部門 || ''} readOnly />
+                  <label>大分類(編集不可)</label>
+                  <input type="text" value={meetingInfo.大分類 || ''} readOnly />
+                  <label>中分類(編集不可)</label>
+                  <input type="text" value={meetingInfo.中分類 || ''} readOnly />
+                  <label>小分類(編集不可)</label>
+                  <input type="text" value={meetingInfo.小分類 || ''} readOnly />
                 </div>
               ) : (
                 <div className="minutes-editor-wrapper">
