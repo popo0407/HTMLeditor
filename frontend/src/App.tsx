@@ -15,6 +15,8 @@ import { PdfExportService } from './services/pdfExportService';
 function App() {
   // emailTemplates removed: backend provides fixed recipient via settings
   const [importText, setImportText] = useState('');
+  const [meetingInfo, setMeetingInfo] = useState<any | null>(null);
+  const [activeTab, setActiveTab] = useState<'minutes' | 'info'>('minutes');
   const [editorContent, setEditorContent] = useState<string>('');
   const [editorHeight, setEditorHeight] = useState<number>(window.innerHeight);
   const [currentStep, setCurrentStep] = useState<'url-input' | 'editor' | 'output' | 'bookmarklet-install'>('url-input');
@@ -77,21 +79,49 @@ function App() {
     }
 
     try {
-      // HTMLまたはマークダウンテキストを処理
-      console.log('Importing text to TinyMCE editor:', importText);
-      
-      // マークダウンの場合はHTMLに変換
-      let processedContent = importText;
-      if (importText.includes('#') || importText.includes('|')) {
-        processedContent = convertMarkdownToHtml(importText);
+      // まず、貼り付けがJSON形式かどうかを判定
+      const trimmed = importText.trim();
+      let parsedJson: any = null;
+      try {
+        parsedJson = JSON.parse(trimmed);
+      } catch (e) {
+        parsedJson = null;
       }
-      
-      // HTMLをクリーンアップして安全な形式に変換
-      processedContent = sanitizeHtml(processedContent);
-      
-      setEditorContent(processedContent);
-      setImportText(''); // 読み込み後クリア
-      setCurrentStep('output'); // HTMLが読み込まれたら出力ステップに移行
+
+      if (parsedJson && (parsedJson.議事録 || parsedJson['議事録'])) {
+        // JSON形式とみなし、会議情報と議事録をセット
+        const info = {
+          会議タイトル: parsedJson['会議タイトル'] || parsedJson['title'] || '',
+          参加者: parsedJson['参加者'] || parsedJson['participants'] || [],
+          会議日時: parsedJson['会議日時'] || parsedJson['datetime'] || '',
+          会議場所: parsedJson['会議場所'] || parsedJson['会議場所'] || '',
+          要約: parsedJson['要約'] || parsedJson['summary'] || '',
+        };
+
+        const minutesHtml = parsedJson['議事録'] || '';
+
+        setMeetingInfo(info);
+        setEditorContent(minutesHtml);
+        setActiveTab('info');
+        setImportText('');
+        setCurrentStep('editor');
+      } else {
+        // HTMLまたはマークダウンテキストを処理
+        console.log('Importing text to TinyMCE editor:', importText);
+        
+        // マークダウンの場合はHTMLに変換
+        let processedContent = importText;
+        if (importText.includes('#') || importText.includes('|')) {
+          processedContent = convertMarkdownToHtml(importText);
+        }
+        
+        // HTMLをクリーンアップして安全な形式に変換
+        processedContent = sanitizeHtml(processedContent);
+        
+        setEditorContent(processedContent);
+        setImportText(''); // 読み込み後クリア
+        setCurrentStep('output'); // HTMLが読み込まれたら出力ステップに移行
+      }
     } catch (error) {
       console.error('テキストのインポートに失敗しました:', error);
       alert('テキストのインポートに失敗しました。');
@@ -148,8 +178,13 @@ function App() {
 
   const handleDownloadHtml = async () => {
     try {
+      let contentToExport = editorContent;
+      if (meetingInfo) {
+        contentToExport = HtmlExportService.buildCombinedFragment(meetingInfo, editorContent);
+      }
+
       HtmlExportService.downloadHtml(
-        editorContent,
+        contentToExport,
         'document.html',
         'エクスポートされたドキュメント'
       );
@@ -161,8 +196,13 @@ function App() {
 
   const handleDownloadPdf = async () => {
     try {
+      let contentToExport = editorContent;
+      if (meetingInfo) {
+        contentToExport = HtmlExportService.buildCombinedFragment(meetingInfo, editorContent);
+      }
+
       await PdfExportService.downloadPdf(
-        editorContent,
+        contentToExport,
         'document',
         'エクスポートされたドキュメント'
       );
@@ -175,10 +215,15 @@ function App() {
 
   const handleSendHtmlMail = async () => {
     try {
+      let contentToSend = editorContent;
+      if (meetingInfo) {
+        contentToSend = HtmlExportService.buildCombinedFragment(meetingInfo, editorContent);
+      }
+
       const mailRequest: MailSendRequest = {
   // recipient_email is optional; backend will use DEFAULT_RECIPIENT_EMAIL when empty
   recipient_email: '',
-        html_content: editorContent,
+  html_content: contentToSend,
       };
 
       await sendMail(mailRequest);
@@ -191,10 +236,15 @@ function App() {
 
   const handleSendPdfMail = async () => {
     try {
+      let contentToSend = editorContent;
+      if (meetingInfo) {
+        contentToSend = HtmlExportService.buildCombinedFragment(meetingInfo, editorContent);
+      }
+
       const pdfMailRequest: PdfMailSendRequest = {
   // recipient_email is optional; backend will use DEFAULT_RECIPIENT_EMAIL when empty
   recipient_email: '',
-        html_content: editorContent,
+  html_content: contentToSend,
       };
 
       await sendPdfMail(pdfMailRequest);
@@ -208,7 +258,8 @@ function App() {
   const handleContentChange = (content: string) => {
     setEditorContent(content);
     // エディターでコンテンツが変更されたら出力ステップに移行
-    if (content.trim() && currentStep === 'editor') {
+    // JSON会議情報がある場合はタブ編集中の切替を行わず、タブUIを保持する
+    if (!meetingInfo && content.trim() && currentStep === 'editor') {
       setCurrentStep('output');
     }
   };
@@ -342,18 +393,75 @@ console.log("最終結果:",result);}catch(e){console.error("詳細エラー:",e
               議事録を読み込み
             </button>
           </div>
+          
+          <div className="sidebar-section">
+            <h3>ダウンロード</h3>
+            <button onClick={handleDownloadHtml} className="sidebar-button">
+              HTML形式
+            </button>
+            <button onClick={handleDownloadPdf} className="sidebar-button">
+              PDF形式
+            </button>
+          </div>
+          
+          <div className="sidebar-section">
+            <h3>メール送信</h3>
+            <button onClick={handleSendHtmlMail} className="sidebar-button">
+              HTML添付
+            </button>
+            <button onClick={handleSendPdfMail} className="sidebar-button">
+              PDF添付
+            </button>
+          </div>
         </div>
       </aside>
       
       <main className="editor-container">
-        <TinyMCEEditor
-          value={editorContent}
-          onContentChange={handleContentChange}
-          onSave={() => {
-            console.log('TinyMCE editor save');
-          }}
-          height={editorHeight}
-        />
+        {/* タブ切替: meetingInfo がある場合のみ表示 */}
+        {meetingInfo ? (
+          <div className="tabbed-editor">
+            <div className="tabs">
+              <button className={activeTab === 'info' ? 'active' : ''} onClick={() => setActiveTab('info')}>会議情報</button>
+              <button className={activeTab === 'minutes' ? 'active' : ''} onClick={() => setActiveTab('minutes')}>議事録</button>
+            </div>
+            <div className="tab-body">
+              {activeTab === 'info' ? (
+                <div className="meeting-info-editor">
+                  <label>会議タイトル</label>
+                  <input type="text" value={meetingInfo.会議タイトル || ''} onChange={e => setMeetingInfo({...meetingInfo, 会議タイトル: e.target.value})} />
+                  <label>会議日時</label>
+                  <input type="text" value={meetingInfo.会議日時 || ''} onChange={e => setMeetingInfo({...meetingInfo, 会議日時: e.target.value})} />
+                  <label>会議場所</label>
+                  <input type="text" value={meetingInfo.会議場所 || ''} onChange={e => setMeetingInfo({...meetingInfo, 会議場所: e.target.value})} />
+                  <label>参加者（改行で区切ってください）</label>
+                  <textarea rows={4} value={Array.isArray(meetingInfo.参加者) ? meetingInfo.参加者.join('\n') : meetingInfo.参加者 || ''} onChange={e => setMeetingInfo({...meetingInfo, 参加者: e.target.value})} />
+                  <label>要約</label>
+                  <textarea rows={6} value={meetingInfo.要約 || ''} onChange={e => setMeetingInfo({...meetingInfo, 要約: e.target.value})} />
+                </div>
+              ) : (
+                <div className="minutes-editor-wrapper">
+                  <TinyMCEEditor
+                    value={editorContent}
+                    onContentChange={handleContentChange}
+                    onSave={() => {
+                      console.log('TinyMCE editor save');
+                    }}
+                    height={editorHeight}
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+        ) : (
+          <TinyMCEEditor
+            value={editorContent}
+            onContentChange={handleContentChange}
+            onSave={() => {
+              console.log('TinyMCE editor save');
+            }}
+            height={editorHeight}
+          />
+        )}
       </main>
     </div>
   );

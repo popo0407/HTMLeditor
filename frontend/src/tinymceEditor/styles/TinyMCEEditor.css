@@ -400,6 +400,64 @@
   background-color: #545b62;
 }
 
+/* タブ切替用スタイル */
+.tabbed-editor .tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.tabbed-editor .tabs button {
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  background: #f8f9fa;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.tabbed-editor .tabs button.active {
+  background: #fff;
+  border-bottom: 2px solid #007bff;
+  box-shadow: 0 2px 0 rgba(0,0,0,0.04) inset;
+}
+
+.meeting-info-editor label {
+  display: block;
+  margin-top: 8px;
+  margin-bottom: 4px;
+  font-weight: 600;
+}
+
+.meeting-info-editor input,
+.meeting-info-editor textarea {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.tabbed-editor {
+  background: #fff;
+  border: 1px solid #e9ecef;
+  padding: 12px;
+  border-radius: 6px;
+}
+
+.minutes-editor-wrapper {
+  /* ensure TinyMCE doesn't overlay the tab controls */
+  position: relative;
+}
+
+.tabbed-editor .tabs {
+  position: relative;
+  z-index: 20; /* keep tabs above editor */
+}
+
+.tab-actions .sidebar-button {
+  padding: 6px 10px;
+  font-size: 13px;
+}
+
 /* エラーメッセージ */
 .error-message {
   background-color: #f8d7da;

@@ -44,6 +44,22 @@ export class HtmlExportService {
             background-color: #f8f9fa; 
             font-weight: bold; 
           }
+          /* Ensure any tables exported have visible borders */
+          table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 16px 0;
+          }
+          table, table td, table th {
+            border: 1px solid #000 !important;
+          }
+          table td, table th {
+            padding: 8px;
+          }
+          table th {
+            background-color: #f8f9fa;
+            font-weight: bold;
+          }
           h1, h2, h3, h4, h5, h6 {
             margin-top: 24px;
             margin-bottom: 16px;
@@ -169,5 +185,53 @@ export class HtmlExportService {
         navigator.clipboard.writeText(text).then(resolve).catch(reject);
       }
     });
+  }
+
+  // 会議情報と議事録を結合して出力するHTMLフラグメントを作成
+  static buildCombinedFragment(meetingInfo: {
+    会議タイトル?: string;
+    参加者?: string[] | string;
+    会議日時?: string;
+    会議場所?: string;
+    要約?: string;
+  } | null | undefined, minutesHtml: string): string {
+    if (!meetingInfo) return minutesHtml || '';
+
+    const title = meetingInfo.会議タイトル || '';
+    const datetime = meetingInfo.会議日時 || '';
+    const location = meetingInfo.会議場所 || '';
+    const summary = (meetingInfo.要約 || '').toString();
+    let participants: string[] | string = meetingInfo.参加者 || [];
+    if (typeof participants === 'string') {
+      participants = participants.split(/\r?\n/).filter(Boolean);
+    }
+
+    const participantsHtml = Array.isArray(participants)
+      ? participants.map(p => HtmlExportService.escapeHtml(p)).join('<br/>')
+      : HtmlExportService.escapeHtml(String(participants));
+
+    const summaryHtml = HtmlExportService.escapeHtml(summary).replace(/\r?\n/g, '<br/>');
+
+    const fragment = `
+      <h1>${HtmlExportService.escapeHtml(title)}</h1>
+      <h3>会議日時: ${HtmlExportService.escapeHtml(datetime)}</h3>
+      <h3>場所: ${HtmlExportService.escapeHtml(location)}</h3>
+      <h3>参加者</h3>
+      <p>${participantsHtml}</p>
+      <h3>会議概要</h3>
+      <p>${summaryHtml}</p>
+      ${minutesHtml || ''}
+    `;
+
+    return fragment;
+  }
+
+  private static escapeHtml(str: string): string {
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
   }
 } 
