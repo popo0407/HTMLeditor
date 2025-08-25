@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ meeting.title or '' }}</title>
+  <style>
+    body {
+      font-family: 'Hiragino Sans', 'Yu Gothic', 'Meiryo', sans-serif;
+      line-height: 1.6;
+      color: #333;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    h2 {
+      color: #2c3e50;
+      border-bottom: 3px solid #3498db;
+      padding-bottom: 10px;
+      margin-top: 30px;
+    }
+    h3 {
+      color: #34495e;
+      margin-top: 25px;
+    }
+    .action-item {
+      background-color: #d4edda;
+      border-left: 4px solid #28a745;
+      padding: 15px;
+      margin: 15px 0;
+    }
+    /* page break before minutes section so meeting info stays on first page */
+    .page-break {
+  page-break-before: always;
+  break-before: page;
+    }
+    .important {
+      background-color: #fff3cd;
+      border-left: 4px solid #ffc107;
+      padding: 15px;
+      margin: 15px 0;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 15px 0;
+    }
+    th, td {
+      border: 1px solid #ddd;
+      padding: 12px;
+      text-align: left;
+    }
+    th {
+      background-color: #f8f9fa;
+      font-weight: bold;
+    }
+    ul, ol {
+      margin: 10px 0;
+      padding-left: 25px;
+    }
+    li {
+      margin: 5px 0;
+    }
+    @media (max-width: 768px) {
+      body {
+        padding: 10px;
+      }
+      table {
+        font-size: 14px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>{{ meeting.title or '' }}</h1>
+    <div>{{ meeting.datetime or '' }}　{{ meeting.location or '' }}</div>
+  </header>
+
+  <section class="meta">
+    <table class="meta-table">
+  <tr><th>部門</th><td>{{ meeting.department or '' }}</td></tr>
+  <tr><th>参加者</th><td>{% for p in meeting.participants or [] %}{{ p }}{% if not loop.last %}<br/>{% endif %}{% endfor %}</td></tr>
+    </table>
+  </section>
+
+  <section class="summary">
+    <h3>要約</h3>
+    <div>{{ meeting.summary or '' }}</div>
+  </section>
+
+  <hr/>
+
+  <!-- 明示的にページ区切りを入れて、会議情報を1ページ目、議事録本文を2ページ目以降にする -->
+  <section class="minutes page-break">
+    <div class="minutes-content">
+      {{ minutes_html | safe }}
+    </div>
+  </section>
+
+
+</body>
+</html>

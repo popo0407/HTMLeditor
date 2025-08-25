@@ -8,9 +8,8 @@
 import React, { useState, useEffect } from 'react';
 import './App.css';
 import { TinyMCEEditor } from './tinymceEditor/components/TinyMCEEditor';
-import { sendMail, sendPdfMail, MailSendRequest, PdfMailSendRequest } from './services/apiService';
+import { sendPdfMail, PdfMailSendRequest } from './services/apiService';
 import { HtmlExportService } from './tinymceEditor/services/htmlExportService';
-import { PdfExportService } from './services/pdfExportService';
 
 function App() {
   // emailTemplates removed: backend provides fixed recipient via settings
@@ -18,6 +17,8 @@ function App() {
   const [meetingInfo, setMeetingInfo] = useState<any | null>(null);
   const [activeTab, setActiveTab] = useState<'minutes' | 'info'>('minutes');
   const [editorContent, setEditorContent] = useState<string>('');
+  // タブの高さ（px）
+  const TAB_HEIGHT = 40;
   const [editorHeight, setEditorHeight] = useState<number>(window.innerHeight);
   const [currentStep, setCurrentStep] = useState<'url-input' | 'editor' | 'output' | 'bookmarklet-install'>('url-input');
   const [teamsUrl, setTeamsUrl] = useState('');
@@ -26,15 +27,50 @@ function App() {
 
   // No client-side template loading. Backend uses DEFAULT_RECIPIENT_EMAIL from .env.
 
+  // ファイル名をサニタイズする関数
+  const sanitizeFilename = (filename: string): string => {
+    if (!filename) {
+      return '議事録';
+    }
+    
+    // Windows/Linux/macOSで禁止されている文字を置き換え
+    const forbiddenChars = /[<>:"/\\|?*]/g;
+    let sanitized = filename.replace(forbiddenChars, '_');
+    
+    // 制御文字を削除
+    // eslint-disable-next-line no-control-regex
+    sanitized = sanitized.replace(/[\x00-\x1f]/g, '_');
+    
+    // 先頭・末尾のドット、スペースを削除
+    sanitized = sanitized.replace(/^[. ]+|[. ]+$/g, '');
+    
+    // 空文字列の場合はデフォルト名を返す
+    if (!sanitized) {
+      return '議事録';
+    }
+    
+    // 長すぎる場合は切り詰め（拡張子分を考慮して200文字以内）
+    if (sanitized.length > 200) {
+      sanitized = sanitized.substring(0, 200);
+    }
+    
+    return sanitized;
+  };
+
   // ウィンドウサイズの変更を監視
   useEffect(() => {
     const handleResize = () => {
-      setEditorHeight(window.innerHeight);
+      if (meetingInfo) {
+        setEditorHeight(window.innerHeight - TAB_HEIGHT-50);
+      } else {
+        setEditorHeight(window.innerHeight);
+      }
     };
-
     window.addEventListener('resize', handleResize);
+    // meetingInfoの変化でも高さを再計算
+    handleResize();
     return () => window.removeEventListener('resize', handleResize);
-  }, []);
+  }, [meetingInfo]);
 
   // TeamsのURLを編集してチャットページに変換する
   const convertTeamsUrl = (originalUrl: string): string => {
@@ -55,6 +91,62 @@ function App() {
       console.error('URL変換エラー:', error);
       throw error;
     }
+  };
+
+  // JSON解析を補助するヘルパー関数群
+  const decodeHtmlEntities = (text: string): string => {
+    const textarea = document.createElement('textarea');
+    textarea.innerHTML = text;
+    return textarea.value;
+  };
+
+  const escapeJsonString = (text: string): string => {
+    // JSON文字列内の制御文字を適切にエスケープ
+    return text
+      .replace(/\\/g, '\\\\')  // バックスラッシュをエスケープ
+      .replace(/"/g, '\\"')    // ダブルクォートをエスケープ（ただし、既にエスケープされていない場合のみ）
+      .replace(/\n/g, '\\n')   // 改行をエスケープ
+      .replace(/\r/g, '\\r')   // キャリッジリターンをエスケープ
+      .replace(/\t/g, '\\t');  // タブをエスケープ
+  };
+
+  const parseFlexibleJson = (text: string): any => {
+    // より寛容なJSON解析：正規表現を使って主要フィールドを抽出
+    const result: any = {};
+    
+    // 議事録フィールドを抽出（HTMLタグが含まれていても対応）
+    // dotallフラグの代わりに[\s\S]を使用
+    const minutesMatch = text.match(/"議事録"\s*:\s*"((?:[^"\\]|\\[\s\S])*)"/) ||
+                        text.match(/'議事録'\s*:\s*'((?:[^'\\]|\\[\s\S])*)'/) ||
+                        text.match(/"議事録"\s*:\s*`((?:[^`\\]|\\[\s\S])*)`/);
+    
+    if (minutesMatch) {
+      result['議事録'] = minutesMatch[1].replace(/\\"/g, '"').replace(/\\n/g, '\n');
+    }
+
+    // その他の主要フィールドを抽出
+    const fields = ['会議タイトル', '会議日時', '会議場所', '参加者', '要約', '部門', '大分類', '中分類', '小分類'];
+    
+    fields.forEach(field => {
+      const fieldMatch = text.match(new RegExp(`"${field}"\\s*:\\s*"((?:[^"\\\\]|\\\\[\\s\\S])*)"`, 'g')) ||
+                         text.match(new RegExp(`'${field}'\\s*:\\s*'((?:[^'\\\\]|\\\\[\\s\\S])*)'`, 'g'));
+      
+      if (fieldMatch && fieldMatch[0]) {
+        // マッチした結果から値部分を抽出
+        const valueMatch = fieldMatch[0].match(new RegExp(`"${field}"\\s*:\\s*"((?:[^"\\\\]|\\\\[\\s\\S])*)"`, '')) ||
+                          fieldMatch[0].match(new RegExp(`'${field}'\\s*:\\s*'((?:[^'\\\\]|\\\\[\\s\\S])*)'`, ''));
+        if (valueMatch) {
+          result[field] = valueMatch[1].replace(/\\"/g, '"').replace(/\\n/g, '\n');
+        }
+      }
+    });
+
+    // 議事録フィールドが存在する場合のみ有効なJSONとして扱う
+    if (result['議事録']) {
+      return result;
+    }
+    
+    throw new Error('有効なJSON構造が見つかりません');
   };
 
   const handleOpenTeamsChat = () => {
@@ -82,10 +174,30 @@ function App() {
       // まず、貼り付けがJSON形式かどうかを判定
       const trimmed = importText.trim();
       let parsedJson: any = null;
+      
+      // JSON解析の前処理と複数の解析方法を試行
       try {
+        // 方法1: 通常のJSON.parse
         parsedJson = JSON.parse(trimmed);
       } catch (e) {
-        parsedJson = null;
+        try {
+          // 方法2: HTMLエンティティをデコードしてからJSON.parse
+          const decodedText = decodeHtmlEntities(trimmed);
+          parsedJson = JSON.parse(decodedText);
+        } catch (e2) {
+          try {
+            // 方法3: JSON文字列内の改行とHTMLタグを適切にエスケープ
+            const escapedText = escapeJsonString(trimmed);
+            parsedJson = JSON.parse(escapedText);
+          } catch (e3) {
+            try {
+              // 方法4: より寛容な解析（正規表現を使って構造を抽出）
+              parsedJson = parseFlexibleJson(trimmed);
+            } catch (e4) {
+              parsedJson = null;
+            }
+          }
+        }
       }
 
       if (parsedJson && (parsedJson.議事録 || parsedJson['議事録'])) {
@@ -188,9 +300,13 @@ function App() {
         contentToExport = HtmlExportService.buildCombinedFragment(meetingInfo, editorContent);
       }
 
+      // ファイル名を会議タイトルに基づいて生成
+      const meetingTitle = meetingInfo?.会議タイトル || meetingInfo?.title || '議事録';
+      const filename = sanitizeFilename(meetingTitle);
+
       HtmlExportService.downloadHtml(
         contentToExport,
-        'document.html',
+        `${filename}.html`,
         'エクスポートされたドキュメント'
       );
     } catch (error) {
@@ -201,16 +317,37 @@ function App() {
 
   const handleDownloadPdf = async () => {
     try {
-      let contentToExport = editorContent;
-      if (meetingInfo) {
-        contentToExport = HtmlExportService.buildCombinedFragment(meetingInfo, editorContent);
+      // meetingInfo + minutesHtml をそのままバックエンドに送りテンプレート統一
+      const API_BASE_URL = process.env.REACT_APP_API_URL;
+      const payload = {
+        meetingInfo: meetingInfo || null,
+        minutesHtml: editorContent || '',
+        filename: 'document',
+        title: 'エクスポートされたドキュメント'
+      };
+      const resp = await fetch(`${API_BASE_URL}/pdf/export`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (!resp.ok) {
+        const t = await resp.text();
+        throw new Error(t || `status ${resp.status}`);
       }
-
-      await PdfExportService.downloadPdf(
-        contentToExport,
-        'document',
-        'エクスポートされたドキュメント'
-      );
+      const blob = await resp.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      
+      // 会議タイトルからファイル名を生成
+      const meetingTitle = meetingInfo?.title || meetingInfo?.['会議タイトル'] || '議事録';
+      const safeFilename = sanitizeFilename(meetingTitle);
+      a.download = `${safeFilename}.pdf`;
+      
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
       alert('PDFファイルをダウンロードしました。');
     } catch (error) {
       console.error('PDFファイルのダウンロードに失敗しました:', error);
@@ -218,54 +355,16 @@ function App() {
     }
   };
 
-  const handleSendHtmlMail = async () => {
-    try {
-  // Build JSON body template from meetingInfo (only the requested fields)
-      const bodyObject = {
-        会議タイトル: meetingInfo?.会議タイトル || '',
-        参加者: meetingInfo?.参加者 || [],
-        会議日時: meetingInfo?.会議日時 || '',
-        会議場所: meetingInfo?.会議場所 || '',
-        部門: meetingInfo?.部門 || '',
-        大分類: meetingInfo?.大分類 || '',
-        中分類: meetingInfo?.中分類 || '',
-        小分類: meetingInfo?.小分類 || '',
-      };
-
-      const mailRequest: MailSendRequest = {
-        subject: '議事録',
-        // recipient_email is optional; backend will use DEFAULT_RECIPIENT_EMAIL when empty
-        recipient_email: '',
-        // send JSON as plain text in html_content field (backend will treat as HTML body)
-        html_content: JSON.stringify(bodyObject, null, 2),
-      };
-
-      await sendMail(mailRequest);
-      alert('HTML添付メールを送信しました。');
-    } catch (error) {
-      console.error('HTMLメール送信に失敗しました:', error);
-      alert('HTMLメール送信に失敗しました。');
-    }
-  };
+  // HTML添付送信はフロントで廃止。PDF送信はJSONを送るフローとする。
 
   const handleSendPdfMail = async () => {
     try {
-  const bodyObject = {
-        会議タイトル: meetingInfo?.会議タイトル || '',
-        参加者: meetingInfo?.参加者 || [],
-        会議日時: meetingInfo?.会議日時 || '',
-        会議場所: meetingInfo?.会議場所 || '',
-        部門: meetingInfo?.部門 || '',
-        大分類: meetingInfo?.大分類 || '',
-        中分類: meetingInfo?.中分類 || '',
-        小分類: meetingInfo?.小分類 || '',
-      };
-
+      // フロントは構造化データ（meetingInfo + editorContent）をサーバに渡す
       const pdfMailRequest: PdfMailSendRequest = {
         subject: '議事録',
-        // recipient_email is optional; backend will use DEFAULT_RECIPIENT_EMAIL when empty
         recipient_email: '',
-        html_content: JSON.stringify(bodyObject, null, 2),
+        meetingInfo: meetingInfo || {},
+        minutesHtml: editorContent || '',
       };
 
       await sendPdfMail(pdfMailRequest);
@@ -347,7 +446,7 @@ await wait(5000);const c=document.querySelector('[data-is-scrollable="true"]');l
 const tsEl=e.closest('[class*="rightColumn-"]')?.querySelector('[id^="Header-timestamp-"]');if(tsEl)t=tsEl.textContent.trim();const msgEl=e.querySelector('[id^="sub-entry-"]');if(msgEl){msg=Array.from(msgEl.childNodes).filter(n=>n.nodeType===3).map(n=>n.textContent.trim()).join(' ');}
 if(!msg)continue;const uniqueKey=\`\${s}|\${t}|\${msg}\`;if(processedContent.has(uniqueKey)){skipCount++;continue;}
 processedContent.add(uniqueKey);newCount++;entries.push({speaker:s,time:t,content:msg});}
-return{newCount,skipCount};};c.scrollTop=0;await wait(1000);let res=addEntries(c.querySelectorAll('div[class*="rightColumn-"]'));console.log(\`初回: 新規 \${res.newCount} 件, 重複スキップ \${res.skipCount} 件\`);const totalHeight=c.scrollHeight;const viewHeight=c.clientHeight;const scrollStep=viewHeight*0.8;let currentScroll=0,loop=0;while(currentScroll<totalHeight&&loop<100){loop++;currentScroll+=scrollStep;c.scrollTop=currentScroll;await wait(300);if(Math.abs(c.scrollTop-currentScroll)>100){console.log(\`位置修正: 目標 \${currentScroll} → 実際 \${c.scrollTop}\`);c.scrollTop=currentScroll;await wait(300);}
+return{newCount,skipCount};};c.scrollTop=0;await wait(1000);let res=addEntries(c.querySelectorAll('div[class*="rightColumn-"]'));console.log(\`初回: 新規 \${res.newCount} 件, 重複スキップ \${res.skipCount} 件\`);const totalHeight=c.scrollHeight;const viewHeight=c.clientHeight;const scrollStep=viewHeight*1.5;let currentScroll=0,loop=0;while(currentScroll<totalHeight&&loop<100){loop++;currentScroll+=scrollStep;c.scrollTop=currentScroll;await wait(300);if(Math.abs(c.scrollTop-currentScroll)>100){console.log(\`位置修正: 目標 \${currentScroll} → 実際 \${c.scrollTop}\`);c.scrollTop=currentScroll;await wait(300);}
 res=addEntries(c.querySelectorAll('div[class*="rightColumn-"]'));console.log(\`スクロール \${loop}: 新規 \${res.newCount} 件, 重複スキップ \${res.skipCount} 件\`);if(currentScroll>=totalHeight-viewHeight)break;}
 c.scrollTop=c.scrollHeight;await wait(2000);res=addEntries(c.querySelectorAll('div[class*="rightColumn-"]'));console.log(\`最終: 新規 \${res.newCount} 件, 重複スキップ \${res.skipCount} 件\`);entries.sort((a,b)=>{const timeA=a.time.split(':').reduce((acc,time)=>60*acc+parseInt(time,10),0);const timeB=b.time.split(':').reduce((acc,time)=>60*acc+parseInt(time,10),0);return timeA-timeB;});let lastSpeaker='';for(const entry of entries){if(entry.speaker==='（システム）'&&lastSpeaker){transcript+=\`\${entry.content}\\n\\n\`;}else{if(entry.speaker!=='（システム）'){lastSpeaker=entry.speaker;}
 transcript+=\`\${entry.speaker}\${entry.time?' ['+entry.time+']':''}:\\n\${entry.content}\\n\\n\`;}}
@@ -427,9 +526,6 @@ console.log("最終結果:",result);}catch(e){console.error("詳細エラー:",e
           
           <div className="sidebar-section">
             <h3>メール送信</h3>
-            <button onClick={handleSendHtmlMail} className="sidebar-button">
-              HTML添付
-            </button>
             <button onClick={handleSendPdfMail} className="sidebar-button">
               PDF添付
             </button>
@@ -438,10 +534,9 @@ console.log("最終結果:",result);}catch(e){console.error("詳細エラー:",e
       </aside>
       
       <main className="editor-container">
-        {/* タブ切替: meetingInfo がある場合のみ表示 */}
         {meetingInfo ? (
           <div className="tabbed-editor">
-            <div className="tabs">
+            <div className="tabs" style={{height: TAB_HEIGHT}}>
               <button className={activeTab === 'info' ? 'active' : ''} onClick={() => setActiveTab('info')}>会議情報</button>
               <button className={activeTab === 'minutes' ? 'active' : ''} onClick={() => setActiveTab('minutes')}>議事録</button>
             </div>
@@ -472,10 +567,7 @@ console.log("最終結果:",result);}catch(e){console.error("詳細エラー:",e
                 <div className="minutes-editor-wrapper">
                   <TinyMCEEditor
                     value={editorContent}
-                    onContentChange={handleContentChange}
-                    onSave={() => {
-                      console.log('TinyMCE editor save');
-                    }}
+                    onContentChange={setEditorContent}
                     height={editorHeight}
                   />
                 </div>
@@ -485,10 +577,7 @@ console.log("最終結果:",result);}catch(e){console.error("詳細エラー:",e
         ) : (
           <TinyMCEEditor
             value={editorContent}
-            onContentChange={handleContentChange}
-            onSave={() => {
-              console.log('TinyMCE editor save');
-            }}
+            onContentChange={setEditorContent}
             height={editorHeight}
           />
         )}
@@ -536,9 +625,6 @@ console.log("最終結果:",result);}catch(e){console.error("詳細エラー:",e
           
           <div className="sidebar-section">
             <h3>メール送信</h3>
-            <button onClick={handleSendHtmlMail} className="sidebar-button">
-              HTML添付
-            </button>
             <button onClick={handleSendPdfMail} className="sidebar-button">
               PDF添付
             </button>

@@ -441,6 +441,8 @@
   border: 1px solid #e9ecef;
   padding: 12px;
   border-radius: 6px;
+  overflow: auto;
+  min-height: 100vh; /* 画面サイズに合わせて最大化 */
 }
 
 .minutes-editor-wrapper {

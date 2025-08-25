@@ -6,13 +6,10 @@
  */
 
 // API通信サービス
-export { sendMail, sendPdfMail } from './apiService';
+export { sendPdfMail } from './apiService';
 
 // エラーハンドリングサービス
 export { ErrorHandlerService } from './errorHandlerService';
-
-// PDFエクスポートサービス
-export { PdfExportService } from './pdfExportService';
 
 // 型定義のエクスポート
 export type { ErrorInfo } from './errorHandlerService'; 
