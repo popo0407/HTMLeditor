@@ -1,5 +1,4 @@
-﻿
-# IIS デプロイメント自動化スクリプト
+﻿# HTMLエディタ IIS デプロイメント自動化スクリプト
 # サーバー設定専用バージョン (HTTPS対応)
 #
 # 前提条件:
@@ -12,14 +11,11 @@
 #    PowerShell.exe -ExecutionPolicy Bypass -File "C:\webapp\HTMLEditor\deploy-to-iis.ps1"
 
 param(
-        [string]$SiteName = "HTMLEditor",
-        [string]$FrontendPort = "82",
-        [string]$BackendPort = "8002",
-        [string]$DeployPath = "C:\webapp\HTMLEditor",
-        [string]$HttpsPort = "443",
-        [string]$ServiceName = "HTMLEditorAPI",
-        [string]$ServiceDisplayName = "HTML Editor API Service",
-        [string]$ServiceDescription = "FastAPI backend for HTML Editor"
+    [string]$SiteName = "HTMLEditor",
+    [string]$FrontendPort = "82",
+    [string]$BackendPort = "8002",
+    [string]$DeployPath = "C:\webapp\HTMLEditor",
+    [string]$HttpsPort = "443"
 )
 
 # カラー出力用関数
@@ -28,8 +24,8 @@ function Write-ColorOutput($ForegroundColor, $Message) {
 }
 
 Write-ColorOutput Green "==================================================="
-Write-ColorOutput Green "サーバー設定スクリプト開始"
-Write-ColorOutput Green "前提：ファイルは C:\webapp\*** に配置済み"
+Write-ColorOutput Green "HTMLエディタ IIS サーバー設定スクリプト開始"
+Write-ColorOutput Green "前提：ファイルは C:\webapp\HTMLEditor に配置済み"
 Write-ColorOutput Green "==================================================="
 
 # 1. 管理者権限チェック
@@ -205,30 +201,47 @@ Write-ColorOutput Green "HTTPS設定が完了しました。"
 # 8.5. ARRリバースプロキシ設定
 Write-ColorOutput Yellow "ステップ 7.5: ARRリバースプロキシ設定..."
 
-# ARR（Application Request Routing）を有効化
+# --- 追加: グローバル（マシンレベル）で ARR/proxy を有効化しておく ---
+Write-ColorOutput Yellow "ステップ 7.4: ARR グローバル proxy を有効化（全サイト）..."
+try {
+    # グローバルに proxy セクションを作成/有効化
+    Set-WebConfigurationProperty -pspath "MACHINE/WEBROOT/APPHOST" -filter "system.webServer/proxy" -name "enabled" -value "True"
+    Write-ColorOutput Green "ARR global proxy を有効化しました (MACHINE/WEBROOT/APPHOST)。"
+} catch {
+    Write-ColorOutput Yellow "警告: ARR global proxy の有効化に失敗しました。手動で有効化してください。エラー: $_"
+}
+
+# ARR（Application Request Routing）を有効化（サイト単位）
 Set-WebConfigurationProperty -Filter "system.webServer/proxy" -PSPath "IIS:\Sites\$siteFullName" -Name "enabled" -Value "True"
 
-# URL Rewriteルール追加（/api/pdf/* → http://localhost:8002/api/pdf/）
-$rewriteRule = @"
-<rule name="ReverseProxyApiAll" stopProcessing="true">
-    <match url="^api/(.*)" />
-    <action type="Rewrite" url="http://localhost:$BackendPort/api/{R:1}" logRewrittenUrl="true" />
-</rule>
-"@
+# URL Rewriteルール追加（/api/pdf/* → backend）
+# サイト単位でハッシュ形式の Add-WebConfiguration を使い、安全に追加する
+$siteConfigPath = "IIS:\Sites\$siteFullName"
+$ruleName = 'ReverseProxyApi'
+try {
+    # 既に同名ルールがあれば削除（衝突回避）
+    Clear-WebConfiguration -pspath $siteConfigPath -filter "system.webServer/rewrite/rules/rule[@name='$ruleName']" -ErrorAction SilentlyContinue
 
-Add-WebConfigurationProperty -pspath "IIS:\Sites\$siteFullName" `
-    -filter "system.webServer/rewrite/rules" `
-    -name "." `
-    -value ([xml]$rewriteRule).rule
+    $ruleValue = @{
+        name = $ruleName
+        stopProcessing = $true
+        # /api/ 以下のすべてをバックエンドにリライトルールで転送
+        match = @{ url = '^api/(.*)' }
+        action = @{ type = 'Rewrite'; url = "http://localhost:$BackendPort/api/{R:1}"; logRewrittenUrl = $true }
+    }
 
-Write-ColorOutput Green "ARRリバースプロキシルール（/api/pdf/* → バックエンド）を追加しました。"
+    Add-WebConfiguration -pspath $siteConfigPath -Filter "system.webServer/rewrite/rules" -Value $ruleValue
+    Write-ColorOutput Green "ARRリバースプロキシルール（/api/* → バックエンド）をサイト単位で追加しました: $ruleName"
+} catch {
+    Write-ColorOutput Yellow "ARRリバースプロキシルールの追加に失敗しました: $_"
+}
 
 # 9. Windowsサービスとしてバックエンドを起動（NSSM使用）
 Write-ColorOutput Yellow "ステップ 8: バックエンドサービスの登録..."
 
-$serviceName = $ServiceName
-$serviceDisplayName = $ServiceDisplayName
-$serviceDescription = $ServiceDescription
+$serviceName = "HTMLEditorAPI"
+$serviceDisplayName = "HTML Editor API Service"
+$serviceDescription = "FastAPI backend for HTML Editor"
 
 # 既存サービスの停止・削除
 $existingService = Get-Service -Name $serviceName -ErrorAction SilentlyContinue
