@@ -14,7 +14,7 @@
 
 ```powershell
 # フロントエンドのプロジェクトフォルダに移動
-cd C:\Path\To\Your\Project\HTMLEditer\frontend
+cd C:\Path\To\Your\Project\HTMLEditor\frontend
 
 # 依存関係が未インストールの場合は実行
 npm install
@@ -32,7 +32,7 @@ npm run build
 
 # 2. プロジェクトディレクトリに移動
 
-cd C:\Users\user\Downloads\HTMLEditer
+cd C:\Users\user\Downloads\HTMLEditor
 
 # 3. 現在のセッションでのみ実行ポリシーを変更
 
