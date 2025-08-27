@@ -107,7 +107,39 @@ async def export_to_pdf(request: PdfExportRequest):
 
         # 旧互換ルート: 受け取った HTML をそのまま wkhtmltopdf ラッパへ渡す
         try:
-            pdf_data = generate_pdf_from_html(request.html_content or '')
+            # To ensure legacy html_content also uses shared CSS, wrap it in a
+            # minimal HTML that inlines backend/templates/pdf.css if present.
+            from pathlib import Path
+            backend_dir = Path(__file__).resolve().parents[2]  # project root/backend/app/.. -> backend/
+            templates_dir = backend_dir / 'templates'
+            css_text = ''
+            css_path = templates_dir / 'pdf.css'
+            try:
+                if css_path.exists():
+                    css_text = css_path.read_text(encoding='utf-8')
+            except Exception:
+                css_text = ''
+
+            raw_html = request.html_content or ''
+            if css_text:
+                wrapped = f"""
+<!doctype html>
+<html>
+<head>
+<meta charset=\"utf-8\"> 
+<style>
+{css_text}
+</style>
+</head>
+<body>
+{raw_html}
+</body>
+</html>
+"""
+            else:
+                wrapped = raw_html
+
+            pdf_data = generate_pdf_from_html(wrapped)
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"PDF生成失敗 (互換ルート): {e}")
         return StreamingResponse(

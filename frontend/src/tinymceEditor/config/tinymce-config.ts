@@ -28,45 +28,18 @@ export const tinymceConfig = {
   ],
   toolbar: [
     "undo redo | formatselect | bold italic underline strikethrough | alignleft aligncenter alignright alignjustify",
-    "bullist numlist outdent indent | link image | table | code",
+    "bullist numlist outdent indent | link image | table | searchreplace | code",
     "heading-large heading-medium heading-small heading-normal | separator | important action-item normal-text",
   ],
   branding: false,
   promotion: false,
+  // 共通CSSファイルを使用（重複したcontent_styleは削除）
+  content_css: [
+    '/editor-styles.css' // ビルド時にpdf.cssからコピーされる
+  ],
+  // 最小限のcontent_styleのみ（TinyMCE固有の調整）
   content_style: `
-    body { 
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
-      font-size: 14px; 
-      line-height: 1.1; 
-    }
-    p { 
-      line-height: 1.1; 
-      margin: 0 0 1em 0; 
-    }
-    h1, h2, h3, h4, h5, h6 { 
-      line-height: 1.1; 
-      margin: 1em 0 0.5em 0; 
-    }
-    .important { 
-      background-color: #fff3cd; 
-      border-left: 4px solid #ffc107; 
-      padding: 15px; 
-      margin: 15px 0; 
-    }
-    .action-item { 
-      background-color: #d4edda; 
-      border-left: 4px solid #28a745; 
-      padding: 15px; 
-      margin: 15px 0; 
-    }
-    /* UL要素のインデントを保持 */
-    ul.important, ul.action-item {
-      padding-left: 40px !important;
-      margin: 15px 0;
-    }
-    ul.important li, ul.action-item li {
-      margin: 5px 0;
-    }
+    /* TinyMCE固有の調整のみ */
     table { border-collapse: collapse; width: 100%; margin: 16px 0 !important; }
     table td, table th { border: 1px solid #000 !important; padding: 8px !important; }
     table th { background-color: #f8f9fa !important; font-weight: bold !important; }
@@ -85,6 +58,11 @@ export const tinymceConfig = {
       onAction: function () {
         // セパレーターは何もしない
       }
+    });
+
+    // カスタムショートカットキー: Ctrl+Shift+H で検索・置換
+    editor.addShortcut('ctrl+shift+h', 'Search and Replace', function() {
+      editor.execCommand('mceSearchReplace');
     });
     
     // 見出し大ボタン

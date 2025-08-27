@@ -65,10 +65,21 @@ def render_minutes_html(meeting: Dict[str, Any], minutes_html: str) -> str:
     
     env = Environment(loader=FileSystemLoader(str(templates_dir)), autoescape=select_autoescape(['html','xml']))
     template = env.get_template('meeting_minutes.html')
+
+    # Load shared PDF CSS (if present) and pass its contents to template
+    pdf_css_path = templates_dir / 'pdf.css'
+    pdf_css = ''
+    try:
+        if pdf_css_path.exists():
+            pdf_css = pdf_css_path.read_text(encoding='utf-8')
+    except Exception:
+        pdf_css = ''
+
     return template.render(
         meeting=meeting,
         minutes_html=minutes_html,
-        now=datetime.datetime.utcnow().isoformat()
+        now=datetime.datetime.utcnow().isoformat(),
+        pdf_css=pdf_css
     )
 
 

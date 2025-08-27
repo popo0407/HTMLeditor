@@ -4,7 +4,18 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{{ meeting.title or '' }}</title>
+  {% if pdf_css %}
   <style>
+    {{ pdf_css | safe }}
+    /* page break before minutes section so meeting info stays on first page */
+    .page-break {
+      page-break-before: always;
+      break-before: page;
+    }
+  </style>
+  {% else %}
+  <style>
+    /* fallback styles kept for compatibility if pdf.css is not present */
     body {
       font-family: 'Hiragino Sans', 'Yu Gothic', 'Meiryo', sans-serif;
       line-height: 1.6;
@@ -13,63 +24,19 @@
       margin: 0 auto;
       padding: 20px;
     }
-    h2 {
-      color: #2c3e50;
-      border-bottom: 3px solid #3498db;
-      padding-bottom: 10px;
-      margin-top: 30px;
-    }
-    h3 {
-      color: #34495e;
-      margin-top: 25px;
-    }
-    .action-item {
-      background-color: #d4edda;
-      border-left: 4px solid #28a745;
-      padding: 15px;
-      margin: 15px 0;
-    }
-    /* page break before minutes section so meeting info stays on first page */
-    .page-break {
-  page-break-before: always;
-  break-before: page;
-    }
-    .important {
-      background-color: #fff3cd;
-      border-left: 4px solid #ffc107;
-      padding: 15px;
-      margin: 15px 0;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin: 15px 0;
-    }
-    th, td {
-      border: 1px solid #ddd;
-      padding: 12px;
-      text-align: left;
-    }
-    th {
-      background-color: #f8f9fa;
-      font-weight: bold;
-    }
-    ul, ol {
-      margin: 10px 0;
-      padding-left: 25px;
-    }
-    li {
-      margin: 5px 0;
-    }
-    @media (max-width: 768px) {
-      body {
-        padding: 10px;
-      }
-      table {
-        font-size: 14px;
-      }
-    }
+    h2 { color: #2c3e50; border-bottom: 3px solid #3498db; padding-bottom: 10px; margin-top: 30px; }
+    h3 { color: #34495e; margin-top: 25px; }
+    .action-item { background-color: #d4edda; border-left: 4px solid #28a745; padding: 15px; margin: 15px 0; }
+    .important { background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 15px 0; }
+    table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+    th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+    th { background-color: #f8f9fa; font-weight: bold; }
+    ul, ol { margin: 10px 0; padding-left: 25px; }
+    li { margin: 5px 0; }
+    @media (max-width: 768px) { body { padding: 10px; } table { font-size: 14px; } }
+    .page-break { page-break-before: always; break-before: page; }
   </style>
+  {% endif %}
 </head>
 <body>
   <header>

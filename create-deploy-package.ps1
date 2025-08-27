@@ -30,6 +30,10 @@ if (Test-Path $envFile) {
 Write-Host "npm run build を実行します（$FrontendPath）" -ForegroundColor Yellow
 Push-Location $FrontendPath
 try {
+    # PDF CSS同期を先に実行
+    Write-Host "PDF CSSを同期中..." -ForegroundColor Cyan
+    npm run sync-pdf-css
+    
     # npm が存在することを前提にビルドを実行
     npm run build
 } catch {
