@@ -5,6 +5,7 @@ Used by: mail_routes (/mail/send-pdf) and pdf_routes (/pdf/export with minutesHt
 """
 from __future__ import annotations
 
+import re
 from pathlib import Path
 import datetime
 import os
@@ -15,10 +16,12 @@ from jinja2 import Environment, FileSystemLoader, select_autoescape
 from .pdf_service import generate_pdf_from_html
 
 
-# Allow class/style so action-item etc. remain
+# Allow class/style so action-item etc. remain, but explicitly exclude style and script tags
 _ALLOWED_TAGS = set(bleach.sanitizer.ALLOWED_TAGS).union({
     'h1','h2','h3','h4','h5','p','br','ul','ol','li','table','thead','tbody','tr','th','td','div','span'
 })
+_ALLOWED_TAGS.discard('style')  # Explicitly remove style tag to prevent CSS from appearing in content
+_ALLOWED_TAGS.discard('script')  # Explicitly remove script tag for security
 
 def _allowed_attrs():  # dynamic to avoid mutating global constant
     raw_allowed = bleach.sanitizer.ALLOWED_ATTRIBUTES
@@ -71,11 +74,27 @@ def render_minutes_html(meeting: Dict[str, Any], minutes_html: str) -> str:
 
 def generate_minutes_pdf(meeting_info: Dict[str, Any] | None, minutes_html_raw: str) -> bytes:
     meeting = normalize_meeting(meeting_info or {})
+    
+    # Remove CSS content and style tags completely
+    cleaned_html = minutes_html_raw or ''
+    
+    # Remove <style> tags and their content
+    cleaned_html = re.sub(r'<style[^>]*>.*?</style>', '', cleaned_html, flags=re.DOTALL | re.IGNORECASE)
+    
+    # Remove <script> tags and their content for security
+    cleaned_html = re.sub(r'<script[^>]*>.*?</script>', '', cleaned_html, flags=re.DOTALL | re.IGNORECASE)
+    
+    # Remove any remaining CSS-like content (standalone CSS rules without HTML tags)
+    # This handles cases where CSS is directly in the content without <style> tags
+    cleaned_html = re.sub(r'\s*[a-zA-Z-]+\s*{\s*[^}]*}\s*', '', cleaned_html, flags=re.MULTILINE)
+    
+    # Clean with bleach to ensure only allowed tags and attributes
     safe_minutes_html = bleach.clean(
-        minutes_html_raw or '',
+        cleaned_html,
         tags=_ALLOWED_TAGS,
         attributes=_allowed_attrs(),
         strip=True
     )
+    
     rendered_html = render_minutes_html(meeting, safe_minutes_html)
     return generate_pdf_from_html(rendered_html)

@@ -93,7 +93,7 @@ function App() {
     }
   };
 
-  // JSON解析を補助するヘルパー関数群
+  // XML/JSON解析を補助するヘルパー関数群
   const decodeHtmlEntities = (text: string): string => {
     const textarea = document.createElement('textarea');
     textarea.innerHTML = text;
@@ -108,6 +108,52 @@ function App() {
       .replace(/\n/g, '\\n')   // 改行をエスケープ
       .replace(/\r/g, '\\r')   // キャリッジリターンをエスケープ
       .replace(/\t/g, '\\t');  // タブをエスケープ
+  };
+
+  const parseXmlData = (text: string): any => {
+    // XML形式のデータを解析
+    const result: any = {};
+    
+    // 各フィールドをXMLタグから抽出
+    const fields = [
+      '会議タイトル', '参加者', '会議日時', '会議場所', 
+      '部門', '大分類', '中分類', '小分類', '要約', '議事録'
+    ];
+    
+    fields.forEach(field => {
+      const regex = new RegExp(`<${field}>(.*?)</${field}>`, 's');
+      const match = text.match(regex);
+      
+      if (match) {
+        let value = match[1].trim();
+        
+        // 参加者フィールドは配列として処理
+        if (field === '参加者') {
+          // XML内で配列が文字列として格納されている場合の処理
+          try {
+            // JSON配列形式の場合
+            if (value.startsWith('[') && value.endsWith(']')) {
+              result[field] = JSON.parse(value);
+            } else {
+              // カンマ区切りの場合
+              result[field] = value.split(',').map(item => item.trim()).filter(item => item);
+            }
+          } catch (e) {
+            // パースできない場合は文字列のまま
+            result[field] = value;
+          }
+        } else {
+          result[field] = value;
+        }
+      }
+    });
+
+    // 議事録フィールドが存在する場合のみ有効なデータとして扱う
+    if (result['議事録']) {
+      return result;
+    }
+    
+    throw new Error('有効なXML構造が見つかりません');
   };
 
   const parseFlexibleJson = (text: string): any => {
@@ -171,51 +217,62 @@ function App() {
     }
 
     try {
-      // まず、貼り付けがJSON形式かどうかを判定
+      // まず、貼り付けがXMLかJSONかを判定
       const trimmed = importText.trim();
-      let parsedJson: any = null;
+      let parsedData: any = null;
       
-      // JSON解析の前処理と複数の解析方法を試行
-      try {
-        // 方法1: 通常のJSON.parse
-        parsedJson = JSON.parse(trimmed);
-      } catch (e) {
+      // XML形式かどうかをチェック
+      if (trimmed.includes('<会議タイトル>') || trimmed.includes('<議事録>')) {
         try {
-          // 方法2: HTMLエンティティをデコードしてからJSON.parse
-          const decodedText = decodeHtmlEntities(trimmed);
-          parsedJson = JSON.parse(decodedText);
-        } catch (e2) {
+          // XML形式として解析
+          parsedData = parseXmlData(trimmed);
+        } catch (e) {
+          console.error('XML解析エラー:', e);
+          parsedData = null;
+        }
+      } else {
+        // JSON解析の前処理と複数の解析方法を試行
+        try {
+          // 方法1: 通常のJSON.parse
+          parsedData = JSON.parse(trimmed);
+        } catch (e) {
           try {
-            // 方法3: JSON文字列内の改行とHTMLタグを適切にエスケープ
-            const escapedText = escapeJsonString(trimmed);
-            parsedJson = JSON.parse(escapedText);
-          } catch (e3) {
+            // 方法2: HTMLエンティティをデコードしてからJSON.parse
+            const decodedText = decodeHtmlEntities(trimmed);
+            parsedData = JSON.parse(decodedText);
+          } catch (e2) {
             try {
-              // 方法4: より寛容な解析（正規表現を使って構造を抽出）
-              parsedJson = parseFlexibleJson(trimmed);
-            } catch (e4) {
-              parsedJson = null;
+              // 方法3: JSON文字列内の改行とHTMLタグを適切にエスケープ
+              const escapedText = escapeJsonString(trimmed);
+              parsedData = JSON.parse(escapedText);
+            } catch (e3) {
+              try {
+                // 方法4: より寛容な解析（正規表現を使って構造を抽出）
+                parsedData = parseFlexibleJson(trimmed);
+              } catch (e4) {
+                parsedData = null;
+              }
             }
           }
         }
       }
 
-      if (parsedJson && (parsedJson.議事録 || parsedJson['議事録'])) {
-        // JSON形式とみなし、会議情報と議事録をセット
+      if (parsedData && (parsedData.議事録 || parsedData['議事録'])) {
+        // XML/JSON形式とみなし、会議情報と議事録をセット
         const info = {
-          会議タイトル: parsedJson['会議タイトル'] || parsedJson['title'] || '',
-          参加者: parsedJson['参加者'] || parsedJson['participants'] || [],
-          会議日時: parsedJson['会議日時'] || parsedJson['datetime'] || '',
-          会議場所: parsedJson['会議場所'] || parsedJson['会議場所'] || '',
-          要約: parsedJson['要約'] || parsedJson['summary'] || '',
+          会議タイトル: parsedData['会議タイトル'] || parsedData['title'] || '',
+          参加者: parsedData['参加者'] || parsedData['participants'] || [],
+          会議日時: parsedData['会議日時'] || parsedData['datetime'] || '',
+          会議場所: parsedData['会議場所'] || parsedData['会議場所'] || '',
+          要約: parsedData['要約'] || parsedData['summary'] || '',
           // 以下は読み取り専用で表示する分類情報
-          部門: parsedJson['部門'] || parsedJson['department'] || '',
-          大分類: parsedJson['大分類'] || parsedJson['category1'] || '',
-          中分類: parsedJson['中分類'] || parsedJson['category2'] || '',
-          小分類: parsedJson['小分類'] || parsedJson['category3'] || '',
+          部門: parsedData['部門'] || parsedData['department'] || '',
+          大分類: parsedData['大分類'] || parsedData['category1'] || '',
+          中分類: parsedData['中分類'] || parsedData['category2'] || '',
+          小分類: parsedData['小分類'] || parsedData['category3'] || '',
         };
 
-        const minutesHtml = parsedJson['議事録'] || '';
+        const minutesHtml = parsedData['議事録'] || '';
 
         setMeetingInfo(info);
         setEditorContent(minutesHtml);
@@ -240,8 +297,8 @@ function App() {
         setCurrentStep('output'); // HTMLが読み込まれたら出力ステップに移行
       }
     } catch (error) {
-      console.error('テキストのインポートに失敗しました:', error);
-      alert('テキストのインポートに失敗しました。');
+      console.error('データのインポートに失敗しました:', error);
+      alert('データのインポートに失敗しました。XML/JSON形式またはHTML形式で入力してください。');
     }
   };
 
@@ -500,12 +557,12 @@ console.log("最終結果:",result);}catch(e){console.error("詳細エラー:",e
             <h3>議事録データ読み込み</h3>
             <p className="instruction-text">
               Teamsチャットページで「会議情報取得」ブックマークレットを実行し、
-              取得したHTMLをここに貼り付けてください。
+              取得したHTMLまたはXML/JSONデータをここに貼り付けてください。
             </p>
             <textarea
               value={importText}
               onChange={e => setImportText(e.target.value)}
-              placeholder="ブックマークレットで取得したHTMLを貼り付けてください"
+              placeholder="XML/JSONデータまたはHTMLを貼り付けてください&#10;&#10;XML形式例:&#10;<会議タイトル>会議名</会議タイトル>&#10;<参加者>['田中太郎','佐藤花子']</参加者>&#10;<議事録>HTMLコンテンツ</議事録>"
               rows={6}
               className="sidebar-textarea"
             />
