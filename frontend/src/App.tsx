@@ -418,7 +418,7 @@ function App() {
 
       // ファイル名を会議タイトルに基づいて生成
       const meetingTitle = meetingInfo?.会議タイトル || meetingInfo?.title || '議事録';
-      const filename = sanitizeFilename(meetingTitle);
+      const filename = sanitizeFilename(`【社外秘】_${meetingTitle}`);
 
       await HtmlExportService.downloadHtml(
         contentToExport,
@@ -457,7 +457,7 @@ function App() {
       
       // 会議タイトルからファイル名を生成
       const meetingTitle = meetingInfo?.title || meetingInfo?.['会議タイトル'] || '議事録';
-      const safeFilename = sanitizeFilename(meetingTitle);
+      const safeFilename = sanitizeFilename(`【社外秘】_${meetingTitle}`);
       a.download = `${safeFilename}.pdf`;
       
       document.body.appendChild(a);
