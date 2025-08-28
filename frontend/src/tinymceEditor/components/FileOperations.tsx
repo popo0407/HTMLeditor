@@ -43,9 +43,9 @@ export const FileOperations: React.FC<FileOperationsProps> = ({
     }
   };
 
-  const handleExport = (format: 'html' | 'text') => {
+  const handleExport = async (format: 'html' | 'text') => {
     try {
-      HtmlExportService.exportWithOptions(currentContent, {
+      await HtmlExportService.exportWithOptions(currentContent, {
         format,
         filename: `document.${format === 'html' ? 'html' : 'txt'}`,
         title: 'エクスポートされたドキュメント',

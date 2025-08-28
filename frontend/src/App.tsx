@@ -361,7 +361,7 @@ function App() {
       const meetingTitle = meetingInfo?.会議タイトル || meetingInfo?.title || '議事録';
       const filename = sanitizeFilename(meetingTitle);
 
-      HtmlExportService.downloadHtml(
+      await HtmlExportService.downloadHtml(
         contentToExport,
         `${filename}.html`,
         'エクスポートされたドキュメント'
@@ -557,12 +557,12 @@ console.log("最終結果:",result);}catch(e){console.error("詳細エラー:",e
             <h3>議事録データ読み込み</h3>
             <p className="instruction-text">
               Teamsチャットページで「会議情報取得」ブックマークレットを実行し、
-              取得したHTMLまたはXML/JSONデータをここに貼り付けてください。
+              取得したHTMLまたはXMLをここに貼り付けてください。
             </p>
             <textarea
               value={importText}
               onChange={e => setImportText(e.target.value)}
-              placeholder="XML/JSONデータまたはHTMLを貼り付けてください&#10;&#10;XML形式例:&#10;<会議タイトル>会議名</会議タイトル>&#10;<参加者>['田中太郎','佐藤花子']</参加者>&#10;<議事録>HTMLコンテンツ</議事録>"
+              placeholder="XMLまたはHTMLを貼り付けてください"
               rows={6}
               className="sidebar-textarea"
             />
