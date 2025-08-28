@@ -1,4 +1,4 @@
-/* Copied from frontend/src/styles/pdf.css at sync time
+/* Copied from frontend/src/styles/pdf.css at build time
    Backend will inline this CSS into the PDF template so wkhtmltopdf
    renders the same styles as the frontend TinyMCE preview.
    

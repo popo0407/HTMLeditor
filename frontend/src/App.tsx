@@ -508,7 +508,7 @@ res=addEntries(c.querySelectorAll('div[class*="rightColumn-"]'));console.log(\`�
 c.scrollTop=c.scrollHeight;await wait(2000);res=addEntries(c.querySelectorAll('div[class*="rightColumn-"]'));console.log(\`最終: 新規 \${res.newCount} 件, 重複スキップ \${res.skipCount} 件\`);entries.sort((a,b)=>{const timeA=a.time.split(':').reduce((acc,time)=>60*acc+parseInt(time,10),0);const timeB=b.time.split(':').reduce((acc,time)=>60*acc+parseInt(time,10),0);return timeA-timeB;});let lastSpeaker='';for(const entry of entries){if(entry.speaker==='（システム）'&&lastSpeaker){transcript+=\`\${entry.content}\\n\\n\`;}else{if(entry.speaker!=='（システム）'){lastSpeaker=entry.speaker;}
 transcript+=\`\${entry.speaker}\${entry.time?' ['+entry.time+']':''}:\\n\${entry.content}\\n\\n\`;}}
 }
-let result={title,participants,datetime,transcript};if(!transcript){alert("❌ 会議情報を取得できませんでした");}else{try{const jsonString=JSON.stringify(result,null,2);await navigator.clipboard.writeText(jsonString);const lineCount=transcript.split('\\n').filter(l=>l.includes(':')).length;alert(\`✅ 完了！会議情報を取得し、クリップボードにコピーしました\`);window.open('https://d3r0xupf0a2onu.cloudfront.net/use-case-builder/execute/6fadf23d-6d52-4029-a3bb-73a3b9f09cb2','_blank');}catch(clipboardError){const lineCount=transcript.split('\\n').filter(l=>l.includes(':')).length;alert(\`❌ クリップボードコピー失敗\`);window.open('https://d3r0xupf0a2onu.cloudfront.net/use-case-builder/execute/6fadf23d-6d52-4029-a3bb-73a3b9f09cb2','_blank');}}
+let result={title,participants,datetime,transcript};if(!transcript){alert("❌ 会議情報を取得できませんでした");}else{try{const jsonString=JSON.stringify(result,null,2);await navigator.clipboard.writeText(jsonString);const lineCount=transcript.split('\\n').filter(l=>l.includes(':')).length;alert(\`✅ 完了！会議情報を取得し、クリップボードにコピーしました\`);window.open('https://d3r0xupf0a2onu.cloudfront.net/use-case-builder/execute/7abad9ce-a83f-4ec6-91fe-4e843ec0add1','_blank');}catch(clipboardError){const lineCount=transcript.split('\\n').filter(l=>l.includes(':')).length;alert(\`❌ クリップボードコピー失敗\`);window.open('https://d3r0xupf0a2onu.cloudfront.net/use-case-builder/execute/7abad9ce-a83f-4ec6-91fe-4e843ec0add1','_blank');}}
 console.log("最終結果:",result);}catch(e){console.error("詳細エラー:",e);alert(\`❌ 取得失敗: \${e.message||'unknown error'}\`);}})().catch(e=>{console.error("❌ 外側Promiseエラー:",e);});})();`;
 
     return (
@@ -607,7 +607,50 @@ console.log("最終結果:",result);}catch(e){console.error("詳細エラー:",e
                   <label>会議場所</label>
                   <input type="text" value={meetingInfo.会議場所 || ''} onChange={e => setMeetingInfo({...meetingInfo, 会議場所: e.target.value})} />
                   <label>参加者</label>
-                  <textarea rows={4} value={Array.isArray(meetingInfo.参加者) ? meetingInfo.参加者.join('\n') : meetingInfo.参加者 || ''} onChange={e => setMeetingInfo({...meetingInfo, 参加者: e.target.value})} />
+                  {/* Participants editor: show per-person inputs with add/remove to ensure array is sent */}
+                  {(() => {
+                    // normalize to array for rendering
+                    const parts = Array.isArray(meetingInfo.参加者)
+                      ? meetingInfo.参加者
+                      : (typeof meetingInfo.参加者 === 'string' ? meetingInfo.参加者.split(/\r?\n/).filter(Boolean) : []);
+                    return (
+                      <div className="participants-editor">
+                        {parts.map((p: string, idx: number) => (
+                          <div key={idx} style={{display: 'flex', marginBottom: 6}}>
+                            <input
+                              type="text"
+                              value={p}
+                              onChange={e => {
+                                const newParts = parts.slice();
+                                newParts[idx] = e.target.value;
+                                setMeetingInfo({...meetingInfo, 参加者: newParts});
+                              }}
+                              style={{flex: 1}}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const newParts = parts.slice();
+                                newParts.splice(idx, 1);
+                                setMeetingInfo({...meetingInfo, 参加者: newParts});
+                              }}
+                              style={{marginLeft: 8}}
+                            >
+                              ×
+                            </button>
+                          </div>
+                        ))}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const newParts = parts.slice();
+                            newParts.push('');
+                            setMeetingInfo({...meetingInfo, 参加者: newParts});
+                          }}
+                        >参加者を追加</button>
+                      </div>
+                    );
+                  })()}
                   <label>要約</label>
                   <textarea rows={6} value={meetingInfo.要約 || ''} onChange={e => setMeetingInfo({...meetingInfo, 要約: e.target.value})} />
                   {/* 表示はするが編集不可の分類フィールド */}
