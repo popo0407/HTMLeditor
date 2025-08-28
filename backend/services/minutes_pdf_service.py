@@ -18,7 +18,7 @@ from .pdf_service import generate_pdf_from_html
 
 # Allow class/style so action-item etc. remain, but explicitly exclude style and script tags
 _ALLOWED_TAGS = set(bleach.sanitizer.ALLOWED_TAGS).union({
-    'h1','h2','h3','h4','h5','p','br','ul','ol','li','table','thead','tbody','tr','th','td','div','span'
+    'h1','h2','h3','h4','h5','p','br','ul','ol','li','table','thead','tbody','tr','th','td','div','span','img'
 })
 _ALLOWED_TAGS.discard('style')  # Explicitly remove style tag to prevent CSS from appearing in content
 _ALLOWED_TAGS.discard('script')  # Explicitly remove script tag for security
@@ -37,8 +37,11 @@ def _allowed_attrs():  # dynamic to avoid mutating global constant
                 if a not in existing:
                     existing.append(a)
             allowed['*'] = existing
+        
+        # 画像タグの属性を許可
+        allowed['img'] = ['src', 'alt', 'width', 'height', 'class', 'style']
     else:
-        allowed = {'*': list(raw_allowed) + ['class','style']}
+        allowed = {'*': list(raw_allowed) + ['class','style'], 'img': ['src', 'alt', 'width', 'height', 'class', 'style']}
     return allowed
 
 
@@ -104,6 +107,7 @@ def generate_minutes_pdf(meeting_info: Dict[str, Any] | None, minutes_html_raw: 
         cleaned_html,
         tags=_ALLOWED_TAGS,
         attributes=_allowed_attrs(),
+        protocols=['http', 'https', 'data'],  # data: プロトコルを許可（base64画像用）
         strip=True
     )
     

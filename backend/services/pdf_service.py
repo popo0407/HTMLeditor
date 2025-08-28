@@ -32,7 +32,9 @@ def generate_pdf_from_html(html: str, timeout: int = 30, use_header: bool = True
         cmd = [
             WKHTMLTOPDF_PATH,
             '--disable-javascript',
-            '--no-images',
+            '--enable-local-file-access',
+            '--load-error-handling', 'ignore',
+            '--load-media-error-handling', 'ignore',
             '--margin-top', '25mm',
             '--margin-bottom', '15mm',
             '--margin-left', '15mm',

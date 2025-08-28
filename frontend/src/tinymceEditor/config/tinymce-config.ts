@@ -4,7 +4,7 @@ console.log('Environment API Key:', process.env.REACT_APP_TINYMCE_APIKEY);
 console.log('Using API Key:', apiKey);
 
 // 基本的なTinyMCE設定
-export const tinymceConfig = {
+export const tinymceConfig: any = {
   height: 500,
   menubar: true,
   plugins: [
@@ -25,6 +25,7 @@ export const tinymceConfig = {
     "table",
     "help",
     "wordcount",
+    "paste",
   ],
   toolbar: [
     "undo redo | formatselect | bold italic underline strikethrough | alignleft aligncenter alignright alignjustify",
@@ -33,6 +34,20 @@ export const tinymceConfig = {
   ],
   branding: false,
   promotion: false,
+  // 画像の貼り付けとbase64変換設定
+  paste_data_images: true,
+  automatic_uploads: false,
+  images_upload_handler: (blobInfo: any, success: (url: string) => void, failure: (err: string) => void) => {
+    // 画像をbase64として埋め込む
+    const reader = new FileReader();
+    reader.onload = function () {
+      success(reader.result as string);
+    };
+    reader.onerror = function () {
+      failure('画像の読み込みに失敗しました');
+    };
+    reader.readAsDataURL(blobInfo.blob());
+  },
   // 共通CSSファイルを使用（重複したcontent_styleは削除）
   content_css: [
     '/editor-styles.css' // ビルド時にpdf.cssからコピーされる
