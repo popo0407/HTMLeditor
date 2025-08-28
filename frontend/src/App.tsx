@@ -227,6 +227,75 @@ function App() {
     }
   };
 
+  // テキスト処理ロジックを共通化
+  const processImportText = async (textContent: string) => {
+    if (!textContent.trim()) {
+      throw new Error('インポートするテキストが空です。');
+    }
+
+    // XML形式かHTMLの会議情報かをチェック
+    const trimmed = textContent.trim();
+    let parsedData: any = null;
+    
+    if (trimmed.includes('<会議タイトル>') || trimmed.includes('<議事録>')) {
+      try {
+        // XML形式として解析
+        parsedData = parseXmlData(trimmed);
+      } catch (e) {
+        console.error('XML解析エラー:', e);
+        parsedData = null;
+      }
+    } else if (trimmed.includes('meeting-info-container')) {
+      try {
+        // HTML会議情報として解析
+        parsedData = parseHtmlWithMeetingInfo(trimmed);
+      } catch (e) {
+        console.error('HTML会議情報解析エラー:', e);
+        parsedData = null;
+      }
+    }
+
+    if (parsedData && (parsedData.議事録 || parsedData['議事録'])) {
+      // XML/HTML会議情報形式とみなし、会議情報と議事録をセット
+      const info = {
+        会議タイトル: parsedData['会議タイトル'] || parsedData['title'] || '',
+        参加者: parsedData['参加者'] || parsedData['participants'] || [],
+        会議日時: parsedData['会議日時'] || parsedData['datetime'] || '',
+        会議場所: parsedData['会議場所'] || parsedData['会議場所'] || '',
+        要約: parsedData['要約'] || parsedData['summary'] || '',
+        // 以下は読み取り専用で表示する分類情報
+        部門: parsedData['部門'] || parsedData['department'] || '',
+        大分類: parsedData['大分類'] || parsedData['category1'] || '',
+        中分類: parsedData['中分類'] || parsedData['category2'] || '',
+        小分類: parsedData['小分類'] || parsedData['category3'] || '',
+      };
+
+      const minutesHtml = parsedData['議事録'] || '';
+
+      setMeetingInfo(info);
+      setEditorContent(minutesHtml);
+      setActiveTab('info');
+      setImportText('');
+      setCurrentStep('editor');
+    } else {
+      // HTMLまたはマークダウンテキストを処理
+      console.log('Importing text to TinyMCE editor:', textContent);
+      
+      // マークダウンの場合はHTMLに変換
+      let processedContent = textContent;
+      if (textContent.includes('#') || textContent.includes('|')) {
+        processedContent = convertMarkdownToHtml(textContent);
+      }
+      
+      // HTMLをクリーンアップして安全な形式に変換
+      processedContent = sanitizeHtml(processedContent);
+      
+      setEditorContent(processedContent);
+      setImportText(''); // 読み込み後クリア
+      setCurrentStep('output'); // HTMLが読み込まれたら出力ステップに移行
+    }
+  };
+
   const handleImportFromTextBox = async () => {
     if (!importText.trim()) {
       alert('インポートするテキストを入力してください。');
@@ -234,67 +303,7 @@ function App() {
     }
 
     try {
-      // XML形式かHTMLの会議情報かをチェック
-      const trimmed = importText.trim();
-      let parsedData: any = null;
-      
-      if (trimmed.includes('<会議タイトル>') || trimmed.includes('<議事録>')) {
-        try {
-          // XML形式として解析
-          parsedData = parseXmlData(trimmed);
-        } catch (e) {
-          console.error('XML解析エラー:', e);
-          parsedData = null;
-        }
-      } else if (trimmed.includes('meeting-info-container')) {
-        try {
-          // HTML会議情報として解析
-          parsedData = parseHtmlWithMeetingInfo(trimmed);
-        } catch (e) {
-          console.error('HTML会議情報解析エラー:', e);
-          parsedData = null;
-        }
-      }
-
-      if (parsedData && (parsedData.議事録 || parsedData['議事録'])) {
-        // XML/HTML会議情報形式とみなし、会議情報と議事録をセット
-        const info = {
-          会議タイトル: parsedData['会議タイトル'] || parsedData['title'] || '',
-          参加者: parsedData['参加者'] || parsedData['participants'] || [],
-          会議日時: parsedData['会議日時'] || parsedData['datetime'] || '',
-          会議場所: parsedData['会議場所'] || parsedData['会議場所'] || '',
-          要約: parsedData['要約'] || parsedData['summary'] || '',
-          // 以下は読み取り専用で表示する分類情報
-          部門: parsedData['部門'] || parsedData['department'] || '',
-          大分類: parsedData['大分類'] || parsedData['category1'] || '',
-          中分類: parsedData['中分類'] || parsedData['category2'] || '',
-          小分類: parsedData['小分類'] || parsedData['category3'] || '',
-        };
-
-        const minutesHtml = parsedData['議事録'] || '';
-
-        setMeetingInfo(info);
-        setEditorContent(minutesHtml);
-        setActiveTab('info');
-        setImportText('');
-        setCurrentStep('editor');
-      } else {
-        // HTMLまたはマークダウンテキストを処理
-        console.log('Importing text to TinyMCE editor:', importText);
-        
-        // マークダウンの場合はHTMLに変換
-        let processedContent = importText;
-        if (importText.includes('#') || importText.includes('|')) {
-          processedContent = convertMarkdownToHtml(importText);
-        }
-        
-        // HTMLをクリーンアップして安全な形式に変換
-        processedContent = sanitizeHtml(processedContent);
-        
-        setEditorContent(processedContent);
-        setImportText(''); // 読み込み後クリア
-        setCurrentStep('output'); // HTMLが読み込まれたら出力ステップに移行
-      }
+      await processImportText(importText);
     } catch (error) {
       console.error('データのインポートに失敗しました:', error);
       alert('データのインポートに失敗しました。XML形式、HTML会議情報形式、またはHTML形式で入力してください。');
@@ -363,10 +372,20 @@ function App() {
     
     if (htmlFile) {
       const reader = new FileReader();
-      reader.onload = (event) => {
+      reader.onload = async (event) => {
         const content = event.target?.result as string;
         if (content) {
           setImportText(content);
+          // ファイル読み込み後、自動的に議事録読み込み処理を実行
+          // setImportTextの更新を待つために少し遅延を入れる
+          setTimeout(async () => {
+            try {
+              await processImportText(content);
+            } catch (error) {
+              console.error('HTMLファイルの自動処理に失敗しました:', error);
+              alert('HTMLファイルの自動処理に失敗しました。手動で「議事録を読み込み」ボタンを押してください。');
+            }
+          }, 100);
         }
       };
       reader.readAsText(htmlFile, 'UTF-8');
