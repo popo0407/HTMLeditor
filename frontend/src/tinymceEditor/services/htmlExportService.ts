@@ -145,18 +145,22 @@ export class HtmlExportService {
     const summaryHtml = HtmlExportService.escapeHtml(summary).replace(/\r?\n/g, '<br/>');
 
 
-    const departmentHtml = department ? `<h3>部門</h3><p>${HtmlExportService.escapeHtml(department)}</p>` : '';
+    const departmentHtml = department ? `<h3 class="meeting-info-department">部門</h3><p class="meeting-info-department-value">${HtmlExportService.escapeHtml(department)}</p>` : '';
 
     const fragment = `
-      <h1>${HtmlExportService.escapeHtml(title)}</h1>
-      <h3>会議日時: ${HtmlExportService.escapeHtml(datetime)}</h3>
-      <h3>場所: ${HtmlExportService.escapeHtml(location)}</h3>
-      ${departmentHtml}
-      <h3>参加者</h3>
-      <p>${participantsHtml}</p>
-      <h3>会議概要</h3>
-      <p>${summaryHtml}</p>
-      ${minutesHtml || ''}
+      <div class="meeting-info-container">
+        <h1 class="meeting-info-title">${HtmlExportService.escapeHtml(title)}</h1>
+        <h3 class="meeting-info-datetime">会議日時: ${HtmlExportService.escapeHtml(datetime)}</h3>
+        <h3 class="meeting-info-location">場所: ${HtmlExportService.escapeHtml(location)}</h3>
+        ${departmentHtml}
+        <h3 class="meeting-info-participants-label">参加者</h3>
+        <p class="meeting-info-participants">${participantsHtml}</p>
+        <h3 class="meeting-info-summary-label">会議概要</h3>
+        <p class="meeting-info-summary">${summaryHtml}</p>
+      </div>
+      <div class="meeting-minutes-content">
+        ${minutesHtml || ''}
+      </div>
     `;
 
     return fragment;

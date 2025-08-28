@@ -93,22 +93,7 @@ function App() {
     }
   };
 
-  // XML/JSON解析を補助するヘルパー関数群
-  const decodeHtmlEntities = (text: string): string => {
-    const textarea = document.createElement('textarea');
-    textarea.innerHTML = text;
-    return textarea.value;
-  };
-
-  const escapeJsonString = (text: string): string => {
-    // JSON文字列内の制御文字を適切にエスケープ
-    return text
-      .replace(/\\/g, '\\\\')  // バックスラッシュをエスケープ
-      .replace(/"/g, '\\"')    // ダブルクォートをエスケープ（ただし、既にエスケープされていない場合のみ）
-      .replace(/\n/g, '\\n')   // 改行をエスケープ
-      .replace(/\r/g, '\\r')   // キャリッジリターンをエスケープ
-      .replace(/\t/g, '\\t');  // タブをエスケープ
-  };
+  // XML解析を補助するヘルパー関数群
 
   const parseXmlData = (text: string): any => {
     // XML形式のデータを解析
@@ -156,43 +141,75 @@ function App() {
     throw new Error('有効なXML構造が見つかりません');
   };
 
-  const parseFlexibleJson = (text: string): any => {
-    // より寛容なJSON解析：正規表現を使って主要フィールドを抽出
+  const parseHtmlWithMeetingInfo = (html: string): any => {
+    // HTMLから会議情報を抽出
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = html;
+    
+    const meetingInfoContainer = tempDiv.querySelector('.meeting-info-container');
+    if (!meetingInfoContainer) {
+      return null; // 会議情報がない場合
+    }
+    
     const result: any = {};
     
-    // 議事録フィールドを抽出（HTMLタグが含まれていても対応）
-    // dotallフラグの代わりに[\s\S]を使用
-    const minutesMatch = text.match(/"議事録"\s*:\s*"((?:[^"\\]|\\[\s\S])*)"/) ||
-                        text.match(/'議事録'\s*:\s*'((?:[^'\\]|\\[\s\S])*)'/) ||
-                        text.match(/"議事録"\s*:\s*`((?:[^`\\]|\\[\s\S])*)`/);
+    // 各要素から会議情報を抽出
+    const titleEl = meetingInfoContainer.querySelector('.meeting-info-title');
+    if (titleEl) result['会議タイトル'] = titleEl.textContent?.trim() || '';
     
-    if (minutesMatch) {
-      result['議事録'] = minutesMatch[1].replace(/\\"/g, '"').replace(/\\n/g, '\n');
+    const datetimeEl = meetingInfoContainer.querySelector('.meeting-info-datetime');
+    if (datetimeEl) {
+      const datetimeText = datetimeEl.textContent?.trim() || '';
+      result['会議日時'] = datetimeText.replace(/^会議日時:\s*/, '');
     }
-
-    // その他の主要フィールドを抽出
-    const fields = ['会議タイトル', '会議日時', '会議場所', '参加者', '要約', '部門', '大分類', '中分類', '小分類'];
     
-    fields.forEach(field => {
-      const fieldMatch = text.match(new RegExp(`"${field}"\\s*:\\s*"((?:[^"\\\\]|\\\\[\\s\\S])*)"`, 'g')) ||
-                         text.match(new RegExp(`'${field}'\\s*:\\s*'((?:[^'\\\\]|\\\\[\\s\\S])*)'`, 'g'));
+    const locationEl = meetingInfoContainer.querySelector('.meeting-info-location');
+    if (locationEl) {
+      const locationText = locationEl.textContent?.trim() || '';
+      result['会議場所'] = locationText.replace(/^場所:\s*/, '');
+    }
+    
+    const departmentEl = meetingInfoContainer.querySelector('.meeting-info-department-value');
+    if (departmentEl) result['部門'] = departmentEl.textContent?.trim() || '';
+    
+    const participantsEl = meetingInfoContainer.querySelector('.meeting-info-participants');
+    if (participantsEl) {
+      const participantsHtml = participantsEl.innerHTML;
+      // <br/>や<br>で区切られた参加者リストを配列に変換
+      // HTMLタグを除去してテキストのみを取得
+      let participants = participantsHtml
+        .split(/<br\s*\/?>/i)  // <br/>、<br>、<BR/>等に対応
+        .map(p => p.replace(/<[^>]*>/g, '').trim())  // HTMLタグを除去
+        .filter(p => p);  // 空文字列を除去
       
-      if (fieldMatch && fieldMatch[0]) {
-        // マッチした結果から値部分を抽出
-        const valueMatch = fieldMatch[0].match(new RegExp(`"${field}"\\s*:\\s*"((?:[^"\\\\]|\\\\[\\s\\S])*)"`, '')) ||
-                          fieldMatch[0].match(new RegExp(`'${field}'\\s*:\\s*'((?:[^'\\\\]|\\\\[\\s\\S])*)'`, ''));
-        if (valueMatch) {
-          result[field] = valueMatch[1].replace(/\\"/g, '"').replace(/\\n/g, '\n');
+      // 分割がうまくいかない場合は、textContentから改行で分割を試行
+      if (participants.length <= 1 && participantsEl.textContent) {
+        const textParticipants = participantsEl.textContent.trim().split(/\n/).filter(p => p.trim());
+        if (textParticipants.length > 1) {
+          participants = textParticipants.map(p => p.trim());
         }
       }
-    });
-
-    // 議事録フィールドが存在する場合のみ有効なJSONとして扱う
-    if (result['議事録']) {
-      return result;
+      
+      result['参加者'] = participants;
     }
     
-    throw new Error('有効なJSON構造が見つかりません');
+    const summaryEl = meetingInfoContainer.querySelector('.meeting-info-summary');
+    if (summaryEl) {
+      const summaryHtml = summaryEl.innerHTML;
+      // <br/>を改行に変換し、その他のHTMLタグを除去
+      result['要約'] = summaryHtml
+        .replace(/<br\s*\/?>/gi, '\n')  // <br>を改行に変換
+        .replace(/<[^>]*>/g, '')  // その他のHTMLタグを除去
+        .trim();
+    }
+    
+    // 議事録部分を抽出
+    const minutesEl = tempDiv.querySelector('.meeting-minutes-content');
+    if (minutesEl) {
+      result['議事録'] = minutesEl.innerHTML;
+    }
+    
+    return result;
   };
 
   const handleOpenTeamsChat = () => {
@@ -217,11 +234,10 @@ function App() {
     }
 
     try {
-      // まず、貼り付けがXMLかJSONかを判定
+      // XML形式かHTMLの会議情報かをチェック
       const trimmed = importText.trim();
       let parsedData: any = null;
       
-      // XML形式かどうかをチェック
       if (trimmed.includes('<会議タイトル>') || trimmed.includes('<議事録>')) {
         try {
           // XML形式として解析
@@ -230,35 +246,18 @@ function App() {
           console.error('XML解析エラー:', e);
           parsedData = null;
         }
-      } else {
-        // JSON解析の前処理と複数の解析方法を試行
+      } else if (trimmed.includes('meeting-info-container')) {
         try {
-          // 方法1: 通常のJSON.parse
-          parsedData = JSON.parse(trimmed);
+          // HTML会議情報として解析
+          parsedData = parseHtmlWithMeetingInfo(trimmed);
         } catch (e) {
-          try {
-            // 方法2: HTMLエンティティをデコードしてからJSON.parse
-            const decodedText = decodeHtmlEntities(trimmed);
-            parsedData = JSON.parse(decodedText);
-          } catch (e2) {
-            try {
-              // 方法3: JSON文字列内の改行とHTMLタグを適切にエスケープ
-              const escapedText = escapeJsonString(trimmed);
-              parsedData = JSON.parse(escapedText);
-            } catch (e3) {
-              try {
-                // 方法4: より寛容な解析（正規表現を使って構造を抽出）
-                parsedData = parseFlexibleJson(trimmed);
-              } catch (e4) {
-                parsedData = null;
-              }
-            }
-          }
+          console.error('HTML会議情報解析エラー:', e);
+          parsedData = null;
         }
       }
 
       if (parsedData && (parsedData.議事録 || parsedData['議事録'])) {
-        // XML/JSON形式とみなし、会議情報と議事録をセット
+        // XML/HTML会議情報形式とみなし、会議情報と議事録をセット
         const info = {
           会議タイトル: parsedData['会議タイトル'] || parsedData['title'] || '',
           参加者: parsedData['参加者'] || parsedData['participants'] || [],
@@ -298,7 +297,7 @@ function App() {
       }
     } catch (error) {
       console.error('データのインポートに失敗しました:', error);
-      alert('データのインポートに失敗しました。XML/JSON形式またはHTML形式で入力してください。');
+      alert('データのインポートに失敗しました。XML形式、HTML会議情報形式、またはHTML形式で入力してください。');
     }
   };
 
@@ -557,12 +556,12 @@ console.log("最終結果:",result);}catch(e){console.error("詳細エラー:",e
             <h3>議事録データ読み込み</h3>
             <p className="instruction-text">
               Teamsチャットページで「会議情報取得」ブックマークレットを実行し、
-              取得したHTMLまたはXMLをここに貼り付けてください。
+              取得したHTML、XMLまたは既にエクスポートしたHTMLをここに貼り付けてください。
             </p>
             <textarea
               value={importText}
               onChange={e => setImportText(e.target.value)}
-              placeholder="XMLまたはHTMLを貼り付けてください"
+              placeholder="XML、HTML会議情報、またはHTMLを貼り付けてください"
               rows={6}
               className="sidebar-textarea"
             />
