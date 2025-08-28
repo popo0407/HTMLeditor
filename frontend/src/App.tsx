@@ -349,6 +349,47 @@ function App() {
     return sanitized;
   };
 
+  // ファイルドラッグ&ドロップのハンドラー関数
+  const handleFileDrop = (e: React.DragEvent<HTMLTextAreaElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    const files = Array.from(e.dataTransfer.files);
+    const htmlFile = files.find(file => 
+      file.type === 'text/html' || 
+      file.name.toLowerCase().endsWith('.html') || 
+      file.name.toLowerCase().endsWith('.htm')
+    );
+    
+    if (htmlFile) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const content = event.target?.result as string;
+        if (content) {
+          setImportText(content);
+        }
+      };
+      reader.readAsText(htmlFile, 'UTF-8');
+    } else {
+      alert('HTMLファイル（.html または .htm）をドロップしてください。');
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLTextAreaElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDragEnter = (e: React.DragEvent<HTMLTextAreaElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDragLeave = (e: React.DragEvent<HTMLTextAreaElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
   const handleDownloadHtml = async () => {
     try {
       let contentToExport = editorContent;
@@ -561,7 +602,11 @@ console.log("最終結果:",result);}catch(e){console.error("詳細エラー:",e
             <textarea
               value={importText}
               onChange={e => setImportText(e.target.value)}
-              placeholder="XML、HTML会議情報、またはHTMLを貼り付けてください"
+              onDrop={handleFileDrop}
+              onDragOver={handleDragOver}
+              onDragEnter={handleDragEnter}
+              onDragLeave={handleDragLeave}
+              placeholder="XML、HTML会議情報、またはHTMLを貼り付けてください（HTMLファイルのドラッグ&ドロップも可能）"
               rows={6}
               className="sidebar-textarea"
             />
@@ -703,7 +748,11 @@ console.log("最終結果:",result);}catch(e){console.error("詳細エラー:",e
             <textarea
               value={importText}
               onChange={e => setImportText(e.target.value)}
-              placeholder="追加のHTMLやマークダウンテキストを貼り付けてください"
+              onDrop={handleFileDrop}
+              onDragOver={handleDragOver}
+              onDragEnter={handleDragEnter}
+              onDragLeave={handleDragLeave}
+              placeholder="追加のHTMLやマークダウンテキストを貼り付けてください（HTMLファイルのドラッグ&ドロップも可能）"
               rows={4}
               className="sidebar-textarea"
             />
