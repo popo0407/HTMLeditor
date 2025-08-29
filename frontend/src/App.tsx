@@ -22,6 +22,8 @@ function App() {
   const [editorHeight, setEditorHeight] = useState<number>(window.innerHeight);
   const [currentStep, setCurrentStep] = useState<'url-input' | 'editor' | 'output' | 'bookmarklet-install'>('url-input');
   const [teamsUrl, setTeamsUrl] = useState('');
+  // 参加者の選択状態を管理
+  const [selectedParticipants, setSelectedParticipants] = useState<Set<number>>(new Set());
 
   // HtmlExportServiceは直接使用するため、useRefは不要
 
@@ -57,6 +59,32 @@ function App() {
     return sanitized;
   };
 
+  // 選択した参加者を除外する関数
+  const excludeSelectedParticipants = () => {
+    if (!meetingInfo || selectedParticipants.size === 0) return;
+    
+    const parts = Array.isArray(meetingInfo.参加者)
+      ? meetingInfo.参加者
+      : (typeof meetingInfo.参加者 === 'string' ? meetingInfo.参加者.split(/\r?\n/).filter(Boolean) : []);
+    
+    const newParts = parts.filter((_: string, idx: number) => !selectedParticipants.has(idx));
+    setMeetingInfo({...meetingInfo, 参加者: newParts});
+    setSelectedParticipants(new Set());
+  };
+
+  // 選択した参加者以外を除外する関数
+  const excludeUnselectedParticipants = () => {
+    if (!meetingInfo || selectedParticipants.size === 0) return;
+    
+    const parts = Array.isArray(meetingInfo.参加者)
+      ? meetingInfo.参加者
+      : (typeof meetingInfo.参加者 === 'string' ? meetingInfo.参加者.split(/\r?\n/).filter(Boolean) : []);
+    
+    const newParts = parts.filter((_: string, idx: number) => selectedParticipants.has(idx));
+    setMeetingInfo({...meetingInfo, 参加者: newParts});
+    setSelectedParticipants(new Set());
+  };
+
   // ウィンドウサイズの変更を監視
   useEffect(() => {
     const handleResize = () => {
@@ -71,6 +99,11 @@ function App() {
     handleResize();
     return () => window.removeEventListener('resize', handleResize);
   }, [meetingInfo]);
+
+  // 参加者リストが変更されたときに選択状態をリセット
+  useEffect(() => {
+    setSelectedParticipants(new Set());
+  }, [meetingInfo?.参加者]);
 
   // TeamsのURLを編集してチャットページに変換する
   const convertTeamsUrl = (originalUrl: string): string => {
@@ -669,7 +702,41 @@ console.log("最終結果:",result);}catch(e){console.error("詳細エラー:",e
                   <input type="text" value={meetingInfo.会議日時 || ''} onChange={e => setMeetingInfo({...meetingInfo, 会議日時: e.target.value})} />
                   <label>会議場所</label>
                   <input type="text" value={meetingInfo.会議場所 || ''} onChange={e => setMeetingInfo({...meetingInfo, 会議場所: e.target.value})} />
-                  <label>参加者</label>
+                  <div style={{display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px'}}>
+                    <label style={{margin: 0}}>参加者</label>
+                    <button
+                      type="button"
+                      onClick={excludeSelectedParticipants}
+                      style={{
+                        padding: '4px 8px',
+                        fontSize: '12px',
+                        backgroundColor: '#dc3545',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: 'pointer'
+                      }}
+                      disabled={selectedParticipants.size === 0}
+                    >
+                      選択した参加者を除外
+                    </button>
+                    <button
+                      type="button"
+                      onClick={excludeUnselectedParticipants}
+                      style={{
+                        padding: '4px 8px',
+                        fontSize: '12px',
+                        backgroundColor: '#28a745',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: 'pointer'
+                      }}
+                      disabled={selectedParticipants.size === 0}
+                    >
+                      選択した参加者以外を除外
+                    </button>
+                  </div>
                   {/* Participants editor: show per-person inputs with add/remove to ensure array is sent */}
                   {(() => {
                     // normalize to array for rendering
@@ -677,9 +744,23 @@ console.log("最終結果:",result);}catch(e){console.error("詳細エラー:",e
                       ? meetingInfo.参加者
                       : (typeof meetingInfo.参加者 === 'string' ? meetingInfo.参加者.split(/\r?\n/).filter(Boolean) : []);
                     return (
-                      <div className="participants-editor">
+                      <div className="participants-editor" style={{display: 'flex', flexDirection: 'column', alignItems: 'flex-start'}}>
                         {parts.map((p: string, idx: number) => (
-                          <div key={idx} style={{display: 'flex', marginBottom: 6}}>
+                          <div key={idx} style={{display: 'flex', alignItems: 'center', marginBottom: 6, justifyContent: 'flex-start', width: '10%'}}>
+                            <input
+                              type="checkbox"
+                              checked={selectedParticipants.has(idx)}
+                              onChange={e => {
+                                const newSelected = new Set(selectedParticipants);
+                                if (e.target.checked) {
+                                  newSelected.add(idx);
+                                } else {
+                                  newSelected.delete(idx);
+                                }
+                                setSelectedParticipants(newSelected);
+                              }}
+                              style={{marginRight: 8}}
+                            />
                             <input
                               type="text"
                               value={p}
@@ -688,19 +769,8 @@ console.log("最終結果:",result);}catch(e){console.error("詳細エラー:",e
                                 newParts[idx] = e.target.value;
                                 setMeetingInfo({...meetingInfo, 参加者: newParts});
                               }}
-                              style={{flex: 1}}
+                              style={{flex: '1 1 auto', minWidth: '500px'}}
                             />
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const newParts = parts.slice();
-                                newParts.splice(idx, 1);
-                                setMeetingInfo({...meetingInfo, 参加者: newParts});
-                              }}
-                              style={{marginLeft: 8}}
-                            >
-                              ×
-                            </button>
                           </div>
                         ))}
                         <button
@@ -709,6 +779,8 @@ console.log("最終結果:",result);}catch(e){console.error("詳細エラー:",e
                             const newParts = parts.slice();
                             newParts.push('');
                             setMeetingInfo({...meetingInfo, 参加者: newParts});
+                            // 新しい参加者が追加されたので選択状態をリセット
+                            setSelectedParticipants(new Set());
                           }}
                         >参加者を追加</button>
                       </div>
