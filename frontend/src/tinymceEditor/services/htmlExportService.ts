@@ -121,9 +121,9 @@ export class HtmlExportService {
   会議場所?: string;
   要約?: string;
   部門?: string;
-  大分類?: string; // (廃止予定: 出力から除外)
-  中分類?: string; // (廃止予定: 出力から除外)
-  小分類?: string; // (廃止予定: 出力から除外)
+  大分類?: string;
+  中分類?: string;
+  小分類?: string;
   } | null | undefined, minutesHtml: string): string {
     if (!meetingInfo) return minutesHtml || '';
 
@@ -131,8 +131,10 @@ export class HtmlExportService {
     const datetime = meetingInfo.会議日時 || '';
     const location = meetingInfo.会議場所 || '';
   const summary = (meetingInfo.要約 || '').toString();
-  // 出力では部門のみ使用
   const department = meetingInfo.部門 || '';
+  const category1 = meetingInfo.大分類 || '';
+  const category2 = meetingInfo.中分類 || '';
+  const category3 = meetingInfo.小分類 || '';
     let participants: string[] | string = meetingInfo.参加者 || [];
     if (typeof participants === 'string') {
       participants = participants.split(/\r?\n/).filter(Boolean);
@@ -144,8 +146,10 @@ export class HtmlExportService {
 
     const summaryHtml = HtmlExportService.escapeHtml(summary).replace(/\r?\n/g, '<br/>');
 
-
     const departmentHtml = department ? `<h3 class="meeting-info-department">部門</h3><p class="meeting-info-department-value">${HtmlExportService.escapeHtml(department)}</p>` : '';
+    const category1Html = category1 ? `<h3 class="meeting-info-category1">大分類</h3><p class="meeting-info-category1-value">${HtmlExportService.escapeHtml(category1)}</p>` : '';
+    const category2Html = category2 ? `<h3 class="meeting-info-category2">中分類</h3><p class="meeting-info-category2-value">${HtmlExportService.escapeHtml(category2)}</p>` : '';
+    const category3Html = category3 ? `<h3 class="meeting-info-category3">小分類</h3><p class="meeting-info-category3-value">${HtmlExportService.escapeHtml(category3)}</p>` : '';
 
     const fragment = `
       <div class="meeting-info-container">
@@ -153,6 +157,9 @@ export class HtmlExportService {
         <h3 class="meeting-info-datetime">会議日時: ${HtmlExportService.escapeHtml(datetime)}</h3>
         <h3 class="meeting-info-location">場所: ${HtmlExportService.escapeHtml(location)}</h3>
         ${departmentHtml}
+        ${category1Html}
+        ${category2Html}
+        ${category3Html}
         <h3 class="meeting-info-participants-label">参加者</h3>
         <p class="meeting-info-participants">${participantsHtml}</p>
         <h3 class="meeting-info-summary-label">会議概要</h3>

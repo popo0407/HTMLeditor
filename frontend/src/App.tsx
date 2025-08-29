@@ -204,6 +204,16 @@ function App() {
     
     const departmentEl = meetingInfoContainer.querySelector('.meeting-info-department-value');
     if (departmentEl) result['部門'] = departmentEl.textContent?.trim() || '';
+
+    // 分類情報の抽出を追加
+    const category1El = meetingInfoContainer.querySelector('.meeting-info-category1-value');
+    if (category1El) result['大分類'] = category1El.textContent?.trim() || '';
+
+    const category2El = meetingInfoContainer.querySelector('.meeting-info-category2-value');
+    if (category2El) result['中分類'] = category2El.textContent?.trim() || '';
+
+    const category3El = meetingInfoContainer.querySelector('.meeting-info-category3-value');
+    if (category3El) result['小分類'] = category3El.textContent?.trim() || '';
     
     const participantsEl = meetingInfoContainer.querySelector('.meeting-info-participants');
     if (participantsEl) {
@@ -789,14 +799,14 @@ console.log("最終結果:",result);}catch(e){console.error("詳細エラー:",e
                   <label>要約</label>
                   <textarea rows={6} value={meetingInfo.要約 || ''} onChange={e => setMeetingInfo({...meetingInfo, 要約: e.target.value})} />
                   {/* 表示はするが編集不可の分類フィールド */}
-                  <label>部門(編集不可)</label>
-                  <input type="text" value={meetingInfo.部門 || ''} readOnly />
-                  <label>大分類(編集不可)</label>
-                  <input type="text" value={meetingInfo.大分類 || ''} readOnly />
-                  <label>中分類(編集不可)</label>
-                  <input type="text" value={meetingInfo.中分類 || ''} readOnly />
-                  <label>小分類(編集不可)</label>
-                  <input type="text" value={meetingInfo.小分類 || ''} readOnly />
+                  <label>部門</label>
+                  <input type="text" value={meetingInfo.部門 || ''} onChange={e => setMeetingInfo({...meetingInfo, 部門: e.target.value})} />
+                  <label>大分類</label>
+                  <input type="text" value={meetingInfo.大分類 || ''} onChange={e => setMeetingInfo({...meetingInfo, 大分類: e.target.value})} />
+                  <label>中分類</label>
+                  <input type="text" value={meetingInfo.中分類 || ''} onChange={e => setMeetingInfo({...meetingInfo, 中分類: e.target.value})} />
+                  <label>小分類</label>
+                  <input type="text" value={meetingInfo.小分類 || ''} onChange={e => setMeetingInfo({...meetingInfo, 小分類: e.target.value})} />
                 </div>
               ) : (
                 <div className="minutes-editor-wrapper">
