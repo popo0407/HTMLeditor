@@ -47,6 +47,41 @@ def sanitize_filename(filename: str) -> str:
     
     return sanitized
 
+
+def generate_pdf_filename(meeting_info: dict) -> str:
+    """会議情報に基づいてPDFファイル名を生成（【社外秘】_会議日（YYYY-MM-DD）_会議タイトル）"""
+    # 会議タイトルを取得
+    meeting_title = meeting_info.get('会議タイトル') or meeting_info.get('title') or '議事録'
+    
+    # 会議日時を取得してフォーマット
+    meeting_datetime = meeting_info.get('会議日時') or meeting_info.get('datetime') or ''
+    meeting_date = ''
+    
+    if meeting_datetime:
+        try:
+            # 様々な日時フォーマットに対応
+            from datetime import datetime
+            if ' ' in meeting_datetime:
+                # "YYYY-MM-DD HH:MM:SS" または "YYYY-MM-DD HH:MM" 形式
+                meeting_date = meeting_datetime.split(' ')[0]
+            else:
+                # "YYYY-MM-DD" 形式
+                meeting_date = meeting_datetime
+            
+            # 日付の妥当性チェック
+            datetime.strptime(meeting_date, '%Y-%m-%d')
+        except ValueError:
+            # 日付が不正な場合は空文字列
+            meeting_date = ''
+    
+    # ファイル名を構築
+    if meeting_date:
+        filename = f"【社外秘】_{meeting_date}_{meeting_title}"
+    else:
+        filename = f"【社外秘】_{meeting_title}"
+    
+    return sanitize_filename(filename)
+
 def encode_filename_for_header(filename: str) -> str:
     """HTTPヘッダー用にファイル名をエンコード（RFC 6266準拠）"""
     # ASCII文字のみの場合はそのまま
@@ -89,9 +124,8 @@ async def export_to_pdf(request: PdfExportRequest):
             except Exception as e:
                 raise HTTPException(status_code=500, detail=f"PDF生成失敗: {e}")
 
-            # ファイル名を会議タイトルに基づいて生成
-            meeting_title = meeting.get('title') or meeting.get('会議タイトル') or '議事録'
-            pdf_filename = sanitize_filename(meeting_title)
+            # ファイル名を新しい形式で生成（【社外秘】_会議日（YYYY-MM-DD）_会議タイトル）
+            pdf_filename = generate_pdf_filename(meeting)
 
             return StreamingResponse(
                 io.BytesIO(pdf_bytes),

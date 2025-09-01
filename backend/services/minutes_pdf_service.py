@@ -16,6 +16,33 @@ from jinja2 import Environment, FileSystemLoader, select_autoescape
 from .pdf_service import generate_pdf_from_html
 
 
+def validate_datetime_format(datetime_str: str) -> bool:
+    """
+    日時文字列がYYYY-MM-DD hh:mm:ss形式かを検証する
+    
+    Args:
+        datetime_str: 検証する日時文字列
+        
+    Returns:
+        bool: 有効な形式の場合True
+    """
+    if not datetime_str or not isinstance(datetime_str, str):
+        return True  # 空の場合は検証をスキップ
+    
+    # YYYY-MM-DD hh:mm:ss 形式の正規表現
+    pattern = r'^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$'
+    
+    if not re.match(pattern, datetime_str):
+        return False
+    
+    try:
+        # 実際にパースして有効な日時かチェック
+        datetime.datetime.strptime(datetime_str, '%Y-%m-%d %H:%M:%S')
+        return True
+    except ValueError:
+        return False
+
+
 # Allow class/style so action-item etc. remain, but explicitly exclude style and script tags
 _ALLOWED_TAGS = set(bleach.sanitizer.ALLOWED_TAGS).union({
     'h1','h2','h3','h4','h5','p','br','ul','ol','li','table','thead','tbody','tr','th','td','div','span','img'
@@ -48,7 +75,8 @@ def _allowed_attrs():  # dynamic to avoid mutating global constant
 def normalize_meeting(meeting: Dict[str, Any] | None) -> Dict[str, Any]:
     if not meeting:
         return {}
-    return {
+    
+    normalized = {
         'title': meeting.get('title') or meeting.get('会議タイトル') or '',
         'datetime': meeting.get('datetime') or meeting.get('会議日時') or '',
         'location': meeting.get('location') or meeting.get('会議場所') or '',
@@ -56,6 +84,12 @@ def normalize_meeting(meeting: Dict[str, Any] | None) -> Dict[str, Any]:
         'participants': meeting.get('participants') or meeting.get('参加者') or [],
         'summary': meeting.get('summary') or meeting.get('要約') or ''
     }
+    
+    # 日時形式の検証
+    if normalized['datetime'] and not validate_datetime_format(normalized['datetime']):
+        raise ValueError(f"会議日時の形式が正しくありません。YYYY-MM-DD hh:mm:ss の形式で入力してください。入力値: {normalized['datetime']}")
+    
+    return normalized
 
 
 def render_minutes_html(meeting: Dict[str, Any], minutes_html: str) -> str:

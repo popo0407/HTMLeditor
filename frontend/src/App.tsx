@@ -29,22 +29,49 @@ function App() {
 
   // No client-side template loading. Backend uses DEFAULT_RECIPIENT_EMAIL from .env.
 
-  // ファイル名をサニタイズする関数
-  const sanitizeFilename = (filename: string): string => {
-    if (!filename) {
-      return '議事録';
+  // 日時形式を検証するヘルパー関数
+  const validateDateTimeFormat = (datetime: string): boolean => {
+    if (!datetime || typeof datetime !== 'string') return true; // 空の場合は検証をスキップ
+    
+    // YYYY-MM-DD hh:mm:ss 形式の正規表現
+    const dateTimePattern = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/;
+    
+    if (!dateTimePattern.test(datetime)) {
+      return false;
     }
     
-    // Windows/Linux/macOSで禁止されている文字を置き換え
-    const forbiddenChars = /[<>:"/\\|?*]/g;
-    let sanitized = filename.replace(forbiddenChars, '_');
+    // 実際の日付として有効かチェック
+    const datePart = datetime.split(' ')[0];
+    const timePart = datetime.split(' ')[1];
     
-    // 制御文字を削除
-    // eslint-disable-next-line no-control-regex
-    sanitized = sanitized.replace(/[\x00-\x1f]/g, '_');
+    const [year, month, day] = datePart.split('-').map(Number);
+    const [hour, minute, second] = timePart.split(':').map(Number);
     
-    // 先頭・末尾のドット、スペースを削除
-    sanitized = sanitized.replace(/^[. ]+|[. ]+$/g, '');
+    // 基本的な範囲チェック
+    if (month < 1 || month > 12) return false;
+    if (day < 1 || day > 31) return false;
+    if (hour < 0 || hour > 23) return false;
+    if (minute < 0 || minute > 59) return false;
+    if (second < 0 || second > 59) return false;
+    
+    // Date オブジェクトで実際に有効な日付かチェック
+    const date = new Date(year, month - 1, day, hour, minute, second);
+    return date.getFullYear() === year &&
+           date.getMonth() === month - 1 &&
+           date.getDate() === day &&
+           date.getHours() === hour &&
+           date.getMinutes() === minute &&
+           date.getSeconds() === second;
+  };
+
+  // ファイル名をサニタイズするヘルパー関数
+  const sanitizeFilename = (filename: string): string => {
+    // ファイル名に使用できない文字を除去またはアンダーバーに置き換え
+    let sanitized = filename
+      .replace(/[<>:"/\\|?*]/g, '_')  // 無効な文字をアンダーバーに置き換え
+      .replace(/\s+/g, '_')           // 連続するスペースをアンダーバーに置き換え
+      .replace(/_{2,}/g, '_')         // 連続するアンダーバーを単一に
+      .replace(/^_+|_+$/g, '');       // 先頭と末尾のアンダーバーを除去
     
     // 空文字列の場合はデフォルト名を返す
     if (!sanitized) {
@@ -57,6 +84,45 @@ function App() {
     }
     
     return sanitized;
+  };
+
+  // PDFファイル名を生成するヘルパー関数（【社外秘】_会議日（YYYY-MM-DD）_会議タイトル）
+  const generatePdfFilename = (meetingInfo: any): string => {
+    // 会議タイトルを取得
+    const meetingTitle = meetingInfo?.['会議タイトル'] || meetingInfo?.title || '議事録';
+    
+    // 会議日時を取得してフォーマット
+    const meetingDateTime = meetingInfo?.['会議日時'] || meetingInfo?.datetime || '';
+    let meetingDate = '';
+    
+    if (meetingDateTime) {
+      try {
+        // 様々な日時フォーマットに対応
+        if (meetingDateTime.includes(' ')) {
+          // "YYYY-MM-DD HH:MM:SS" または "YYYY-MM-DD HH:MM" 形式
+          meetingDate = meetingDateTime.split(' ')[0];
+        } else {
+          // "YYYY-MM-DD" 形式
+          meetingDate = meetingDateTime;
+        }
+        
+        // 日付の妥当性チェック（簡易）
+        const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+        if (!dateRegex.test(meetingDate)) {
+          meetingDate = '';
+        }
+      } catch (error) {
+        // 日付が不正な場合は空文字列
+        meetingDate = '';
+      }
+    }
+    
+    // ファイル名を構築
+    const filename = meetingDate 
+      ? `【社外秘】_${meetingDate}_${meetingTitle}`
+      : `【社外秘】_${meetingTitle}`;
+    
+    return sanitizeFilename(filename);
   };
 
   // 選択した参加者を除外する関数
@@ -261,6 +327,12 @@ function App() {
       return;
     }
 
+    // https://teams.microsoft.com/meet/ から始まるURLの場合は特別なメッセージを表示
+    if (teamsUrl.trim().startsWith('https://teams.microsoft.com/meet/')) {
+      alert('このリンクの会議チャットには自動で移動できません。Webブラウザ上でTeamsを手動で開き、会議チャットを開いた状態でブックマークレット「会議情報取得」を実行してください。');
+      return;
+    }
+
     try {
       const convertedUrl = convertTeamsUrl(teamsUrl);
       window.open(convertedUrl, '_blank');
@@ -454,14 +526,19 @@ function App() {
 
   const handleDownloadHtml = async () => {
     try {
+      // 会議日時の形式チェック
+      if (meetingInfo?.会議日時 && !validateDateTimeFormat(meetingInfo.会議日時)) {
+        alert('会議日時の形式が正しくありません。YYYY-MM-DD hh:mm:ss の形式で入力してください。\n例: 2025-01-01 14:00:00');
+        return;
+      }
+
       let contentToExport = editorContent;
       if (meetingInfo) {
         contentToExport = HtmlExportService.buildCombinedFragment(meetingInfo, editorContent);
       }
 
-      // ファイル名を会議タイトルに基づいて生成
-      const meetingTitle = meetingInfo?.会議タイトル || meetingInfo?.title || '議事録';
-      const filename = sanitizeFilename(`【社外秘】_${meetingTitle}`);
+      // 新しい形式でファイル名を生成（【社外秘】_会議日（YYYY-MM-DD）_会議タイトル）
+      const filename = generatePdfFilename(meetingInfo);
 
       await HtmlExportService.downloadHtml(
         contentToExport,
@@ -476,6 +553,12 @@ function App() {
 
   const handleDownloadPdf = async () => {
     try {
+      // 会議日時の形式チェック
+      if (meetingInfo?.会議日時 && !validateDateTimeFormat(meetingInfo.会議日時)) {
+        alert('会議日時の形式が正しくありません。YYYY-MM-DD hh:mm:ss の形式で入力してください。\n例: 2025-01-01 14:00:00');
+        return;
+      }
+
       // meetingInfo + minutesHtml をそのままバックエンドに送りテンプレート統一
       const API_BASE_URL = process.env.REACT_APP_API_URL;
       const payload = {
@@ -498,9 +581,8 @@ function App() {
       const a = document.createElement('a');
       a.href = url;
       
-      // 会議タイトルからファイル名を生成
-      const meetingTitle = meetingInfo?.title || meetingInfo?.['会議タイトル'] || '議事録';
-      const safeFilename = sanitizeFilename(`【社外秘】_${meetingTitle}`);
+      // 新しい形式でファイル名を生成（【社外秘】_会議日（YYYY-MM-DD）_会議タイトル）
+      const safeFilename = generatePdfFilename(meetingInfo);
       a.download = `${safeFilename}.pdf`;
       
       document.body.appendChild(a);
@@ -518,6 +600,12 @@ function App() {
 
   const handleSendPdfMail = async () => {
     try {
+      // 会議日時の形式チェック
+      if (meetingInfo?.会議日時 && !validateDateTimeFormat(meetingInfo.会議日時)) {
+        alert('会議日時の形式が正しくありません。YYYY-MM-DD hh:mm:ss の形式で入力してください。\n例: 2025-01-01 14:00:00');
+        return;
+      }
+
       // フロントは構造化データ（meetingInfo + editorContent）をサーバに渡す
       const pdfMailRequest: PdfMailSendRequest = {
         subject: '議事録',
@@ -708,8 +796,13 @@ console.log("最終結果:",result);}catch(e){console.error("詳細エラー:",e
                 <div className="meeting-info-editor">
                   <label>会議タイトル</label>
                   <input type="text" value={meetingInfo.会議タイトル || ''} onChange={e => setMeetingInfo({...meetingInfo, 会議タイトル: e.target.value})} />
-                  <label>会議日時</label>
-                  <input type="text" value={meetingInfo.会議日時 || ''} onChange={e => setMeetingInfo({...meetingInfo, 会議日時: e.target.value})} />
+                  <label>会議日時 (YYYY-MM-DD hh:mm:ss)</label>
+                  <input 
+                    type="text" 
+                    placeholder="2025-01-01 14:00:00" 
+                    value={meetingInfo.会議日時 || ''} 
+                    onChange={e => setMeetingInfo({...meetingInfo, 会議日時: e.target.value})} 
+                  />
                   <label>会議場所</label>
                   <input type="text" value={meetingInfo.会議場所 || ''} onChange={e => setMeetingInfo({...meetingInfo, 会議場所: e.target.value})} />
                   <div style={{display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px'}}>
