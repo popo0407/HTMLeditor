@@ -18,6 +18,13 @@ export interface PdfMailSendRequest {
   recipient_email?: string;
   meetingInfo?: any;
   minutesHtml?: string;
+  // 元データ関連
+  sourceDataText?: string;
+  sourceDataFile?: {
+    name: string;
+    content: string; // base64
+    mimeType: string;
+  };
 }
 
 export interface MailSendResponse {

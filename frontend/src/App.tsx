@@ -24,6 +24,11 @@ function App() {
   const [teamsUrl, setTeamsUrl] = useState('');
   // 参加者の選択状態を管理
   const [selectedParticipants, setSelectedParticipants] = useState<Set<number>>(new Set());
+  
+  // 元データ管理の状態
+  const [sourceDataText, setSourceDataText] = useState('');
+  const [sourceDataFile, setSourceDataFile] = useState<File | null>(null);
+  const [isSourceDataTextDisabled, setIsSourceDataTextDisabled] = useState(false);
 
   // HtmlExportServiceは直接使用するため、useRefは不要
 
@@ -121,6 +126,45 @@ function App() {
     const filename = meetingDate 
       ? `【社外秘】_${meetingDate}_${meetingTitle}`
       : `【社外秘】_${meetingTitle}`;
+    
+    return sanitizeFilename(filename);
+  };
+
+  // 元データファイル名を生成するヘルパー関数（【社外秘】_YYYY-MM-DD_会議タイトル_元データ）
+  const generateSourceDataFilename = (meetingInfo: any, extension: string = 'txt'): string => {
+    // 会議タイトルを取得
+    const meetingTitle = meetingInfo?.['会議タイトル'] || meetingInfo?.title || '議事録';
+    
+    // 会議日時を取得してフォーマット
+    const meetingDateTime = meetingInfo?.['会議日時'] || meetingInfo?.datetime || '';
+    let meetingDate = '';
+    
+    if (meetingDateTime) {
+      try {
+        // 様々な日時フォーマットに対応
+        if (meetingDateTime.includes(' ')) {
+          // "YYYY-MM-DD HH:MM:SS" または "YYYY-MM-DD HH:MM" 形式
+          meetingDate = meetingDateTime.split(' ')[0];
+        } else {
+          // "YYYY-MM-DD" 形式
+          meetingDate = meetingDateTime;
+        }
+        
+        // 日付の妥当性チェック（簡易）
+        const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+        if (!dateRegex.test(meetingDate)) {
+          meetingDate = '';
+        }
+      } catch (error) {
+        // 日付が不正な場合は空文字列
+        meetingDate = '';
+      }
+    }
+    
+    // ファイル名を構築
+    const filename = meetingDate 
+      ? `【社外秘】_${meetingDate}_${meetingTitle}_元データ`
+      : `【社外秘】_${meetingTitle}_元データ`;
     
     return sanitizeFilename(filename);
   };
@@ -524,6 +568,43 @@ function App() {
     e.stopPropagation();
   };
 
+  // 元データファイルドラッグ&ドロップのハンドラー関数
+  const handleSourceDataFileDrop = (e: React.DragEvent<HTMLTextAreaElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    const files = Array.from(e.dataTransfer.files);
+    const supportedFile = files.find(file => {
+      const name = file.name.toLowerCase();
+      return name.endsWith('.doc') || name.endsWith('.docx') || 
+             name.endsWith('.xls') || name.endsWith('.xlsx') || 
+             name.endsWith('.pdf');
+    });
+    
+    if (supportedFile) {
+      setSourceDataFile(supportedFile);
+      setSourceDataText(''); // ファイルがアップロードされたらテキストをクリア
+      setIsSourceDataTextDisabled(true); // テキスト入力を無効化
+    } else {
+      alert('対応ファイル形式: Word(.doc, .docx), Excel(.xls, .xlsx), PDF(.pdf)');
+    }
+  };
+
+  // 元データテキスト変更ハンドラー
+  const handleSourceDataTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setSourceDataText(e.target.value);
+    if (e.target.value.trim()) {
+      setSourceDataFile(null); // テキストが入力されたらファイルをクリア
+    }
+  };
+
+  // 元データクリアハンドラー
+  const handleClearSourceData = () => {
+    setSourceDataText('');
+    setSourceDataFile(null);
+    setIsSourceDataTextDisabled(false);
+  };
+
   const handleDownloadHtml = async () => {
     try {
       // 会議日時の形式チェック
@@ -606,16 +687,46 @@ function App() {
         return;
       }
 
-      // フロントは構造化データ（meetingInfo + editorContent）をサーバに渡す
+      // 元データの準備
+      let sourceDataFileAttachment: any = undefined;
+      let sourceDataTextContent: string | undefined = undefined;
+
+      if (sourceDataFile && sourceDataFile instanceof File) {
+        // ファイルがアップロードされている場合
+        const fileReader = new FileReader();
+        sourceDataFileAttachment = await new Promise((resolve, reject) => {
+          fileReader.onload = () => {
+            const base64Content = (fileReader.result as string).split(',')[1]; // data:... 部分を除去
+            resolve({
+              name: sourceDataFile.name,
+              content: base64Content,
+              mimeType: sourceDataFile.type || 'application/octet-stream'
+            });
+          };
+          fileReader.onerror = reject;
+          fileReader.readAsDataURL(sourceDataFile);
+        });
+      } else if (sourceDataText && sourceDataText.trim()) {
+        // テキストが入力されている場合
+        sourceDataTextContent = sourceDataText.trim();
+      }
+
+      // フロントは構造化データ（meetingInfo + editorContent + 元データ）をサーバに渡す
       const pdfMailRequest: PdfMailSendRequest = {
         subject: '議事録',
         recipient_email: '',
         meetingInfo: meetingInfo || {},
         minutesHtml: editorContent || '',
+        sourceDataText: sourceDataTextContent,
+        sourceDataFile: sourceDataFileAttachment,
       };
 
       await sendPdfMail(pdfMailRequest);
-      alert('PDF添付メールを送信しました。');
+      
+      const attachmentInfo = sourceDataFileAttachment ? 
+        ` + 元データファイル (${sourceDataFileAttachment.name})` : 
+        (sourceDataTextContent ? ' + 元データテキスト' : '');
+      alert(`PDF${attachmentInfo}添付メールを送信しました。`);
     } catch (error) {
       console.error('PDFメール送信に失敗しました:', error);
       alert('PDFメール送信に失敗しました。');
@@ -763,6 +874,47 @@ console.log("最終結果:",result);}catch(e){console.error("詳細エラー:",e
             <button onClick={handleImportFromTextBox} className="sidebar-button">
               議事録を読み込み
             </button>
+          </div>
+
+          <div className="sidebar-section">
+            <h3>元データ入力</h3>
+            <p className="instruction-text">
+              議事録の元となるテキストデータを入力するか、Word・Excel・PDFファイルをドラッグ&ドロップしてください。
+            </p>
+            <textarea
+              value={sourceDataText}
+              onChange={handleSourceDataTextChange}
+              onDrop={handleSourceDataFileDrop}
+              onDragOver={handleDragOver}
+              onDragEnter={handleDragEnter}
+              onDragLeave={handleDragLeave}
+              disabled={isSourceDataTextDisabled}
+              placeholder={isSourceDataTextDisabled ? 
+                'ファイルがアップロードされているため、テキスト入力は無効化されています。' : 
+                'テキストデータを入力するか、Word・Excel・PDFファイルをドラッグ&ドロップしてください。'}
+              rows={4}
+              className="sidebar-textarea"
+              style={{
+                backgroundColor: isSourceDataTextDisabled ? '#f5f5f5' : 'white',
+                color: isSourceDataTextDisabled ? '#666' : 'black'
+              }}
+            />
+            {sourceDataFile && (
+              <div className="source-data-file-info">
+                <p>アップロード済み: {sourceDataFile.name}</p>
+                <button onClick={handleClearSourceData} className="sidebar-button-secondary">
+                  クリア
+                </button>
+              </div>
+            )}
+            {!sourceDataFile && sourceDataText.trim() && (
+              <div className="source-data-text-info">
+                <p>テキストデータ: {sourceDataText.length}文字</p>
+                <button onClick={handleClearSourceData} className="sidebar-button-secondary">
+                  クリア
+                </button>
+              </div>
+            )}
           </div>
           
           <div className="sidebar-section">
@@ -953,6 +1105,44 @@ console.log("最終結果:",result);}catch(e){console.error("詳細エラー:",e
             <button onClick={handleImportFromTextBox} className="sidebar-button">
               追加読み込み
             </button>
+          </div>
+
+          <div className="sidebar-section">
+            <h3>元データ入力</h3>
+            <textarea
+              value={sourceDataText}
+              onChange={handleSourceDataTextChange}
+              onDrop={handleSourceDataFileDrop}
+              onDragOver={handleDragOver}
+              onDragEnter={handleDragEnter}
+              onDragLeave={handleDragLeave}
+              disabled={isSourceDataTextDisabled}
+              placeholder={isSourceDataTextDisabled ? 
+                'ファイルがアップロードされているため、テキスト入力は無効化されています。' : 
+                'テキストデータを入力するか、Word・Excel・PDFファイルをドラッグ&ドロップしてください。'}
+              rows={3}
+              className="sidebar-textarea"
+              style={{
+                backgroundColor: isSourceDataTextDisabled ? '#f5f5f5' : 'white',
+                color: isSourceDataTextDisabled ? '#666' : 'black'
+              }}
+            />
+            {sourceDataFile && (
+              <div className="source-data-file-info">
+                <p>アップロード済み: {sourceDataFile.name}</p>
+                <button onClick={handleClearSourceData} className="sidebar-button-secondary">
+                  クリア
+                </button>
+              </div>
+            )}
+            {!sourceDataFile && sourceDataText.trim() && (
+              <div className="source-data-text-info">
+                <p>テキストデータ: {sourceDataText.length}文字</p>
+                <button onClick={handleClearSourceData} className="sidebar-button-secondary">
+                  クリア
+                </button>
+              </div>
+            )}
           </div>
           
           <div className="sidebar-section">

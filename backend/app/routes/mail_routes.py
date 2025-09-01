@@ -73,6 +73,41 @@ def generate_pdf_filename(meeting_info: dict) -> str:
     
     return sanitize_filename(filename)
 
+
+def generate_source_data_filename(meeting_info: dict, extension: str = 'txt') -> str:
+    """会議情報に基づいて元データファイル名を生成（【社外秘】_会議日（YYYY-MM-DD）_会議タイトル_元データ）"""
+    # 会議タイトルを取得
+    meeting_title = meeting_info.get('会議タイトル') or meeting_info.get('title') or '議事録'
+    
+    # 会議日時を取得してフォーマット
+    meeting_datetime = meeting_info.get('会議日時') or meeting_info.get('datetime') or ''
+    meeting_date = ''
+    
+    if meeting_datetime:
+        try:
+            # 様々な日時フォーマットに対応
+            from datetime import datetime
+            if ' ' in meeting_datetime:
+                # "YYYY-MM-DD HH:MM:SS" または "YYYY-MM-DD HH:MM" 形式
+                meeting_date = meeting_datetime.split(' ')[0]
+            else:
+                # "YYYY-MM-DD" 形式
+                meeting_date = meeting_datetime
+            
+            # 日付の妥当性チェック
+            datetime.strptime(meeting_date, '%Y-%m-%d')
+        except ValueError:
+            # 日付が不正な場合は空文字列
+            meeting_date = ''
+    
+    # ファイル名を構築
+    if meeting_date:
+        filename = f"【社外秘】_{meeting_date}_{meeting_title}_元データ"
+    else:
+        filename = f"【社外秘】_{meeting_title}_元データ"
+    
+    return sanitize_filename(filename)
+
 class MailRequest(BaseModel):
     """メール送信リクエスト (旧)"""
     subject: str
@@ -85,6 +120,9 @@ class PdfMailRequest(BaseModel):
     recipient_email: Optional[str] = None
     meetingInfo: Optional[dict] = None
     minutesHtml: Optional[str] = None
+    # 元データ関連のフィールド
+    sourceDataText: Optional[str] = None
+    sourceDataFile: Optional[dict] = None  # {name: str, content: str (base64), mimeType: str}
 
 class MailResponse(BaseModel):
     """メール送信レスポンス"""
@@ -149,16 +187,46 @@ async def send_pdf_email(
         # ファイル名を新しい形式で生成（【社外秘】_会議日（YYYY-MM-DD）_会議タイトル）
         pdf_filename = f"{generate_pdf_filename(request.meetingInfo or {})}.pdf"
 
+        # 元データファイルの準備
+        source_data_attachment = None
+        if request.sourceDataFile:
+            # アップロードされたファイル
+            import base64
+            try:
+                file_content = base64.b64decode(request.sourceDataFile['content'])
+                # 元のファイル名から拡張子を抽出
+                original_filename = request.sourceDataFile['name']
+                file_extension = original_filename.split('.')[-1] if '.' in original_filename else 'bin'
+                source_filename = f"{generate_source_data_filename(request.meetingInfo or {}, file_extension)}.{file_extension}"
+                source_data_attachment = {
+                    'filename': source_filename,
+                    'content': file_content,
+                    'mime_type': request.sourceDataFile.get('mimeType', 'application/octet-stream')
+                }
+            except Exception as e:
+                raise HTTPException(status_code=400, detail=f"ファイルのデコードに失敗しました: {e}")
+        elif request.sourceDataText and request.sourceDataText.strip():
+            # テキストデータ
+            source_filename = f"{generate_source_data_filename(request.meetingInfo or {}, 'txt')}.txt"
+            # UTF-8 BOM付きでエンコード
+            text_content = '\ufeff' + request.sourceDataText  # BOM (U+FEFF) を先頭に追加
+            source_data_attachment = {
+                'filename': source_filename,
+                'content': text_content.encode('utf-8'),
+                'mime_type': 'text/plain; charset=utf-8'
+            }
+
         # send email: body is pretty JSON
         import json
         body_text = json.dumps(body_json, ensure_ascii=False, indent=2)
 
-        result = mail_service.send_json_with_pdf(
+        result = mail_service.send_json_with_pdf_and_source_data(
             to_emails=recipients,
             subject=subject,
             body_json_text=body_text,
             pdf_bytes=pdf_bytes,
-            pdf_filename=pdf_filename
+            pdf_filename=pdf_filename,
+            source_data_attachment=source_data_attachment
         )
 
         if result.get("success"):

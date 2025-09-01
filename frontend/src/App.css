@@ -511,4 +511,42 @@
   line-height: 1.6;
   margin: 10px 0;
 }
+
+/* 元データ関連のスタイル */
+.source-data-file-info,
+.source-data-text-info {
+  background-color: #e7f3ff;
+  border: 1px solid #b8daff;
+  border-radius: 4px;
+  padding: 8px 12px;
+  margin-top: 8px;
+  font-size: 14px;
+  color: #004085;
+}
+
+.source-data-file-info p,
+.source-data-text-info p {
+  margin: 0 0 6px 0;
+  font-weight: 500;
+}
+
+.sidebar-button-secondary {
+  background-color: #6c757d;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  margin-top: 4px;
+}
+
+.sidebar-button-secondary:hover {
+  background-color: #5a6268;
+}
+
+.sidebar-button-secondary:active {
+  background-color: #495057;
+}
 /* ▲▲▲ ここまで追加 ▲▲▲ */
