@@ -711,6 +711,16 @@ function App() {
         sourceDataTextContent = sourceDataText.trim();
       }
 
+      // 元データの有無チェック
+      const hasSourceData = sourceDataFileAttachment || sourceDataTextContent;
+      if (!hasSourceData) {
+        // 元データがない場合は確認ダイアログを表示
+        const shouldSend = window.confirm('元データがありませんがメール送信していいですか？');
+        if (!shouldSend) {
+          return; // ユーザーが「いいえ」を選択した場合は送信をキャンセル
+        }
+      }
+
       // フロントは構造化データ（meetingInfo + editorContent + 元データ）をサーバに渡す
       const pdfMailRequest: PdfMailSendRequest = {
         subject: '議事録',
@@ -777,6 +787,9 @@ function App() {
           <h3>2. Teamsチャットページでの操作</h3>
           <p><strong>「会議情報取得」ブックマークレット</strong>を実行して、会議情報を取得してください。</p>
           <p>クリップボードに会議情報が自動でコピーされて、議事録生成用のGenAIが新しいタブで開きます。</p>
+          <button onClick={() => window.open("https://d3r0xupf0a2onu.cloudfront.net/use-case-builder/execute/7abad9ce-a83f-4ec6-91fe-4e843ec0add1", "_blank")} className="back-button">
+            議事録生成用のGenAIを開く
+          </button>
         </div>
         <div className="url-input-section">
           <h3>3. GenAI ページでの操作</h3>
@@ -856,10 +869,6 @@ console.log("最終結果:",result);}catch(e){console.error("詳細エラー:",e
         <div className="sidebar-content">
           <div className="sidebar-section">
             <h3>議事録データ読み込み</h3>
-            <p className="instruction-text">
-              Teamsチャットページで「会議情報取得」ブックマークレットを実行し、
-              取得したHTML、XMLまたは既にエクスポートしたHTMLをここに貼り付けてください。
-            </p>
             <textarea
               value={importText}
               onChange={e => setImportText(e.target.value)}
@@ -868,7 +877,7 @@ console.log("最終結果:",result);}catch(e){console.error("詳細エラー:",e
               onDragEnter={handleDragEnter}
               onDragLeave={handleDragLeave}
               placeholder="XML、HTML会議情報、またはHTMLを貼り付けてください（HTMLファイルのドラッグ&ドロップも可能）"
-              rows={6}
+              rows={4}
               className="sidebar-textarea"
             />
             <button onClick={handleImportFromTextBox} className="sidebar-button">
@@ -878,9 +887,6 @@ console.log("最終結果:",result);}catch(e){console.error("詳細エラー:",e
 
           <div className="sidebar-section">
             <h3>元データ入力</h3>
-            <p className="instruction-text">
-              議事録の元となるテキストデータを入力するか、Word・Excel・PDFファイルをドラッグ&ドロップしてください。
-            </p>
             <textarea
               value={sourceDataText}
               onChange={handleSourceDataTextChange}
@@ -892,7 +898,7 @@ console.log("最終結果:",result);}catch(e){console.error("詳細エラー:",e
               placeholder={isSourceDataTextDisabled ? 
                 'ファイルがアップロードされているため、テキスト入力は無効化されています。' : 
                 'テキストデータを入力するか、Word・Excel・PDFファイルをドラッグ&ドロップしてください。'}
-              rows={4}
+              rows={3}
               className="sidebar-textarea"
               style={{
                 backgroundColor: isSourceDataTextDisabled ? '#f5f5f5' : 'white',
