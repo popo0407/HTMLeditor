@@ -120,6 +120,7 @@ export class HtmlExportService {
   会議日時?: string;
   会議場所?: string;
   要約?: string;
+  講評?: string;
   部門?: string;
   大分類?: string;
   中分類?: string;
@@ -131,6 +132,7 @@ export class HtmlExportService {
     const datetime = meetingInfo.会議日時 || '';
     const location = meetingInfo.会議場所 || '';
   const summary = (meetingInfo.要約 || '').toString();
+  const review = (meetingInfo.講評 || '').toString();
   const department = meetingInfo.部門 || '';
   const category1 = meetingInfo.大分類 || '';
   const category2 = meetingInfo.中分類 || '';
@@ -144,7 +146,16 @@ export class HtmlExportService {
       ? participants.map(p => HtmlExportService.escapeHtml(p)).join('<br/>')
       : HtmlExportService.escapeHtml(String(participants));
 
-    const summaryHtml = HtmlExportService.escapeHtml(summary).replace(/\r?\n/g, '<br/>');
+    // 改行処理のヘルパー関数（\n と /n の両方に対応）
+    const processLineBreaks = (text: string): string => {
+      return HtmlExportService.escapeHtml(text)
+        .replace(/\\n/g, '<br/>')   // \n を <br/> に変換
+        .replace(/\/n/g, '<br/>')   // /n を <br/> に変換
+        .replace(/\r?\n/g, '<br/>'); // 実際の改行を <br/> に変換
+    };
+
+    const summaryHtml = processLineBreaks(summary);
+    const reviewHtml = processLineBreaks(review);
 
     const departmentHtml = department ? `<h3 class="meeting-info-department">部門</h3><p class="meeting-info-department-value">${HtmlExportService.escapeHtml(department)}</p>` : '';
     const category1Html = category1 ? `<h3 class="meeting-info-category1">大分類</h3><p class="meeting-info-category1-value">${HtmlExportService.escapeHtml(category1)}</p>` : '';
@@ -164,6 +175,8 @@ export class HtmlExportService {
         <p class="meeting-info-participants">${participantsHtml}</p>
         <h3 class="meeting-info-summary-label">会議概要</h3>
         <p class="meeting-info-summary">${summaryHtml}</p>
+        <h3 class="meeting-info-review-label">講評</h3>
+        <p class="meeting-info-review">${reviewHtml}</p>
       </div>
       <div class="meeting-minutes-content">
         ${minutesHtml || ''}

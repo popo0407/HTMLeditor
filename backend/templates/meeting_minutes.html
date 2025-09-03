@@ -53,7 +53,12 @@
 
   <section class="summary">
     <h3>要約</h3>
-    <div>{{ meeting.summary or '' }}</div>
+    <div>{{ (meeting.summary or '') | process_line_breaks | safe }}</div>
+  </section>
+
+  <section class="review">
+    <h3>講評</h3>
+    <div>{{ (meeting.review or '') | process_line_breaks | safe }}</div>
   </section>
 
   <hr/>

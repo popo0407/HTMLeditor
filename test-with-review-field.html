@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>講評フィールド対応テスト</title>
+    <style>
+        body { font-family: 'Hiragino Sans', 'Yu Gothic', sans-serif; margin: 20px; }
+        .meeting-info-container { border: 1px solid #ddd; padding: 20px; margin-bottom: 20px; }
+        h1, h3 { color: #2c3e50; }
+        .meeting-info-participants, .meeting-info-summary, .meeting-info-review { 
+            background-color: #f8f9fa; padding: 10px; margin: 10px 0; 
+        }
+    </style>
+</head>
+<body>
+    <div class="meeting-info-container">
+        <h1 class="meeting-info-title">講評フィールド対応テスト会議</h1>
+        <h3 class="meeting-info-datetime">会議日時: 2025-01-01 14:00:00</h3>
+        <h3 class="meeting-info-location">場所: オンライン会議室</h3>
+        <h3 class="meeting-info-department">部門</h3>
+        <p class="meeting-info-department-value">開発部</p>
+        <h3 class="meeting-info-category1">大分類</h3>
+        <p class="meeting-info-category1-value">プロジェクト会議</p>
+        <h3 class="meeting-info-category2">中分類</h3>
+        <p class="meeting-info-category2-value">機能開発</p>
+        <h3 class="meeting-info-category3">小分類</h3>
+        <p class="meeting-info-category3-value">新機能実装</p>
+        <h3 class="meeting-info-participants-label">参加者</h3>
+        <p class="meeting-info-participants">田中開発者<br/>佐藤プロダクトマネージャー<br/>鈴木QAエンジニア</p>
+        <h3 class="meeting-info-summary-label">会議概要</h3>
+        <p class="meeting-info-summary">講評フィールドの実装について検討\n改行処理の対応も含めて実装する/n既存機能への影響を最小限に抑える</p>
+        <h3 class="meeting-info-review-label">講評</h3>
+        <p class="meeting-info-review">実装は予定通り完了\n/n以下の点で優れた成果となった：\n・既存機能への影響なし/n・改行処理の統一化\n・UI/UXの一貫性維持</p>
+    </div>
+    <div class="meeting-minutes-content">
+        <h2>議事録</h2>
+        <h3>1. 実装方針の確認</h3>
+        <p>講評フィールドを要約の直後に配置することを確認。</p>
+        
+        <h3>2. 改行処理の改善</h3>
+        <p>従来の\nに加えて、/nも改行として処理するよう改善。</p>
+        
+        <h3>3. PDFレイアウトの調整</h3>
+        <p>PDF出力時に講評が要約の下に適切に配置されることを確認。</p>
+    </div>
+</body>
+</html>

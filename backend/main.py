@@ -10,12 +10,36 @@ HTMLエディタ バックエンドアプリケーション
 - 開発憲章の「設定とロジックを分離」原則に従い、設定クラスを使用
 """
 
+import logging
+import os
+from datetime import datetime
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from app.routes import mail_routes, pdf_routes
 from app.config import get_settings
 from pathlib import Path
+
+# ログ設定
+log_dir = Path("logs")
+log_dir.mkdir(exist_ok=True)
+
+# ログファイル名に日付を含める
+log_filename = f"app_{datetime.now().strftime('%Y%m%d')}.log"
+log_filepath = log_dir / log_filename
+
+# ログ設定
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler(log_filepath, encoding='utf-8'),
+        logging.StreamHandler()  # コンソールにも出力
+    ]
+)
+
+logger = logging.getLogger(__name__)
+logger.info("=== HTMLエディタ バックエンド アプリケーション開始 ===")
 
 # 設定インスタンスを取得
 settings = get_settings()

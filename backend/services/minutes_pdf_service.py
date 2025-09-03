@@ -82,7 +82,8 @@ def normalize_meeting(meeting: Dict[str, Any] | None) -> Dict[str, Any]:
         'location': meeting.get('location') or meeting.get('会議場所') or '',
         'department': meeting.get('department') or meeting.get('部門') or '',
         'participants': meeting.get('participants') or meeting.get('参加者') or [],
-        'summary': meeting.get('summary') or meeting.get('要約') or ''
+        'summary': meeting.get('summary') or meeting.get('要約') or '',
+        'review': meeting.get('review') or meeting.get('講評') or ''
     }
     
     # 日時形式の検証
@@ -101,6 +102,15 @@ def render_minutes_html(meeting: Dict[str, Any], minutes_html: str) -> str:
         raise FileNotFoundError(f"Templates directory not found: {templates_dir}")
     
     env = Environment(loader=FileSystemLoader(str(templates_dir)), autoescape=select_autoescape(['html','xml']))
+    
+    # 改行処理のカスタムフィルタを追加（\n と /n の両方に対応）
+    def process_line_breaks(text):
+        if not text:
+            return ''
+        return str(text).replace('\\n', '<br/>').replace('/n', '<br/>').replace('\n', '<br/>')
+    
+    env.filters['process_line_breaks'] = process_line_breaks
+    
     template = env.get_template('meeting_minutes.html')
 
     # Load shared PDF CSS (if present) and pass its contents to template

@@ -9,3 +9,4 @@ reportlab==4.0.7
 weasyprint
 bleach>=6.0.0
 Jinja2>=3.1.0
+python-docx>=0.8.11

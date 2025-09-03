@@ -54,7 +54,29 @@ class MailService:
             attachment = MIMEBase('application', 'pdf')
             attachment.set_payload(pdf_bytes)
             encoders.encode_base64(attachment)
-            attachment.add_header('Content-Disposition', f'attachment; filename="{pdf_filename}"')
+            
+            # RFC 2231準拠のファイル名エンコーディング（日本語対応）
+            import urllib.parse
+            import base64
+            import logging
+            logger = logging.getLogger(__name__)
+            
+            # RFC 2047 Base64エンコーディング（一部のメールクライアント用）
+            encoded_b64 = base64.b64encode(pdf_filename.encode('utf-8')).decode('ascii')
+            rfc2047_filename = f"=?UTF-8?B?{encoded_b64}?="
+            
+            # RFC 2231 URLエンコーディング
+            encoded_filename = urllib.parse.quote(pdf_filename.encode('utf-8'))
+            
+            # 複数の形式で設定（メールクライアント互換性向上）
+            content_disposition = f'attachment; filename="{rfc2047_filename}"; filename*=UTF-8\'\'{encoded_filename}'
+            
+            logger.info(f"PDF Content-Disposition header: {content_disposition}")
+            logger.info(f"Original PDF filename: {pdf_filename}")
+            logger.info(f"RFC 2047 filename: {rfc2047_filename}")
+            logger.info(f"RFC 2231 encoded filename: {encoded_filename}")
+            
+            attachment.add_header('Content-Disposition', content_disposition)
             message.attach(attachment)
 
             all_recipients = to_emails.copy()
@@ -124,7 +146,29 @@ class MailService:
             pdf_attachment = MIMEBase('application', 'pdf')
             pdf_attachment.set_payload(pdf_bytes)
             encoders.encode_base64(pdf_attachment)
-            pdf_attachment.add_header('Content-Disposition', f'attachment; filename="{pdf_filename}"')
+            
+            # RFC 2231準拠のファイル名エンコーディング（日本語対応）
+            import urllib.parse
+            import base64
+            import logging
+            logger = logging.getLogger(__name__)
+            
+            # RFC 2047 Base64エンコーディング（一部のメールクライアント用）
+            encoded_pdf_b64 = base64.b64encode(pdf_filename.encode('utf-8')).decode('ascii')
+            rfc2047_pdf_filename = f"=?UTF-8?B?{encoded_pdf_b64}?="
+            
+            # RFC 2231 URLエンコーディング
+            encoded_pdf_filename = urllib.parse.quote(pdf_filename.encode('utf-8'))
+            
+            # 複数の形式で設定（メールクライアント互換性向上）
+            pdf_content_disposition = f'attachment; filename="{rfc2047_pdf_filename}"; filename*=UTF-8\'\'{encoded_pdf_filename}'
+            
+            logger.info(f"PDF Content-Disposition header: {pdf_content_disposition}")
+            logger.info(f"Original PDF filename: {pdf_filename}")
+            logger.info(f"RFC 2047 PDF filename: {rfc2047_pdf_filename}")
+            logger.info(f"RFC 2231 encoded PDF filename: {encoded_pdf_filename}")
+            
+            pdf_attachment.add_header('Content-Disposition', pdf_content_disposition)
             message.attach(pdf_attachment)
 
             # attach source data if provided
@@ -143,10 +187,28 @@ class MailService:
                     source_attachment.set_payload(source_data_attachment['content'])
                     encoders.encode_base64(source_attachment)
                 
-                source_attachment.add_header(
-                    'Content-Disposition',
-                    f'attachment; filename="{source_data_attachment["filename"]}"'
-                )
+                # RFC 2231準拠のファイル名エンコーディング（日本語対応）
+                import urllib.parse
+                import base64
+                
+                source_filename = source_data_attachment["filename"]
+                
+                # RFC 2047 Base64エンコーディング（一部のメールクライアント用）
+                encoded_source_b64 = base64.b64encode(source_filename.encode('utf-8')).decode('ascii')
+                rfc2047_source_filename = f"=?UTF-8?B?{encoded_source_b64}?="
+                
+                # RFC 2231 URLエンコーディング
+                encoded_source_filename = urllib.parse.quote(source_filename.encode('utf-8'))
+                
+                # 複数の形式で設定（メールクライアント互換性向上）
+                source_content_disposition = f'attachment; filename="{rfc2047_source_filename}"; filename*=UTF-8\'\'{encoded_source_filename}'
+                
+                logger.info(f"Source Data Content-Disposition header: {source_content_disposition}")
+                logger.info(f"Original source filename: {source_filename}")
+                logger.info(f"RFC 2047 source filename: {rfc2047_source_filename}")
+                logger.info(f"RFC 2231 encoded source filename: {encoded_source_filename}")
+                
+                source_attachment.add_header('Content-Disposition', source_content_disposition)
                 message.attach(source_attachment)
 
             all_recipients = to_emails.copy()

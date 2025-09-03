@@ -54,7 +54,9 @@ Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process -Force
 
 - **インターネット インフォメーション サービス**
 
-さらに、IIS で Python アプリケーションを安定稼働させるための**推奨モジュール**をインストールします。
+再起動する
+
+IIS で Python アプリケーションを安定稼働させるための**推奨モジュール**をインストールします。
 
 1.  **[Rewrite](https://www.iis.net/downloads/microsoft/url-rewrite)** をインストールします。
 2.  **[Application Request Routing (ARR)](https://www.iis.net/downloads/microsoft/application-request-routing)** をインストールします。
@@ -69,7 +71,7 @@ Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process -Force
 > **Note** > `deploy-to-iis.ps1`は、バックエンドを**NSSM (Non-Sucking Service Manager)** というツールで Windows サービス化しようと試みます。
 > NSSM が見つからない場合、手動での起動を促すメッセージが表示されます。
 > 安定運用のために、[NSSM 公式サイト](https://nssm.cc/download)からダウンロードし、
-> `nssm.exe`を環境変数 PATH の通ったフォルダに配置しておくことを強く推奨します。
+> `nssm.exe`を置いているフォルダを環境変数 PATH に設定する。
 
 
 #### プロキシの設定 🔐

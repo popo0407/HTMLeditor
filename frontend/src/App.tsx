@@ -14,7 +14,18 @@ import { HtmlExportService } from './tinymceEditor/services/htmlExportService';
 function App() {
   // emailTemplates removed: backend provides fixed recipient via settings
   const [importText, setImportText] = useState('');
-  const [meetingInfo, setMeetingInfo] = useState<any | null>(null);
+  const [meetingInfo, setMeetingInfo] = useState<any>({
+    会議タイトル: '',
+    参加者: [],
+    会議日時: '',
+    会議場所: '',
+    要約: '',
+    講評: '',
+    部門: '',
+    大分類: '',
+    中分類: '',
+    小分類: ''
+  });
   const [activeTab, setActiveTab] = useState<'minutes' | 'info'>('minutes');
   const [editorContent, setEditorContent] = useState<string>('');
   // タブの高さ（px）
@@ -33,6 +44,36 @@ function App() {
   // HtmlExportServiceは直接使用するため、useRefは不要
 
   // No client-side template loading. Backend uses DEFAULT_RECIPIENT_EMAIL from .env.
+
+  // 共通バリデーション関数
+  const validateAndExecute = async (
+    meetingInfo: any, 
+    operation: () => Promise<void>,
+    operationName: string
+  ): Promise<void> => {
+    // 必須項目チェック
+    if (!meetingInfo?.会議タイトル?.trim()) {
+      alert('会議タイトルは必須項目です。');
+      return;
+    }
+    if (!meetingInfo?.会議日時?.trim()) {
+      alert('会議日時は必須項目です。');
+      return;
+    }
+    
+    // 会議日時形式チェック
+    if (!validateDateTimeFormat(meetingInfo.会議日時)) {
+      alert('会議日時の形式が正しくありません。YYYY-MM-DD hh:mm:ss の形式で入力してください。\n例: 2025-01-01 14:00:00');
+      return;
+    }
+
+    try {
+      await operation();
+    } catch (error) {
+      console.error(`${operationName}に失敗しました:`, error);
+      alert(`${operationName}に失敗しました。`);
+    }
+  };
 
   // 日時形式を検証するヘルパー関数
   const validateDateTimeFormat = (datetime: string): boolean => {
@@ -130,45 +171,6 @@ function App() {
     return sanitizeFilename(filename);
   };
 
-  // 元データファイル名を生成するヘルパー関数（【社外秘】_YYYY-MM-DD_会議タイトル_元データ）
-  const generateSourceDataFilename = (meetingInfo: any, extension: string = 'txt'): string => {
-    // 会議タイトルを取得
-    const meetingTitle = meetingInfo?.['会議タイトル'] || meetingInfo?.title || '議事録';
-    
-    // 会議日時を取得してフォーマット
-    const meetingDateTime = meetingInfo?.['会議日時'] || meetingInfo?.datetime || '';
-    let meetingDate = '';
-    
-    if (meetingDateTime) {
-      try {
-        // 様々な日時フォーマットに対応
-        if (meetingDateTime.includes(' ')) {
-          // "YYYY-MM-DD HH:MM:SS" または "YYYY-MM-DD HH:MM" 形式
-          meetingDate = meetingDateTime.split(' ')[0];
-        } else {
-          // "YYYY-MM-DD" 形式
-          meetingDate = meetingDateTime;
-        }
-        
-        // 日付の妥当性チェック（簡易）
-        const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-        if (!dateRegex.test(meetingDate)) {
-          meetingDate = '';
-        }
-      } catch (error) {
-        // 日付が不正な場合は空文字列
-        meetingDate = '';
-      }
-    }
-    
-    // ファイル名を構築
-    const filename = meetingDate 
-      ? `【社外秘】_${meetingDate}_${meetingTitle}_元データ`
-      : `【社外秘】_${meetingTitle}_元データ`;
-    
-    return sanitizeFilename(filename);
-  };
-
   // 選択した参加者を除外する関数
   const excludeSelectedParticipants = () => {
     if (!meetingInfo || selectedParticipants.size === 0) return;
@@ -245,7 +247,7 @@ function App() {
     // 各フィールドをXMLタグから抽出
     const fields = [
       '会議タイトル', '参加者', '会議日時', '会議場所', 
-      '部門', '大分類', '中分類', '小分類', '要約', '議事録'
+      '部門', '大分類', '中分類', '小分類', '要約', '講評', '議事録'
     ];
     
     fields.forEach(field => {
@@ -352,7 +354,22 @@ function App() {
       // <br/>を改行に変換し、その他のHTMLタグを除去
       result['要約'] = summaryHtml
         .replace(/<br\s*\/?>/gi, '\n')  // <br>を改行に変換
-        .replace(/<[^>]*>/g, '')  // その他のHTMLタグを除去
+        .replace(/\/n/g, '\n')          // /n を \n に統一
+        .replace(/\\n/g, '\n')          // \n を \n に統一
+        .replace(/<[^>]*>/g, '')        // その他のHTMLタグを除去
+        .trim();
+    }
+    
+    // 講評フィールドを抽出
+    const reviewEl = meetingInfoContainer.querySelector('.meeting-info-review');
+    if (reviewEl) {
+      const reviewHtml = reviewEl.innerHTML;
+      // <br/>を改行に変換し、その他のHTMLタグを除去
+      result['講評'] = reviewHtml
+        .replace(/<br\s*\/?>/gi, '\n')  // <br>を改行に変換
+        .replace(/\/n/g, '\n')          // /n を \n に統一
+        .replace(/\\n/g, '\n')          // \n を \n に統一
+        .replace(/<[^>]*>/g, '')        // その他のHTMLタグを除去
         .trim();
     }
     
@@ -422,6 +439,7 @@ function App() {
         会議日時: parsedData['会議日時'] || parsedData['datetime'] || '',
         会議場所: parsedData['会議場所'] || parsedData['会議場所'] || '',
         要約: parsedData['要約'] || parsedData['summary'] || '',
+        講評: parsedData['講評'] || parsedData['review'] || '',
         // 以下は読み取り専用で表示する分類情報
         部門: parsedData['部門'] || parsedData['department'] || '',
         大分類: parsedData['大分類'] || parsedData['category1'] || '',
@@ -451,7 +469,7 @@ function App() {
       
       setEditorContent(processedContent);
       setImportText(''); // 読み込み後クリア
-      setCurrentStep('output'); // HTMLが読み込まれたら出力ステップに移行
+      setCurrentStep('editor'); // HTMLが読み込まれたら編集ステップに移行
     }
   };
 
@@ -606,13 +624,7 @@ function App() {
   };
 
   const handleDownloadHtml = async () => {
-    try {
-      // 会議日時の形式チェック
-      if (meetingInfo?.会議日時 && !validateDateTimeFormat(meetingInfo.会議日時)) {
-        alert('会議日時の形式が正しくありません。YYYY-MM-DD hh:mm:ss の形式で入力してください。\n例: 2025-01-01 14:00:00');
-        return;
-      }
-
+    await validateAndExecute(meetingInfo, async () => {
       let contentToExport = editorContent;
       if (meetingInfo) {
         contentToExport = HtmlExportService.buildCombinedFragment(meetingInfo, editorContent);
@@ -626,20 +638,11 @@ function App() {
         `${filename}.html`,
         'エクスポートされたドキュメント'
       );
-    } catch (error) {
-      console.error('HTMLダウンロードに失敗しました:', error);
-      alert('HTMLダウンロードに失敗しました。');
-    }
+    }, 'HTMLダウンロード');
   };
 
   const handleDownloadPdf = async () => {
-    try {
-      // 会議日時の形式チェック
-      if (meetingInfo?.会議日時 && !validateDateTimeFormat(meetingInfo.会議日時)) {
-        alert('会議日時の形式が正しくありません。YYYY-MM-DD hh:mm:ss の形式で入力してください。\n例: 2025-01-01 14:00:00');
-        return;
-      }
-
+    await validateAndExecute(meetingInfo, async () => {
       // meetingInfo + minutesHtml をそのままバックエンドに送りテンプレート統一
       const API_BASE_URL = process.env.REACT_APP_API_URL;
       const payload = {
@@ -671,22 +674,13 @@ function App() {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
       alert('PDFファイルをダウンロードしました。');
-    } catch (error) {
-      console.error('PDFファイルのダウンロードに失敗しました:', error);
-      alert('PDFファイルのダウンロードに失敗しました。');
-    }
+    }, 'PDFダウンロード');
   };
 
   // HTML添付送信はフロントで廃止。PDF送信はJSONを送るフローとする。
 
   const handleSendPdfMail = async () => {
-    try {
-      // 会議日時の形式チェック
-      if (meetingInfo?.会議日時 && !validateDateTimeFormat(meetingInfo.会議日時)) {
-        alert('会議日時の形式が正しくありません。YYYY-MM-DD hh:mm:ss の形式で入力してください。\n例: 2025-01-01 14:00:00');
-        return;
-      }
-
+    await validateAndExecute(meetingInfo, async () => {
       // 元データの準備
       let sourceDataFileAttachment: any = undefined;
       let sourceDataTextContent: string | undefined = undefined;
@@ -737,19 +731,7 @@ function App() {
         ` + 元データファイル (${sourceDataFileAttachment.name})` : 
         (sourceDataTextContent ? ' + 元データテキスト' : '');
       alert(`PDF${attachmentInfo}添付メールを送信しました。`);
-    } catch (error) {
-      console.error('PDFメール送信に失敗しました:', error);
-      alert('PDFメール送信に失敗しました。');
-    }
-  };
-
-  const handleContentChange = (content: string) => {
-    setEditorContent(content);
-    // エディターでコンテンツが変更されたら出力ステップに移行
-    // JSON会議情報がある場合はタブ編集中の切替を行わず、タブUIを保持する
-    if (!meetingInfo && content.trim() && currentStep === 'editor') {
-      setCurrentStep('output');
-    }
+    }, 'PDF添付メール送信');
   };
 
   // URL入力画面
@@ -876,7 +858,7 @@ console.log("最終結果:",result);}catch(e){console.error("詳細エラー:",e
               onDragOver={handleDragOver}
               onDragEnter={handleDragEnter}
               onDragLeave={handleDragLeave}
-              placeholder="XML、HTML会議情報、またはHTMLを貼り付けてください（HTMLファイルのドラッグ&ドロップも可能）"
+              placeholder="GenAIで生成された会議情報、またはHTMLを貼り付けてください（HTMLファイルのドラッグ&ドロップも可能）"
               rows={4}
               className="sidebar-textarea"
             />
@@ -943,11 +925,10 @@ console.log("最終結果:",result);}catch(e){console.error("詳細エラー:",e
       </aside>
       
       <main className="editor-container">
-        {meetingInfo ? (
-          <div className="tabbed-editor">
-            <div className="tabs" style={{height: TAB_HEIGHT}}>
-              <button className={activeTab === 'info' ? 'active' : ''} onClick={() => setActiveTab('info')}>会議情報</button>
-              <button className={activeTab === 'minutes' ? 'active' : ''} onClick={() => setActiveTab('minutes')}>議事録</button>
+        <div className="tabbed-editor">
+          <div className="tabs" style={{height: TAB_HEIGHT}}>
+            <button className={activeTab === 'info' ? 'active' : ''} onClick={() => setActiveTab('info')}>会議情報</button>
+            <button className={activeTab === 'minutes' ? 'active' : ''} onClick={() => setActiveTab('minutes')}>議事録</button>
             </div>
             <div className="tab-body">
               {activeTab === 'info' ? (
@@ -1049,6 +1030,8 @@ console.log("最終結果:",result);}catch(e){console.error("詳細エラー:",e
                   })()}
                   <label>要約</label>
                   <textarea rows={6} value={meetingInfo.要約 || ''} onChange={e => setMeetingInfo({...meetingInfo, 要約: e.target.value})} />
+                  <label>講評</label>
+                  <textarea rows={6} value={meetingInfo.講評 || ''} onChange={e => setMeetingInfo({...meetingInfo, 講評: e.target.value})} />
                   {/* 表示はするが編集不可の分類フィールド */}
                   <label>部門</label>
                   <input type="text" value={meetingInfo.部門 || ''} onChange={e => setMeetingInfo({...meetingInfo, 部門: e.target.value})} />
@@ -1070,115 +1053,6 @@ console.log("最終結果:",result);}catch(e){console.error("詳細エラー:",e
               )}
             </div>
           </div>
-        ) : (
-          <TinyMCEEditor
-            value={editorContent}
-            onContentChange={setEditorContent}
-            height={editorHeight}
-          />
-        )}
-      </main>
-    </div>
-  );
-
-  // 出力画面
-  const renderOutputStep = () => (
-    <div className="app-layout">
-      <aside className="sidebar">
-        <div className="sidebar-header">
-          <h1>HTMLエディタ</h1>
-          <button 
-            onClick={() => setCurrentStep('editor')} 
-            className="back-button"
-          >
-            ← 編集に戻る
-          </button>
-        </div>
-        <div className="sidebar-content">
-          <div className="sidebar-section">
-            <h3>議事録データ読み込み</h3>
-            <textarea
-              value={importText}
-              onChange={e => setImportText(e.target.value)}
-              onDrop={handleFileDrop}
-              onDragOver={handleDragOver}
-              onDragEnter={handleDragEnter}
-              onDragLeave={handleDragLeave}
-              placeholder="追加のHTMLやマークダウンテキストを貼り付けてください（HTMLファイルのドラッグ&ドロップも可能）"
-              rows={4}
-              className="sidebar-textarea"
-            />
-            <button onClick={handleImportFromTextBox} className="sidebar-button">
-              追加読み込み
-            </button>
-          </div>
-
-          <div className="sidebar-section">
-            <h3>元データ入力</h3>
-            <textarea
-              value={sourceDataText}
-              onChange={handleSourceDataTextChange}
-              onDrop={handleSourceDataFileDrop}
-              onDragOver={handleDragOver}
-              onDragEnter={handleDragEnter}
-              onDragLeave={handleDragLeave}
-              disabled={isSourceDataTextDisabled}
-              placeholder={isSourceDataTextDisabled ? 
-                'ファイルがアップロードされているため、テキスト入力は無効化されています。' : 
-                'テキストデータを入力するか、Word・Excel・PDFファイルをドラッグ&ドロップしてください。'}
-              rows={3}
-              className="sidebar-textarea"
-              style={{
-                backgroundColor: isSourceDataTextDisabled ? '#f5f5f5' : 'white',
-                color: isSourceDataTextDisabled ? '#666' : 'black'
-              }}
-            />
-            {sourceDataFile && (
-              <div className="source-data-file-info">
-                <p>アップロード済み: {sourceDataFile.name}</p>
-                <button onClick={handleClearSourceData} className="sidebar-button-secondary">
-                  クリア
-                </button>
-              </div>
-            )}
-            {!sourceDataFile && sourceDataText.trim() && (
-              <div className="source-data-text-info">
-                <p>テキストデータ: {sourceDataText.length}文字</p>
-                <button onClick={handleClearSourceData} className="sidebar-button-secondary">
-                  クリア
-                </button>
-              </div>
-            )}
-          </div>
-          
-          <div className="sidebar-section">
-            <h3>ダウンロード</h3>
-            <button onClick={handleDownloadHtml} className="sidebar-button">
-              HTML形式
-            </button>
-            <button onClick={handleDownloadPdf} className="sidebar-button">
-              PDF形式
-            </button>
-          </div>
-          
-          <div className="sidebar-section">
-            <h3>メール送信</h3>
-            <button onClick={handleSendPdfMail} className="sidebar-button">
-              PDF添付
-            </button>
-          </div>
-        </div>
-      </aside>
-      
-      <main className="editor-container">
-        <TinyMCEEditor
-          value={editorContent}
-          onContentChange={handleContentChange}
-          onSave={() => {
-            console.log('TinyMCE editor save');
-          }}
-          height={editorHeight}
-        />
       </main>
     </div>
   );
@@ -1187,7 +1061,6 @@ console.log("最終結果:",result);}catch(e){console.error("詳細エラー:",e
     <div className="app">
       {currentStep === 'url-input' && renderUrlInputStep()}
       {currentStep === 'editor' && renderEditorStep()}
-      {currentStep === 'output' && renderOutputStep()}
       {/* ▼▼▼ ここを追加 ▼▼▼ */}
       {currentStep === 'bookmarklet-install' && renderBookmarkletInstallStep()}
     </div>

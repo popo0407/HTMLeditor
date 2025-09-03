@@ -11,6 +11,7 @@ from typing import Optional
 from services.mail_service import MailService
 from app.config.settings import get_settings
 from services.minutes_pdf_service import generate_minutes_pdf
+from services.word_document_service import WordDocumentService
 import datetime
 import re
 
@@ -41,12 +42,20 @@ def sanitize_filename(filename: str) -> str:
 
 def generate_pdf_filename(meeting_info: dict) -> str:
     """会議情報に基づいてPDFファイル名を生成（【社外秘】_会議日（YYYY-MM-DD）_会議タイトル）"""
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    # デバッグ用：会議情報をログ出力
+    logger.info(f"PDF filename generation - meeting_info: {meeting_info}")
+    
     # 会議タイトルを取得
     meeting_title = meeting_info.get('会議タイトル') or meeting_info.get('title') or '議事録'
+    logger.info(f"PDF filename generation - meeting_title: {meeting_title}")
     
     # 会議日時を取得してフォーマット
     meeting_datetime = meeting_info.get('会議日時') or meeting_info.get('datetime') or ''
     meeting_date = ''
+    logger.info(f"PDF filename generation - meeting_datetime: {meeting_datetime}")
     
     if meeting_datetime:
         try:
@@ -61,8 +70,10 @@ def generate_pdf_filename(meeting_info: dict) -> str:
             
             # 日付の妥当性チェック
             datetime.strptime(meeting_date, '%Y-%m-%d')
-        except ValueError:
+            logger.info(f"PDF filename generation - parsed meeting_date: {meeting_date}")
+        except ValueError as e:
             # 日付が不正な場合は空文字列
+            logger.warning(f"PDF filename generation - invalid date format: {meeting_datetime}, error: {e}")
             meeting_date = ''
     
     # ファイル名を構築
@@ -71,17 +82,29 @@ def generate_pdf_filename(meeting_info: dict) -> str:
     else:
         filename = f"【社外秘】_{meeting_title}"
     
-    return sanitize_filename(filename)
+    logger.info(f"PDF filename generation - final filename before sanitization: {filename}")
+    sanitized = sanitize_filename(filename)
+    logger.info(f"PDF filename generation - final sanitized filename: {sanitized}")
+    
+    return sanitized
 
 
 def generate_source_data_filename(meeting_info: dict, extension: str = 'txt') -> str:
     """会議情報に基づいて元データファイル名を生成（【社外秘】_会議日（YYYY-MM-DD）_会議タイトル_元データ）"""
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    # デバッグ用：会議情報をログ出力
+    logger.info(f"Source data filename generation - meeting_info: {meeting_info}")
+    
     # 会議タイトルを取得
     meeting_title = meeting_info.get('会議タイトル') or meeting_info.get('title') or '議事録'
+    logger.info(f"Source data filename generation - meeting_title: {meeting_title}")
     
     # 会議日時を取得してフォーマット
     meeting_datetime = meeting_info.get('会議日時') or meeting_info.get('datetime') or ''
     meeting_date = ''
+    logger.info(f"Source data filename generation - meeting_datetime: {meeting_datetime}")
     
     if meeting_datetime:
         try:
@@ -96,8 +119,10 @@ def generate_source_data_filename(meeting_info: dict, extension: str = 'txt') ->
             
             # 日付の妥当性チェック
             datetime.strptime(meeting_date, '%Y-%m-%d')
-        except ValueError:
+            logger.info(f"Source data filename generation - parsed meeting_date: {meeting_date}")
+        except ValueError as e:
             # 日付が不正な場合は空文字列
+            logger.warning(f"Source data filename generation - invalid date format: {meeting_datetime}, error: {e}")
             meeting_date = ''
     
     # ファイル名を構築
@@ -106,7 +131,11 @@ def generate_source_data_filename(meeting_info: dict, extension: str = 'txt') ->
     else:
         filename = f"【社外秘】_{meeting_title}_元データ"
     
-    return sanitize_filename(filename)
+    logger.info(f"Source data filename generation - final filename before sanitization: {filename}")
+    sanitized = sanitize_filename(filename)
+    logger.info(f"Source data filename generation - final sanitized filename: {sanitized}")
+    
+    return sanitized
 
 class MailRequest(BaseModel):
     """メール送信リクエスト (旧)"""
@@ -123,6 +152,8 @@ class PdfMailRequest(BaseModel):
     # 元データ関連のフィールド
     sourceDataText: Optional[str] = None
     sourceDataFile: Optional[dict] = None  # {name: str, content: str (base64), mimeType: str}
+    # 元データファイル形式の選択
+    sourceDataFormat: Optional[str] = "docx"  # "txt" or "docx"
 
 class MailResponse(BaseModel):
     """メール送信レスポンス"""
@@ -186,6 +217,11 @@ async def send_pdf_email(
 
         # ファイル名を新しい形式で生成（【社外秘】_会議日（YYYY-MM-DD）_会議タイトル）
         pdf_filename = f"{generate_pdf_filename(request.meetingInfo or {})}.pdf"
+        
+        # デバッグログ
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.info(f"Generated PDF filename: {pdf_filename}")
 
         # 元データファイルの準備
         source_data_attachment = None
@@ -198,6 +234,9 @@ async def send_pdf_email(
                 original_filename = request.sourceDataFile['name']
                 file_extension = original_filename.split('.')[-1] if '.' in original_filename else 'bin'
                 source_filename = f"{generate_source_data_filename(request.meetingInfo or {}, file_extension)}.{file_extension}"
+                
+                # デバッグログ
+                logger.info(f"Generated source data filename: {source_filename}")
                 source_data_attachment = {
                     'filename': source_filename,
                     'content': file_content,
@@ -207,14 +246,46 @@ async def send_pdf_email(
                 raise HTTPException(status_code=400, detail=f"ファイルのデコードに失敗しました: {e}")
         elif request.sourceDataText and request.sourceDataText.strip():
             # テキストデータ
-            source_filename = f"{generate_source_data_filename(request.meetingInfo or {}, 'txt')}.txt"
-            # UTF-8 BOM付きでエンコード
-            text_content = '\ufeff' + request.sourceDataText  # BOM (U+FEFF) を先頭に追加
-            source_data_attachment = {
-                'filename': source_filename,
-                'content': text_content.encode('utf-8'),
-                'mime_type': 'text/plain; charset=utf-8'
-            }
+            source_format = request.sourceDataFormat or "docx"  # デフォルトはdocx
+            
+            if source_format.lower() == "docx":
+                # Wordファイルとして生成
+                try:
+                    word_bytes = WordDocumentService.create_document_from_text(
+                        request.sourceDataText, 
+                        request.meetingInfo or {}
+                    )
+                    source_filename = f"{generate_source_data_filename(request.meetingInfo or {}, 'docx')}.docx"
+                    source_data_attachment = {
+                        'filename': source_filename,
+                        'content': word_bytes,
+                        'mime_type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+                    }
+                    logger.info(f"Generated source Word filename: {source_filename}")
+                    logger.info(f"Word document size: {len(word_bytes)} bytes")
+                except Exception as e:
+                    logger.error(f"Wordファイル生成エラー: {e}")
+                    # フォールバックとしてTXTファイルを作成
+                    source_filename = f"{generate_source_data_filename(request.meetingInfo or {}, 'txt')}.txt"
+                    text_content = '\ufeff' + request.sourceDataText  # BOM (U+FEFF) を先頭に追加
+                    source_data_attachment = {
+                        'filename': source_filename,
+                        'content': text_content.encode('utf-8'),
+                        'mime_type': 'text/plain; charset=utf-8'
+                    }
+                    logger.warning(f"Wordファイル生成に失敗したため、TXTファイルで送信: {source_filename}")
+            else:
+                # TXTファイルとして生成（従来通り）
+                source_filename = f"{generate_source_data_filename(request.meetingInfo or {}, 'txt')}.txt"
+                text_content = '\ufeff' + request.sourceDataText  # BOM (U+FEFF) を先頭に追加
+                source_data_attachment = {
+                    'filename': source_filename,
+                    'content': text_content.encode('utf-8'),
+                    'mime_type': 'text/plain; charset=utf-8'
+                }
+                logger.info(f"Generated source text filename: {source_filename}")
+            
+            logger.info(f"Source text content length: {len(request.sourceDataText)}")
 
         # send email: body is pretty JSON
         import json
