@@ -49,9 +49,12 @@ def sanitize_filename(filename: str) -> str:
 
 
 def generate_pdf_filename(meeting_info: dict) -> str:
-    """会議情報に基づいてPDFファイル名を生成（【社外秘】_会議日（YYYY-MM-DD）_会議タイトル）"""
+    """会議情報に基づいてPDFファイル名を生成（【機密レベル】_会議日（YYYY-MM-DD）_会議タイトル）"""
     # 会議タイトルを取得
     meeting_title = meeting_info.get('会議タイトル') or meeting_info.get('title') or '議事録'
+    
+    # 機密レベルを取得（デフォルトは「社外秘」）
+    confidential_level = meeting_info.get('機密レベル') or '社外秘'
     
     # 会議日時を取得してフォーマット
     meeting_datetime = meeting_info.get('会議日時') or meeting_info.get('datetime') or ''
@@ -76,9 +79,9 @@ def generate_pdf_filename(meeting_info: dict) -> str:
     
     # ファイル名を構築
     if meeting_date:
-        filename = f"【社外秘】_{meeting_date}_{meeting_title}"
+        filename = f"【{confidential_level}】_{meeting_date}_{meeting_title}"
     else:
-        filename = f"【社外秘】_{meeting_title}"
+        filename = f"【{confidential_level}】_{meeting_title}"
     
     return sanitize_filename(filename)
 
@@ -173,7 +176,7 @@ async def export_to_pdf(request: PdfExportRequest):
             else:
                 wrapped = raw_html
 
-            pdf_data = generate_pdf_from_html(wrapped)
+            pdf_data = generate_pdf_from_html(wrapped, confidential_level=request.meeting_info.get('機密レベル', '社外秘') if request.meeting_info else '社外秘')
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"PDF生成失敗 (互換ルート): {e}")
         return StreamingResponse(

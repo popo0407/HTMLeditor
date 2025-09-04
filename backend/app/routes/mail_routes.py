@@ -41,7 +41,7 @@ def sanitize_filename(filename: str) -> str:
 
 
 def generate_pdf_filename(meeting_info: dict) -> str:
-    """会議情報に基づいてPDFファイル名を生成（【社外秘】_会議日（YYYY-MM-DD）_会議タイトル）"""
+    """会議情報に基づいてPDFファイル名を生成（【機密レベル】_会議日（YYYY-MM-DD）_会議タイトル）"""
     import logging
     logger = logging.getLogger(__name__)
     
@@ -51,6 +51,10 @@ def generate_pdf_filename(meeting_info: dict) -> str:
     # 会議タイトルを取得
     meeting_title = meeting_info.get('会議タイトル') or meeting_info.get('title') or '議事録'
     logger.info(f"PDF filename generation - meeting_title: {meeting_title}")
+    
+    # 機密レベルを取得（デフォルトは「社外秘」）
+    confidential_level = meeting_info.get('機密レベル') or '社外秘'
+    logger.info(f"PDF filename generation - confidential_level: {confidential_level}")
     
     # 会議日時を取得してフォーマット
     meeting_datetime = meeting_info.get('会議日時') or meeting_info.get('datetime') or ''
@@ -78,9 +82,9 @@ def generate_pdf_filename(meeting_info: dict) -> str:
     
     # ファイル名を構築
     if meeting_date:
-        filename = f"【社外秘】_{meeting_date}_{meeting_title}"
+        filename = f"【{confidential_level}】_{meeting_date}_{meeting_title}"
     else:
-        filename = f"【社外秘】_{meeting_title}"
+        filename = f"【{confidential_level}】_{meeting_title}"
     
     logger.info(f"PDF filename generation - final filename before sanitization: {filename}")
     sanitized = sanitize_filename(filename)
@@ -90,7 +94,7 @@ def generate_pdf_filename(meeting_info: dict) -> str:
 
 
 def generate_source_data_filename(meeting_info: dict, extension: str = 'txt') -> str:
-    """会議情報に基づいて元データファイル名を生成（【社外秘】_会議日（YYYY-MM-DD）_会議タイトル_元データ）"""
+    """会議情報に基づいて元データファイル名を生成（【機密レベル】_会議日（YYYY-MM-DD）_会議タイトル_元データ）"""
     import logging
     logger = logging.getLogger(__name__)
     
@@ -100,6 +104,10 @@ def generate_source_data_filename(meeting_info: dict, extension: str = 'txt') ->
     # 会議タイトルを取得
     meeting_title = meeting_info.get('会議タイトル') or meeting_info.get('title') or '議事録'
     logger.info(f"Source data filename generation - meeting_title: {meeting_title}")
+    
+    # 機密レベルを取得（デフォルトは「社外秘」）
+    confidential_level = meeting_info.get('機密レベル') or '社外秘'
+    logger.info(f"Source data filename generation - confidential_level: {confidential_level}")
     
     # 会議日時を取得してフォーマット
     meeting_datetime = meeting_info.get('会議日時') or meeting_info.get('datetime') or ''
@@ -127,9 +135,9 @@ def generate_source_data_filename(meeting_info: dict, extension: str = 'txt') ->
     
     # ファイル名を構築
     if meeting_date:
-        filename = f"【社外秘】_{meeting_date}_{meeting_title}_元データ"
+        filename = f"【{confidential_level}】_{meeting_date}_{meeting_title}_元データ"
     else:
-        filename = f"【社外秘】_{meeting_title}_元データ"
+        filename = f"【{confidential_level}】_{meeting_title}_元データ"
     
     logger.info(f"Source data filename generation - final filename before sanitization: {filename}")
     sanitized = sanitize_filename(filename)

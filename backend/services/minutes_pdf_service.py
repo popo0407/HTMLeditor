@@ -83,7 +83,8 @@ def normalize_meeting(meeting: Dict[str, Any] | None) -> Dict[str, Any]:
         'department': meeting.get('department') or meeting.get('部門') or '',
         'participants': meeting.get('participants') or meeting.get('参加者') or [],
         'summary': meeting.get('summary') or meeting.get('要約') or '',
-        'review': meeting.get('review') or meeting.get('講評') or ''
+        'review': meeting.get('review') or meeting.get('講評') or '',
+        '機密レベル': meeting.get('機密レベル') or '社外秘'  # 機密レベルフィールドを追加
     }
     
     # 日時形式の検証
@@ -131,7 +132,16 @@ def render_minutes_html(meeting: Dict[str, Any], minutes_html: str) -> str:
 
 
 def generate_minutes_pdf(meeting_info: Dict[str, Any] | None, minutes_html_raw: str) -> bytes:
+    import logging
+    logger = logging.getLogger(__name__)
+    
     meeting = normalize_meeting(meeting_info or {})
+    logger.info(f"Generate minutes PDF - meeting_info: {meeting_info}")
+    logger.info(f"Generate minutes PDF - normalized meeting: {meeting}")
+    
+    # 機密レベルを取得（デフォルトは「社外秘」）
+    confidential_level = meeting.get('機密レベル', '社外秘')
+    logger.info(f"Generate minutes PDF - confidential_level: {confidential_level}")
     
     # Remove CSS content and style tags completely
     cleaned_html = minutes_html_raw or ''
@@ -156,4 +166,4 @@ def generate_minutes_pdf(meeting_info: Dict[str, Any] | None, minutes_html_raw: 
     )
     
     rendered_html = render_minutes_html(meeting, safe_minutes_html)
-    return generate_pdf_from_html(rendered_html)
+    return generate_pdf_from_html(rendered_html, confidential_level=confidential_level)

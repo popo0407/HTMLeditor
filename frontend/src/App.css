@@ -549,4 +549,73 @@
 .sidebar-button-secondary:active {
   background-color: #495057;
 }
+
+/* 機密レベルボタンのスタイル */
+.confidential-level-container {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.confidential-button {
+  padding: 10px 20px;
+  border: 2px solid;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: transparent;
+  position: relative;
+  overflow: hidden;
+}
+
+.confidential-button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+  transition: left 0.5s;
+}
+
+.confidential-button:hover::before {
+  left: 100%;
+}
+
+.confidential-button-public {
+  border-color: #28a745;
+  color: #28a745;
+}
+
+.confidential-button-public.active {
+  background-color: #28a745;
+  color: white;
+  box-shadow: 0 4px 12px rgba(40, 167, 69, 0.4);
+  transform: translateY(-2px);
+}
+
+.confidential-button-public:hover:not(.active) {
+  background-color: rgba(40, 167, 69, 0.1);
+  transform: translateY(-1px);
+}
+
+.confidential-button-secret {
+  border-color: #dc3545;
+  color: #dc3545;
+}
+
+.confidential-button-secret.active {
+  background-color: #dc3545;
+  color: white;
+  box-shadow: 0 4px 12px rgba(220, 53, 69, 0.4);
+  transform: translateY(-2px);
+}
+
+.confidential-button-secret:hover:not(.active) {
+  background-color: rgba(220, 53, 69, 0.1);
+  transform: translateY(-1px);
+}
 /* ▲▲▲ ここまで追加 ▲▲▲ */

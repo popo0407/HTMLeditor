@@ -137,6 +137,9 @@ function App() {
     // 会議タイトルを取得
     const meetingTitle = meetingInfo?.['会議タイトル'] || meetingInfo?.title || '議事録';
     
+    // 機密レベルを取得（デフォルトは「社外秘」）
+    const confidentialLevel = meetingInfo?.['機密レベル'] || '社外秘';
+    
     // 会議日時を取得してフォーマット
     const meetingDateTime = meetingInfo?.['会議日時'] || meetingInfo?.datetime || '';
     let meetingDate = '';
@@ -165,8 +168,8 @@ function App() {
     
     // ファイル名を構築
     const filename = meetingDate 
-      ? `【社外秘】_${meetingDate}_${meetingTitle}`
-      : `【社外秘】_${meetingTitle}`;
+      ? `【${confidentialLevel}】_${meetingDate}_${meetingTitle}`
+      : `【${confidentialLevel}】_${meetingTitle}`;
     
     return sanitizeFilename(filename);
   };
@@ -440,6 +443,7 @@ function App() {
         会議場所: parsedData['会議場所'] || parsedData['会議場所'] || '',
         要約: parsedData['要約'] || parsedData['summary'] || '',
         講評: parsedData['講評'] || parsedData['review'] || '',
+        機密レベル: parsedData['機密レベル'] || '社外秘', // デフォルトは「社外秘」
         // 以下は読み取り専用で表示する分類情報
         部門: parsedData['部門'] || parsedData['department'] || '',
         大分類: parsedData['大分類'] || parsedData['category1'] || '',
@@ -932,7 +936,25 @@ console.log("最終結果:",result);}catch(e){console.error("詳細エラー:",e
             </div>
             <div className="tab-body">
               {activeTab === 'info' ? (
-                <div className="meeting-info-editor">
+              <div className="meeting-info-editor">
+                
+                  <label>機密レベル</label>
+                  <div className="confidential-level-container">
+                    <button
+                      type="button"
+                      onClick={() => setMeetingInfo({...meetingInfo, 機密レベル: '社外秘'})}
+                      className={`confidential-button confidential-button-public ${(meetingInfo.機密レベル || '社外秘') === '社外秘' ? 'active' : ''}`}
+                    >
+                      社外秘
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setMeetingInfo({...meetingInfo, 機密レベル: '秘'})}
+                      className={`confidential-button confidential-button-secret ${meetingInfo.機密レベル === '秘' ? 'active' : ''}`}
+                    >
+                      秘
+                    </button>
+                  </div>
                   <label>会議タイトル</label>
                   <input type="text" value={meetingInfo.会議タイトル || ''} onChange={e => setMeetingInfo({...meetingInfo, 会議タイトル: e.target.value})} />
                   <label>会議日時 (YYYY-MM-DD hh:mm:ss)</label>
@@ -1032,6 +1054,8 @@ console.log("最終結果:",result);}catch(e){console.error("詳細エラー:",e
                   <textarea rows={6} value={meetingInfo.要約 || ''} onChange={e => setMeetingInfo({...meetingInfo, 要約: e.target.value})} />
                   <label>講評</label>
                   <textarea rows={6} value={meetingInfo.講評 || ''} onChange={e => setMeetingInfo({...meetingInfo, 講評: e.target.value})} />
+                  
+                  
                   {/* 表示はするが編集不可の分類フィールド */}
                   <label>部門</label>
                   <input type="text" value={meetingInfo.部門 || ''} onChange={e => setMeetingInfo({...meetingInfo, 部門: e.target.value})} />

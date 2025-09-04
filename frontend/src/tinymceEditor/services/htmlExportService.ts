@@ -125,6 +125,7 @@ export class HtmlExportService {
   大分類?: string;
   中分類?: string;
   小分類?: string;
+  機密レベル?: string;
   } | null | undefined, minutesHtml: string): string {
     if (!meetingInfo) return minutesHtml || '';
 
