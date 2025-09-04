@@ -41,19 +41,27 @@
 <body>
   <header>
     <h1>{{ meeting.title or '' }}</h1>
-    <div>{{ meeting.datetime or '' }}　{{ meeting.location or '' }}</div>
+    <div>{{ meeting.datetime or '' }}</div>
   </header>
-
-  <section class="meta">
-    <table class="meta-table">
-  <tr><th>部門</th><td>{{ meeting.department or '' }}</td></tr>
-  <tr><th>参加者</th><td>{% for p in meeting.participants or [] %}{{ p }}{% if not loop.last %}<br/>{% endif %}{% endfor %}</td></tr>
-    </table>
-  </section>
 
   <section class="summary">
     <h3>要約</h3>
     <div>{{ (meeting.summary or '') | process_line_breaks | safe }}</div>
+  </section>
+
+  <!-- 議事録本文をページ分けせずに続けて記載 -->
+  <section class="minutes">
+    <div class="minutes-content">
+      {{ minutes_html | safe }}
+    </div>
+  </section>
+
+  <hr/>
+
+  <!-- 議事録本文終了後、次のページに移動 -->
+  <section class="participants page-break">
+    <h3>参加者</h3>
+    <div>{% for p in meeting.participants or [] %}{{ p }}{% if not loop.last %}<br/>{% endif %}{% endfor %}</div>
   </section>
 
   <section class="review">
@@ -61,12 +69,17 @@
     <div>{{ (meeting.review or '') | process_line_breaks | safe }}</div>
   </section>
 
-  <hr/>
+  <section class="meta">
+    <h3>部門</h3>
+    <div>{{ meeting.department or '' }}</div>
+  </section>
 
-  <!-- 明示的にページ区切りを入れて、会議情報を1ページ目、議事録本文を2ページ目以降にする -->
-  <section class="minutes page-break">
-    <div class="minutes-content">
-      {{ minutes_html | safe }}
+  <section class="classification">
+    <h3>大分類/中分類/小分類</h3>
+    <div>
+      {% if meeting.major_category or meeting.middle_category or meeting.minor_category %}
+        {{ meeting.major_category or '' }}{% if meeting.major_category and (meeting.middle_category or meeting.minor_category) %} / {% endif %}{{ meeting.middle_category or '' }}{% if meeting.middle_category and meeting.minor_category %} / {% endif %}{{ meeting.minor_category or '' }}
+      {% endif %}
     </div>
   </section>
 

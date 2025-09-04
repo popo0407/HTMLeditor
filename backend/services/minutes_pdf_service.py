@@ -84,6 +84,9 @@ def normalize_meeting(meeting: Dict[str, Any] | None) -> Dict[str, Any]:
         'participants': meeting.get('participants') or meeting.get('参加者') or [],
         'summary': meeting.get('summary') or meeting.get('要約') or '',
         'review': meeting.get('review') or meeting.get('講評') or '',
+        'major_category': meeting.get('major_category') or meeting.get('大分類') or '',
+        'middle_category': meeting.get('middle_category') or meeting.get('中分類') or '',
+        'minor_category': meeting.get('minor_category') or meeting.get('小分類') or '',
         '機密レベル': meeting.get('機密レベル') or '社外秘'  # 機密レベルフィールドを追加
     }
     
