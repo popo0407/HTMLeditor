@@ -27,9 +27,11 @@
 .url-input-container {
   display: flex;
   justify-content: center;
-  align-items: center;
-  height: 100vh;
+  align-items: flex-start;
+  min-height: 100vh;
   background-color: #f8f9fa;
+  padding: 20px 0;
+  overflow-y: auto;
 }
 
 .url-input-content {
@@ -38,6 +40,8 @@
   background-color: white;
   border-radius: 8px;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  margin: 0 20px;
 }
 
 .url-input-content h2 {
@@ -298,59 +302,6 @@
   cursor: not-allowed;
 }
 
-.editor-mode-switch {
-  display: flex;
-  gap: 8px;
-  margin-right: 16px;
-}
-
-.mode-button {
-  padding: 8px 16px;
-  border: 2px solid var(--accent-color);
-  background-color: white;
-  color: var(--accent-color);
-  border-radius: 6px;
-  cursor: pointer;
-  font-family: var(--primary-font);
-  font-size: 14px;
-  font-weight: 500;
-  transition: all 0.2s ease;
-  white-space: nowrap;
-}
-
-.mode-button:hover {
-  background-color: var(--accent-color);
-  color: white;
-}
-
-.mode-button.active {
-  background-color: var(--accent-color);
-  color: white;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.header-import-box {
-  display: flex;
-  align-items: center;
-  margin-bottom: 8px;
-  flex: 1;
-  min-width: 300px;
-}
-
-.header-import-box textarea {
-  font-size: 1rem;
-  padding: 6px;
-  border-radius: 4px;
-  border: 1px solid #ccc;
-  resize: vertical;
-}
-
-.header-import-box .header-button {
-  margin-left: 4px;
-  height: 40px;
-  font-size: 1rem;
-}
-
 .app-main {
   flex: 1;
   overflow: auto;
@@ -370,33 +321,7 @@
   min-height: 100%;
 }
 
-/* 分割ビューのスタイル */
-.split-view {
-  flex-direction: row;
-  gap: 16px;
-  min-height: fit-content;
-}
-
-.editor-pane,
-.preview-pane {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  background-color: transparent;
-  border-radius: 8px;
-  border: none;
-  overflow: visible;
-  min-width: 0;
-  height: auto;
-  min-height: 500px;
-}
-
-.pane-header {
-  background-color: transparent;
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--border-color);
-  flex-shrink: 0;
-}
+/* 廃止されたプレビューモード関連のスタイルを削除 */
 
 .pane-header h3 {
   margin: 0;
@@ -619,3 +544,901 @@
   transform: translateY(-1px);
 }
 /* ▲▲▲ ここまで追加 ▲▲▲ */
+
+/* 誤字修正リストのスタイル */
+.typo-correction-list {
+  background-color: white;
+  padding: 20px;
+  border-radius: 8px;
+  border: 1px solid #dee2e6;
+}
+
+.correction-actions {
+  margin-bottom: 15px;
+}
+
+.add-button {
+  padding: 8px 16px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.add-button:hover:not(:disabled) {
+  background-color: #0056b3;
+}
+
+.add-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.corrections-table {
+  overflow-x: auto;
+}
+
+.corrections-table table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+}
+
+.corrections-table th,
+.corrections-table td {
+  padding: 12px;
+  text-align: left;
+  border-bottom: 1px solid #dee2e6;
+}
+
+.corrections-table th {
+  background-color: #f8f9fa;
+  font-weight: 600;
+  color: #495057;
+}
+
+.corrections-table input[type="text"] {
+  width: 100%;
+  padding: 6px 10px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.corrections-table button {
+  margin-right: 5px;
+  padding: 4px 8px;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.corrections-table button:hover:not(:disabled) {
+  opacity: 0.8;
+}
+
+.corrections-table button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.delete-button {
+  background-color: #dc3545 !important;
+  color: white !important;
+}
+
+.navigation-buttons {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 30px;
+  gap: 15px;
+}
+
+.back-button, .next-button {
+  padding: 12px 24px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.back-button {
+  background-color: #6c757d;
+  color: white;
+}
+
+.back-button:hover {
+  background-color: #545b62;
+  transform: translateY(-1px);
+}
+
+.next-button {
+  background-color: #007bff;
+  color: white;
+}
+
+.next-button:hover {
+  background-color: #0056b3;
+  transform: translateY(-1px);
+}
+
+.warning-text {
+  color: #dc3545;
+  font-size: 14px;
+  margin-top: 10px;
+  font-style: italic;
+}
+
+.info-text {
+  color: #007bff;
+  font-size: 14px;
+  margin: 10px 0;
+  font-weight: 500;
+}
+
+/* 階層的な部門選択のスタイル */
+.bu-selection, .ka-selection {
+  margin-top: 20px;
+}
+
+.breadcrumb {
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+}
+
+.breadcrumb-button {
+  background: none;
+  border: none;
+  color: #007bff;
+  text-decoration: underline;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.breadcrumb-button:hover {
+  color: #0056b3;
+}
+
+.breadcrumb span {
+  color: #6c757d;
+  font-size: 16px;
+}
+
+/* 部門管理ページのスタイル */
+.department-management {
+  height: 100vh;
+  padding: 20px;
+  background-color: #f8f9fa;
+}
+
+.management-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+  padding-bottom: 15px;
+  border-bottom: 2px solid #dee2e6;
+}
+
+.management-header h2 {
+  margin: 0;
+  color: #212529;
+}
+
+.management-content {
+  display: flex;
+  gap: 30px;
+  height: calc(100vh - 120px);
+}
+
+.departments-section {
+  flex: 1;
+  background-color: white;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  overflow-y: auto;
+}
+
+.corrections-section {
+  flex: 2;
+  background-color: white;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  overflow-y: auto;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #dee2e6;
+}
+
+.section-header h3 {
+  margin: 0;
+  color: #495057;
+}
+
+.departments-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.department-item-container {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.department-item-container.selected {
+  background-color: #e3f2fd;
+  padding: 8px;
+  border-radius: 4px;
+  border: 1px solid #007bff;
+}
+
+.delete-department-button {
+  padding: 6px 12px;
+  background-color: #dc3545;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: background-color 0.2s ease;
+}
+
+.delete-department-button:hover:not(:disabled) {
+  background-color: #c82333;
+}
+
+.delete-department-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.department-item {
+  padding: 15px;
+  border: 1px solid #dee2e6;
+  background-color: #f8f9fa;
+  border-radius: 6px;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.3s ease;
+  font-size: 14px;
+}
+
+.department-item:hover {
+  background-color: #e9ecef;
+  border-color: #007bff;
+}
+
+.department-item.selected {
+  background-color: #007bff;
+  color: white;
+  border-color: #007bff;
+}
+
+.add-department-form {
+  background-color: #f8f9fa;
+  padding: 20px;
+  border-radius: 6px;
+  margin-bottom: 20px;
+  border: 1px solid #dee2e6;
+}
+
+.add-department-form h4 {
+  margin-top: 0;
+  margin-bottom: 15px;
+  color: #495057;
+}
+
+.form-row {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+.form-column {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+.form-row input {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.form-column input,
+.form-column select {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  font-size: 14px;
+  background-color: white;
+}
+
+.form-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.form-actions button {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.form-actions button:first-child {
+  background-color: #007bff;
+  color: white;
+}
+
+.form-actions button:first-child:hover:not(:disabled) {
+  background-color: #0056b3;
+}
+
+.form-actions button:last-child {
+  background-color: #6c757d;
+  color: white;
+}
+
+.form-actions button:last-child:hover:not(:disabled) {
+  background-color: #545b62;
+}
+
+.form-actions button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* インライン部門選択のスタイル */
+.department-selection-inline {
+  margin: 15px 0;
+  padding: 15px;
+  background-color: #f8f9fa;
+  border-radius: 6px;
+  border: 1px solid #dee2e6;
+}
+
+.bu-selection-inline,
+.ka-selection-inline {
+  margin-bottom: 15px;
+}
+
+/* 部門管理ページ用の部門選択スタイル */
+.bu-selection,
+.ka-selection {
+  margin-bottom: 20px;
+}
+
+.bu-selection p,
+.ka-selection .breadcrumb span {
+  font-weight: 500;
+  color: #495057;
+  margin-bottom: 10px;
+}
+
+.department-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.department-button {
+  padding: 12px 20px;
+  border: 1px solid #007bff;
+  background-color: white;
+  color: #007bff;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s ease;
+  font-weight: 500;
+}
+
+.department-button:hover {
+  background-color: #007bff;
+  color: white;
+}
+
+.department-button.selected {
+  background-color: #007bff;
+  color: white;
+}
+
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 15px;
+}
+
+.breadcrumb-button {
+  background: none;
+  border: none;
+  color: #007bff;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: underline;
+}
+
+.breadcrumb-button:hover {
+  color: #0056b3;
+}
+
+.department-buttons-inline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.department-button-small {
+  padding: 8px 16px;
+  border: 1px solid #007bff;
+  background-color: white;
+  color: #007bff;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+/* 注意書きテキストのスタイル */
+.notice-text {
+  font-size: 14px;
+  color: #6c757d;
+  font-style: italic;
+  margin: 5px 0;
+}
+
+/* 選択済み部門の表示 */
+.selected-department {
+  margin-top: 15px;
+  padding: 10px;
+  background-color: #d4edda;
+  border: 1px solid #c3e6cb;
+  border-radius: 4px;
+}
+
+.selected-text {
+  margin: 0;
+  color: #155724;
+  font-size: 14px;
+}
+
+.department-button-small:hover {
+  background-color: #007bff;
+  color: white;
+}
+
+.department-button-small.selected {
+  background-color: #007bff;
+  color: white;
+}
+
+.breadcrumb-inline {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.breadcrumb-button-small {
+  background: none;
+  border: none;
+  color: #007bff;
+  text-decoration: underline;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.breadcrumb-button-small:hover {
+  color: #0056b3;
+}
+
+.selected-department-inline {
+  margin-top: 15px;
+  padding: 10px;
+  background-color: #d4edda;
+  border: 1px solid #c3e6cb;
+  border-radius: 4px;
+}
+
+.selected-text {
+  margin: 0;
+  color: #155724;
+  font-size: 14px;
+}
+
+.manage-link-button {
+  background: none;
+  border: none;
+  color: #007bff;
+  text-decoration: underline;
+  cursor: pointer;
+  font-size: 14px;
+  margin-left: 10px;
+}
+
+.manage-link-button:hover {
+  color: #0056b3;
+}
+
+/* 部門削除ボタンのスタイル */
+.department-item-container {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.department-item-container.selected {
+  background-color: rgba(0, 123, 255, 0.1);
+  border-radius: 6px;
+  padding: 5px;
+}
+
+.department-item-container .department-item {
+  flex: 1;
+  margin: 0;
+}
+
+.delete-department-button {
+  padding: 6px 12px;
+  background-color: #dc3545;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.delete-department-button:hover:not(:disabled) {
+  background-color: #c82333;
+}
+
+.delete-department-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Excelライクな編集機能のスタイル */
+.save-button {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  background-color: #6c757d;
+  color: white;
+}
+
+.save-button.has-changes {
+  background-color: #28a745;
+  color: white;
+  box-shadow: 0 2px 8px rgba(40, 167, 69, 0.3);
+}
+
+.save-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.save-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.deleted-row {
+  opacity: 0.5;
+  background-color: #f8d7da;
+  text-decoration: line-through;
+}
+
+.validation-error {
+  border-color: #dc3545 !important;
+  background-color: #f8d7da;
+}
+
+.restore-button {
+  background-color: #28a745 !important;
+  color: white !important;
+}
+
+.unsaved-changes-warning {
+  background-color: #fff3cd;
+  border: 1px solid #ffeaa7;
+  border-radius: 4px;
+  padding: 10px;
+  margin-top: 15px;
+  color: #856404;
+  font-weight: 500;
+  text-align: center;
+}
+
+/* コピー元選択用のフォームスタイル */
+.form-row label {
+  display: block;
+  margin-bottom: 5px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #495057;
+}
+
+.form-row select {
+  flex: 1;
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  font-size: 14px;
+  background-color: white;
+}
+
+.form-row select:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+.form-column input:focus,
+.form-column select:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+/* TinyMCEエディタ関連のスタイル */
+.tabbed-editor {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.tabs {
+  display: flex;
+  border-bottom: 1px solid #dee2e6;
+  background-color: #f8f9fa;
+}
+
+.tabs button {
+  padding: 12px 24px;
+  border: none;
+  background-color: transparent;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  color: #6c757d;
+  border-bottom: 3px solid transparent;
+  transition: all 0.2s ease;
+}
+
+.tabs button.active {
+  color: #007bff;
+  border-bottom-color: #007bff;
+  background-color: white;
+}
+
+.tabs button:hover:not(.active) {
+  color: #495057;
+  background-color: #e9ecef;
+}
+
+.tab-body {
+  flex: 1;
+  padding: 20px;
+  overflow-y: auto;
+}
+
+.meeting-info-editor {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.meeting-info-editor label {
+  display: block;
+  margin-bottom: 5px;
+  margin-top: 15px;
+  font-weight: 500;
+  color: #495057;
+}
+
+.meeting-info-editor label:first-child {
+  margin-top: 0;
+}
+
+.meeting-info-editor input[type="text"],
+.meeting-info-editor textarea {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  font-size: 14px;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+.meeting-info-editor input[type="text"]:focus,
+.meeting-info-editor textarea:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+.meeting-info-editor textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.participants-editor {
+  margin-top: 10px;
+}
+
+.minutes-editor-wrapper {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.department-button-small.selected {
+  background-color: #007bff;
+  color: white;
+  font-weight: 500;
+}
+
+.breadcrumb-inline {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.breadcrumb-button-small {
+  background: none;
+  border: none;
+  color: #007bff;
+  text-decoration: underline;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.breadcrumb-button-small:hover {
+  color: #0056b3;
+}
+
+.breadcrumb-inline span {
+  color: #6c757d;
+  font-size: 14px;
+  margin-left: 5px;
+}
+
+.selected-department-inline {
+  margin-top: 15px;
+  padding-top: 15px;
+  border-top: 1px solid #dee2e6;
+}
+
+.selected-text {
+  margin: 0;
+  color: #28a745;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.manage-link-button {
+  padding: 4px 8px;
+  background-color: #6c757d;
+  color: white;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 12px;
+  text-decoration: none;
+}
+
+.manage-link-button:hover {
+  background-color: #545b62;
+}
+
+/* Excelライクな編集機能用のスタイル */
+.save-button {
+  padding: 8px 16px;
+  background-color: #6c757d;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.3s ease;
+}
+
+.save-button:hover:not(:disabled) {
+  background-color: #5a6268;
+}
+
+.save-button.has-changes {
+  background-color: #28a745;
+}
+
+.save-button.has-changes:hover:not(:disabled) {
+  background-color: #218838;
+}
+
+.save-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.deleted-row {
+  opacity: 0.5;
+  text-decoration: line-through;
+  background-color: #f8d7da;
+}
+
+.validation-error {
+  border-color: #dc3545 !important;
+  background-color: #f8d7da !important;
+}
+
+.restore-button {
+  background-color: #17a2b8 !important;
+  color: white !important;
+}
+
+.restore-button:hover:not(:disabled) {
+  background-color: #138496 !important;
+}
+
+.unsaved-changes-warning {
+  margin-top: 10px;
+  padding: 8px 12px;
+  background-color: #fff3cd;
+  border: 1px solid #ffeaa7;
+  border-radius: 4px;
+  color: #856404;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.corrections-table input[type="text"] {
+  border: 1px solid #ced4da;
+  transition: border-color 0.3s ease, background-color 0.3s ease;
+}
+
+.corrections-table input[type="text"]:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}

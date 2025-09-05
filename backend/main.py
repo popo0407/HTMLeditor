@@ -16,8 +16,9 @@ from datetime import datetime
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from app.routes import mail_routes, pdf_routes
+from app.routes import mail_routes, pdf_routes, department_routes
 from app.config import get_settings
+from app.config.database import init_database
 from pathlib import Path
 
 # ログ設定
@@ -43,6 +44,9 @@ logger.info("=== HTMLエディタ バックエンド アプリケーション開
 
 # 設定インスタンスを取得
 settings = get_settings()
+
+# データベースの初期化
+init_database()
 
 app = FastAPI(
     title="HTML Editor API",
@@ -72,6 +76,8 @@ if static_dir.exists():
 app.include_router(mail_routes.router, prefix="/api/mail", tags=["mail"])
 # PDF出力APIは /api/pdf を起点とする
 app.include_router(pdf_routes.router, prefix="/api/pdf", tags=["pdf"])
+# 部門管理APIは /api/departments を起点とする
+app.include_router(department_routes.router, prefix="/api/departments", tags=["departments"])
 
 
 @app.get("/")

@@ -10,6 +10,14 @@ import './App.css';
 import { TinyMCEEditor } from './tinymceEditor/components/TinyMCEEditor';
 import { sendPdfMail, PdfMailSendRequest } from './services/apiService';
 import { HtmlExportService } from './tinymceEditor/services/htmlExportService';
+import { 
+  Department, 
+  DepartmentWithCorrections, 
+  getAllDepartments, 
+  getDepartmentWithCorrections, 
+  getCorrectionsForClipboard 
+} from './services/departmentService';
+import { DepartmentManagement } from './components/DepartmentManagement';
 
 function App() {
   // emailTemplates removed: backend provides fixed recipient via settings
@@ -31,7 +39,7 @@ function App() {
   // タブの高さ（px）
   const TAB_HEIGHT = 40;
   const [editorHeight, setEditorHeight] = useState<number>(window.innerHeight);
-  const [currentStep, setCurrentStep] = useState<'url-input' | 'editor' | 'output' | 'bookmarklet-install'>('url-input');
+  const [currentStep, setCurrentStep] = useState<'url-input' | 'department-management' | 'editor' | 'output' | 'bookmarklet-install'>('url-input');
   const [teamsUrl, setTeamsUrl] = useState('');
   // 参加者の選択状態を管理
   const [selectedParticipants, setSelectedParticipants] = useState<Set<number>>(new Set());
@@ -40,6 +48,15 @@ function App() {
   const [sourceDataText, setSourceDataText] = useState('');
   const [sourceDataFile, setSourceDataFile] = useState<File | null>(null);
   const [isSourceDataTextDisabled, setIsSourceDataTextDisabled] = useState(false);
+
+  // 部門選択の状態
+  const [departments, setDepartments] = useState<Department[]>([]);
+  const [selectedDepartment, setSelectedDepartment] = useState<DepartmentWithCorrections | null>(null);
+  
+  // 部門選択の階層状態
+  const [selectedBu, setSelectedBu] = useState<string>(''); // 選択された部
+  const [availableBus, setAvailableBus] = useState<string[]>([]); // 利用可能な部のリスト
+  const [availableKas, setAvailableKas] = useState<Department[]>([]); // 選択された部の課のリスト
 
   // HtmlExportServiceは直接使用するため、useRefは不要
 
@@ -585,6 +602,82 @@ function App() {
     e.stopPropagation();
   };
 
+  // 部門選択関連の関数
+  const loadDepartments = async () => {
+    try {
+      const depts = await getAllDepartments();
+      setDepartments(depts);
+      
+      // 部の一覧を抽出（重複除去）
+      const busSet = new Set(depts.map(dept => dept.bu_name));
+      setAvailableBus(Array.from(busSet));
+    } catch (error) {
+      console.error('部門の取得に失敗しました:', error);
+      alert('部門の取得に失敗しました。');
+    }
+  };
+
+  const handleBuSelect = (buName: string) => {
+    setSelectedBu(buName);
+    // 選択された部の課一覧を抽出
+    const kasInBu = departments.filter(dept => dept.bu_name === buName);
+    setAvailableKas(kasInBu);
+  };
+
+  const handleBackToBuSelection = () => {
+    setSelectedBu('');
+    setAvailableKas([]);
+    setSelectedDepartment(null);
+  };
+
+  const handleDepartmentSelect = async (departmentId: number) => {
+    try {
+      const department = await getDepartmentWithCorrections(departmentId);
+      setSelectedDepartment(department);
+    } catch (error) {
+      console.error('部門の詳細取得に失敗しました:', error);
+      alert('部門の詳細取得に失敗しました。');
+    }
+  };
+
+  const handleOpenChatWithCorrections = async () => {
+    if (!selectedDepartment) {
+      alert('部門を選択してください。');
+      return;
+    }
+
+    try {
+      const correctionsData = await getCorrectionsForClipboard(selectedDepartment.id);
+      
+      // 部門情報を「部/課/職種」の形でまとめる
+      const departmentInfo = correctionsData.department_info;
+      const departmentDisplay = `${departmentInfo.bu_name}/${departmentInfo.ka_name}${departmentInfo.job_type ? `/${departmentInfo.job_type}` : ''}`;
+      
+      // 部門情報と誤字修正リストを含むJSONを作成
+      const clipboardData = {
+        Department: departmentDisplay,
+        typoCorrectionList: correctionsData.corrections
+      };
+      
+      // JSON形式でクリップボードにコピー
+      const jsonData = JSON.stringify(clipboardData, null, 2);
+      await navigator.clipboard.writeText(jsonData);
+      
+      // チャットページを開く
+      handleOpenTeamsChat();
+    } catch (error) {
+      console.error('誤字修正リストのコピーに失敗しました:', error);
+      alert('誤字修正リストのコピーに失敗しました。');
+    }
+  };
+
+  // 部門選択ステップが表示される際に部門一覧を読み込む
+  React.useEffect(() => {
+    if (currentStep === 'url-input') {
+      loadDepartments();
+    }
+  }, [currentStep]);
+
   const handleDragLeave = (e: React.DragEvent<HTMLTextAreaElement>) => {
     e.preventDefault();
     e.stopPropagation();
@@ -744,6 +837,9 @@ function App() {
       <div className="url-input-content">
         <h2>議事録編集ツール</h2>
         
+
+        <div className="url-input-section">
+          <h3>0. ブックマークレットの登録</h3>
           <p>
             ブックマークレットの登録がまだの方→
             <button 
@@ -753,10 +849,81 @@ function App() {
               ブックマークレットの登録
             </button>
           </p>
+          <p>ブックマークレットが<strong>「会議情報取得ver03」</strong>でない方は再登録してください。更新日: 2025年9月5日
+          </p>
+        </div>
         
         <div className="url-input-section">
-          <h3>1. Teams会議URLを入力</h3>
-          <p>新しいタブで開いたTeamsで「代わりにWebアプリを実行」を選択すると、Teamsチャットページが開きます。</p>
+          <h3>1. 部門選択</h3>
+          <p>部門に合った誤字修正を適用するため部門を選択してください。</p>
+          
+          {/* 部門選択UI */}
+          <div className="department-selection-inline">
+            {departments.length === 0 ? (
+              <p>部門を読み込み中...</p>
+            ) : (
+              <>
+                {!selectedBu ? (
+                  // 部の選択
+                  <div className="bu-selection-inline">
+                    <p>部を選択：</p>
+                    <div className="department-buttons-inline">
+                      {availableBus.map((buName) => (
+                        <button
+                          key={buName}
+                          onClick={() => handleBuSelect(buName)}
+                          className="department-button-small"
+                        >
+                          {buName}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  // 課の選択
+                  <div className="ka-selection-inline">
+                    <div className="breadcrumb-inline">
+                      <button onClick={handleBackToBuSelection} className="breadcrumb-button-small">
+                        部門選択に戻る
+                      </button>
+                      <span> / 課を選択：</span>
+                    </div>
+                    
+                    <div className="department-buttons-inline">
+                      {availableKas.map((dept) => (
+                        <button
+                          key={dept.id}
+                          onClick={() => handleDepartmentSelect(dept.id)}
+                          className={`department-button-small ${selectedDepartment?.id === dept.id ? 'selected' : ''}`}
+                        >
+                          {dept.ka_name}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
+                {selectedDepartment && (
+                  <div className="selected-department-inline">
+                    <p className="selected-text">
+                      ✓ 選択済み: <strong>{selectedDepartment.bu_name} {selectedDepartment.ka_name}</strong>
+                      <button 
+                        onClick={() => setCurrentStep('department-management')}
+                        className="manage-link-button"
+                      >
+                        管理
+                      </button>
+                    </p>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+
+        <div className="url-input-section">
+          <h3>2. Teams会議URLを入力</h3>
+          <p>会議に参加するリンクをテキストボックスに張り付けて、【チャットページを開く】ボタンを押してください。</p>
           <input
             type="url"
             value={teamsUrl}
@@ -764,21 +931,30 @@ function App() {
             placeholder="https://teams.microsoft.com/l/meetup-join/..."
             className="url-input"
           />
-          <button onClick={handleOpenTeamsChat} className="url-button">
-            チャットページを開く
+          <button 
+            onClick={selectedDepartment ? handleOpenChatWithCorrections : handleOpenTeamsChat} 
+            className="url-button"
+            disabled={!selectedDepartment}
+          >
+            {selectedDepartment ? 'チャットページを開く' : 'チャットページを開く'}
           </button>
+          {!selectedDepartment && (
+            <p className="warning-text">※ 部門を選択してからチャットページを開いてください</p>
+          )}
+          <p>新しいタブで開いたTeamsで「代わりにWebアプリを実行」を選択すると、Teamsチャットページが開きます。</p>
         </div>
         
         <div className="url-input-section">
-          <h3>2. Teamsチャットページでの操作</h3>
+          <h3>3. Teamsチャットページでの操作</h3>
           <p><strong>「会議情報取得」ブックマークレット</strong>を実行して、会議情報を取得してください。</p>
           <p>クリップボードに会議情報が自動でコピーされて、議事録生成用のGenAIが新しいタブで開きます。</p>
+
           <button onClick={() => window.open("https://d3r0xupf0a2onu.cloudfront.net/use-case-builder/execute/7abad9ce-a83f-4ec6-91fe-4e843ec0add1", "_blank")} className="back-button">
             議事録生成用のGenAIを開く
           </button>
         </div>
         <div className="url-input-section">
-          <h3>3. GenAI ページでの操作</h3>
+          <h3>4. GenAI ページでの操作</h3>
           <p><strong>文字起こし入力部</strong>にクリップボードの内容を貼り付けて、議事録の形式を選択して実行してください。</p>
           <p>文字起こしされた内容をコピーしてこのサイトに戻ってきてください。</p>
         </div>
@@ -795,21 +971,165 @@ function App() {
   // ▼▼▼ ここから追加 (新しい画面用の関数) ▼▼▼
   // ブックマークレット登録ページ
   const renderBookmarkletInstallStep = () => {
-    // ▼▼▼ ブックマークレットのコードを定数として分離 ▼▼▼
-    const bookmarkletCode = `javascript:(function(){const wait=(ms)=>new Promise(res=>setTimeout(res,ms));(async()=>{try{let detailBtn=document.querySelector('button[data-tid="chat-meeting-details"]');if(detailBtn){detailBtn.click();}
-await wait(5000);let titleEl=document.querySelector('span[data-tid="calv2-sf-meeting-subject-view"]');let title=titleEl?.innerText||null;let participants=[...document.querySelectorAll('div.ms-TooltipHost')].map(el=>el.innerText);let summaryBtn=document.querySelector('div[data-tid="data-tid-まとめ"]');if(summaryBtn){summaryBtn.click();}
-await wait(5000);let datetime=[...document.querySelectorAll('span.fui-StyledText')].map(el=>el.innerText).filter(t=>/\\d/.test(t));let transcriptBtn=document.querySelector('button[data-tid="Transcript"]');if(transcriptBtn){transcriptBtn.click();}
-await wait(5000);const c=document.querySelector('[data-is-scrollable="true"]');let transcript='';if(c){let entries=[];let processedContent=new Set();const addEntries=(elements)=>{let newCount=0,skipCount=0;for(const e of elements){let s='（システム）',t='',msg='';const a=e.getAttribute('aria-label')||'';const m=a.match(/^(.+?)\\s+\\d/);if(m){s=m[1].trim();}else{const n=e.closest('[class*="rightColumn-"]')?.querySelector('[class*="itemDisplayName-"]');if(n)s=n.textContent.trim();}
-const tsEl=e.closest('[class*="rightColumn-"]')?.querySelector('[id^="Header-timestamp-"]');if(tsEl)t=tsEl.textContent.trim();const msgEl=e.querySelector('[id^="sub-entry-"]');if(msgEl){msg=Array.from(msgEl.childNodes).filter(n=>n.nodeType===3).map(n=>n.textContent.trim()).join(' ');}
-if(!msg)continue;const uniqueKey=\`\${s}|\${t}|\${msg}\`;if(processedContent.has(uniqueKey)){skipCount++;continue;}
-processedContent.add(uniqueKey);newCount++;entries.push({speaker:s,time:t,content:msg});}
-return{newCount,skipCount};};c.scrollTop=0;await wait(1000);let res=addEntries(c.querySelectorAll('div[class*="rightColumn-"]'));console.log(\`初回: 新規 \${res.newCount} 件, 重複スキップ \${res.skipCount} 件\`);const totalHeight=c.scrollHeight;const viewHeight=c.clientHeight;const scrollStep=viewHeight*1.5;let currentScroll=0,loop=0;while(currentScroll<totalHeight&&loop<100){loop++;currentScroll+=scrollStep;c.scrollTop=currentScroll;await wait(300);if(Math.abs(c.scrollTop-currentScroll)>100){console.log(\`位置修正: 目標 \${currentScroll} → 実際 \${c.scrollTop}\`);c.scrollTop=currentScroll;await wait(300);}
-res=addEntries(c.querySelectorAll('div[class*="rightColumn-"]'));console.log(\`スクロール \${loop}: 新規 \${res.newCount} 件, 重複スキップ \${res.skipCount} 件\`);if(currentScroll>=totalHeight-viewHeight)break;}
-c.scrollTop=c.scrollHeight;await wait(2000);res=addEntries(c.querySelectorAll('div[class*="rightColumn-"]'));console.log(\`最終: 新規 \${res.newCount} 件, 重複スキップ \${res.skipCount} 件\`);entries.sort((a,b)=>{const timeA=a.time.split(':').reduce((acc,time)=>60*acc+parseInt(time,10),0);const timeB=b.time.split(':').reduce((acc,time)=>60*acc+parseInt(time,10),0);return timeA-timeB;});let lastSpeaker='';for(const entry of entries){if(entry.speaker==='（システム）'&&lastSpeaker){transcript+=\`\${entry.content}\\n\\n\`;}else{if(entry.speaker!=='（システム）'){lastSpeaker=entry.speaker;}
-transcript+=\`\${entry.speaker}\${entry.time?' ['+entry.time+']':''}:\\n\${entry.content}\\n\\n\`;}}
-}
-let result={title,participants,datetime,transcript};if(!transcript){alert("❌ 会議情報を取得できませんでした");}else{try{const jsonString=JSON.stringify(result,null,2);await navigator.clipboard.writeText(jsonString);const lineCount=transcript.split('\\n').filter(l=>l.includes(':')).length;alert(\`✅ 完了！会議情報を取得し、クリップボードにコピーしました\`);window.open('https://d3r0xupf0a2onu.cloudfront.net/use-case-builder/execute/7abad9ce-a83f-4ec6-91fe-4e843ec0add1','_blank');}catch(clipboardError){const lineCount=transcript.split('\\n').filter(l=>l.includes(':')).length;alert(\`❌ クリップボードコピー失敗\`);window.open('https://d3r0xupf0a2onu.cloudfront.net/use-case-builder/execute/7abad9ce-a83f-4ec6-91fe-4e843ec0add1','_blank');}}
-console.log("最終結果:",result);}catch(e){console.error("詳細エラー:",e);alert(\`❌ 取得失敗: \${e.message||'unknown error'}\`);}})().catch(e=>{console.error("❌ 外側Promiseエラー:",e);});})();`;
+    // ブックマークレットのコードを文字列として定義
+    const bookmarkletCode = [
+      'javascript:(function(){',
+      'const wait=(ms)=>new Promise(res=>setTimeout(res,ms));',
+      'const createProgressWindow=()=>{',
+      'const overlay=document.createElement("div");',
+      'overlay.id="meeting-progress-overlay";',
+      'overlay.style.cssText="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:10000;display:flex;justify-content:center;align-items:center;";',
+      'const window=document.createElement("div");',
+      'window.style.cssText="background:white;padding:20px;border-radius:10px;box-shadow:0 4px 20px rgba(0,0,0,0.3);min-width:300px;text-align:center;font-family:Arial,sans-serif;";',
+      'const title=document.createElement("h3");',
+      'title.textContent="会議情報取得中...";',
+      'title.style.cssText="margin:0 0 15px 0;color:#333;";',
+      'const status=document.createElement("div");',
+      'status.id="progress-status";',
+      'status.style.cssText="margin:10px 0;color:#666;font-size:14px;";',
+      'const progress=document.createElement("div");',
+      'progress.style.cssText="width:100%;height:6px;background:#f0f0f0;border-radius:3px;margin:15px 0;overflow:hidden;";',
+      'const progressBar=document.createElement("div");',
+      'progressBar.id="progress-bar";',
+      'progressBar.style.cssText="width:0%;height:100%;background:linear-gradient(90deg,#4CAF50,#45a049);transition:width 0.3s ease;border-radius:3px;";',
+      'progress.appendChild(progressBar);',
+      'window.appendChild(title);',
+      'window.appendChild(status);',
+      'window.appendChild(progress);',
+      'overlay.appendChild(window);',
+      'document.body.appendChild(overlay);',
+      'return{updateStatus:(text)=>{document.getElementById("progress-status").textContent=text;},updateProgress:(percent)=>{document.getElementById("progress-bar").style.width=percent+"%";},close:()=>{document.body.removeChild(overlay);}};',
+      '};',
+      'const waitForElement=async(selector,maxWaitTime=20000)=>{',
+      'const startTime=Date.now();',
+      'while(Date.now()-startTime<maxWaitTime){',
+      'const element=document.querySelector(selector);',
+      'if(element)return element;',
+      'await wait(1000);',
+      '}',
+      'throw new Error(selector+" が見つかりませんでした");',
+      '};',
+      '(async()=>{',
+      'const progressWindow=createProgressWindow();',
+      'try{',
+      'let cachedData=null;',
+      'try{',
+      'progressWindow.updateStatus("クリップボード情報を取得中...");',
+      'const clipboardText=await navigator.clipboard.readText();',
+      'try{cachedData=JSON.parse(clipboardText);}catch(_){throw new Error("HTMLEditorからチャット画面を開いてください");}',
+      'if(typeof cachedData!=="object"){throw new Error("HTMLEditorからチャット画面を開いてください");}',
+      'progressWindow.updateStatus("クリップボード情報取得成功");',
+      'progressWindow.updateProgress(5);',
+      '}catch(e){progressWindow.close();alert("❌ "+e.message);return;}',
+      'progressWindow.updateStatus("会議詳細ボタンを探しています...");',
+      'progressWindow.updateProgress(10);',
+      'let detailBtn=await waitForElement("button[data-tid=\\"chat-meeting-details\\"]");',
+      'detailBtn.click();',
+      'progressWindow.updateStatus("会議詳細を開きました");',
+      'progressWindow.updateProgress(20);',
+      'progressWindow.updateStatus("会議タイトルを取得中...");',
+      'await wait(2000);',
+      'let titleEl=await waitForElement("span[data-tid=\\"calv2-sf-meeting-subject-view\\"]");',
+      'let title=titleEl?.innerText||null;',
+      'progressWindow.updateProgress(30);',
+      'progressWindow.updateStatus("参加者情報を取得中...");',
+      'let participants=[...document.querySelectorAll("div.ms-TooltipHost")].map(el=>el.innerText);',
+      'progressWindow.updateProgress(40);',
+      'progressWindow.updateStatus("まとめボタンを探しています...");',
+      'let summaryBtn=await waitForElement("div[data-tid=\\"data-tid-まとめ\\"]");',
+      'summaryBtn.click();',
+      'progressWindow.updateStatus("まとめを開きました");',
+      'progressWindow.updateProgress(50);',
+      'progressWindow.updateStatus("日時情報を取得中...");',
+      'await wait(2000);',
+      'let datetime=[...document.querySelectorAll("span.fui-StyledText")].map(el=>el.innerText).filter(t=>/\\d/.test(t));',
+      'progressWindow.updateProgress(60);',
+      'progressWindow.updateStatus("文字起こしボタンを探しています...");',
+      'let transcriptBtn=await waitForElement("button[data-tid=\\"Transcript\\"]");',
+      'transcriptBtn.click();',
+      'progressWindow.updateStatus("文字起こしを開きました");',
+      'progressWindow.updateProgress(70);',
+      'progressWindow.updateStatus("文字起こし内容を読み込み中...");',
+      'await wait(3000);',
+      'const c=await waitForElement("[data-is-scrollable=\\"true\\"]");',
+      'let transcript="";',
+      'if(c){',
+      'progressWindow.updateStatus("文字起こしを解析中...");',
+      'let entries=[];',
+      'let processedContent=new Set();',
+      'const addEntries=(elements)=>{',
+      'for(const e of elements){',
+      'let s="（システム）",t="",msg="";',
+      'const a=e.getAttribute("aria-label")||"";',
+      'const m=a.match(/^(.+?)\\s+\\d/);',
+      'if(m){s=m[1].trim();}else{const n=e.closest("[class*=\\"rightColumn-\\"]")?.querySelector("[class*=\\"itemDisplayName-\\"]");if(n)s=n.textContent.trim();}',
+      'const tsEl=e.closest("[class*=\\"rightColumn-\\"]")?.querySelector("[id^=\\"Header-timestamp-\\"]");',
+      'if(tsEl)t=tsEl.textContent.trim();',
+      'const msgEl=e.querySelector("[id^=\\"sub-entry-\\"]");',
+      'if(msgEl){msg=Array.from(msgEl.childNodes).filter(n=>n.nodeType===3).map(n=>n.textContent.trim()).join(" ");}',
+      'if(!msg)continue;',
+      'const uniqueKey=s+"|"+t+"|"+msg;',
+      'if(processedContent.has(uniqueKey))continue;',
+      'processedContent.add(uniqueKey);',
+      'entries.push({speaker:s,time:t,content:msg});',
+      '}',
+      '};',
+      'c.scrollTop=0;',
+      'await wait(1000);',
+      'addEntries(c.querySelectorAll("div[class*=\\"rightColumn-\\"]"));',
+      'const totalHeight=c.scrollHeight;',
+      'const viewHeight=c.clientHeight;',
+      'const scrollStep=viewHeight*1.5;',
+      'let currentScroll=0,loop=0;',
+      'progressWindow.updateProgress(75);',
+      'while(currentScroll<totalHeight&&loop<100){',
+      'loop++;',
+      'currentScroll+=scrollStep;',
+      'c.scrollTop=currentScroll;',
+      'await wait(300);',
+      'progressWindow.updateStatus("文字起こしをスクロール中... ("+loop+")");',
+      'if(Math.abs(c.scrollTop-currentScroll)>100){c.scrollTop=currentScroll;await wait(300);}',
+      'addEntries(c.querySelectorAll("div[class*=\\"rightColumn-\\"]"));',
+      'if(currentScroll>=totalHeight-viewHeight)break;',
+      '}',
+      'progressWindow.updateProgress(85);',
+      'progressWindow.updateStatus("最終チェック中...");',
+      'c.scrollTop=c.scrollHeight;',
+      'await wait(2000);',
+      'addEntries(c.querySelectorAll("div[class*=\\"rightColumn-\\"]"));',
+      'entries.sort((a,b)=>{',
+      'const timeA=a.time.split(":").reduce((acc,time)=>60*acc+parseInt(time,10),0);',
+      'const timeB=b.time.split(":").reduce((acc,time)=>60*acc+parseInt(time,10),0);',
+      'return timeA-timeB;',
+      '});',
+      'let lastSpeaker="";',
+      'for(const entry of entries){',
+      'if(entry.speaker==="（システム）"&&lastSpeaker){transcript+=entry.content+"\\n\\n";}',
+      'else{if(entry.speaker!=="（システム）"){lastSpeaker=entry.speaker;}',
+      'transcript+=entry.speaker+(entry.time?" ["+entry.time+"]":"")+":\\n"+entry.content+"\\n\\n";}',
+      '}',
+      '}',
+      'progressWindow.updateProgress(95);',
+      'progressWindow.updateStatus("結果を処理中...");',
+      'let result={title,participants,datetime,transcript,Department:cachedData.Department,typoCorrectionList:cachedData.typoCorrectionList};',
+      'if(!transcript){progressWindow.close();alert("❌ 会議情報を取得できませんでした");}',
+      'else{',
+      'try{',
+      'await navigator.clipboard.writeText(JSON.stringify(result,null,2));',
+      'progressWindow.updateProgress(100);',
+      'progressWindow.updateStatus("完了！");',
+      'setTimeout(()=>{',
+      'progressWindow.close();',
+      'alert("✅ 完了！会議情報と誤字修正リストを取得し、クリップボードにコピーしました");',
+      'window.open("https://d3r0xupf0a2onu.cloudfront.net/use-case-builder/execute/7abad9ce-a83f-4ec6-91fe-4e843ec0add1","_blank");',
+      '},1000);',
+      '}catch(clipboardError){progressWindow.close();alert("❌ クリップボードコピー失敗");}',
+      '}',
+      'console.log("最終結果:",result);',
+      '}catch(e){progressWindow.close();console.error("詳細エラー:",e);alert("❌ 取得失敗: "+(e.message||"unknown error"));}',
+      '})().catch(e=>{console.error("❌ 外側Promiseエラー:",e);});',
+      '})();'
+    ].join('');
 
     return (
       <div className="url-input-container">
@@ -823,7 +1143,7 @@ console.log("最終結果:",result);}catch(e){console.error("詳細エラー:",e
             className="bookmarklet-link"
             onClick={(e) => e.preventDefault()} // 誤クリックで実行されないようにする
           >
-            会議情報取得
+            会議情報取得ver03
           </a>
           <p>ブックマークバーが出ていない、わからない人は ctrl+shift+B を押してください。</p>
           <p>ブックマークバーが表示されます。</p>
@@ -1084,6 +1404,9 @@ console.log("最終結果:",result);}catch(e){console.error("詳細エラー:",e
   return (
     <div className="app">
       {currentStep === 'url-input' && renderUrlInputStep()}
+      {currentStep === 'department-management' && (
+        <DepartmentManagement onBack={() => setCurrentStep('url-input')} />
+      )}
       {currentStep === 'editor' && renderEditorStep()}
       {/* ▼▼▼ ここを追加 ▼▼▼ */}
       {currentStep === 'bookmarklet-install' && renderBookmarkletInstallStep()}
