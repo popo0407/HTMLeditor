@@ -70,8 +70,16 @@
   </section>
 
   <section class="meta">
-    <h3>部門</h3>
-    <div>{{ meeting.department or '' }}</div>
+    <h3>部門情報</h3>
+    <div>
+      {% if meeting.bu or meeting.ka or meeting.job_type %}
+        {% if meeting.bu %}部: {{ meeting.bu }}{% endif %}
+        {% if meeting.ka %}{% if meeting.bu %}<br/>{% endif %}課: {{ meeting.ka }}{% endif %}
+        {% if meeting.job_type %}{% if meeting.bu or meeting.ka %}<br/>{% endif %}職種: {{ meeting.job_type }}{% endif %}
+      {% elif meeting.department %}
+        {{ meeting.department }}
+      {% endif %}
+    </div>
   </section>
 
   <section class="classification">

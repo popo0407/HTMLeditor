@@ -267,7 +267,7 @@ function App() {
     // 各フィールドをXMLタグから抽出
     const fields = [
       '会議タイトル', '参加者', '会議日時', '会議場所', 
-      '部門', '大分類', '中分類', '小分類', '要約', '講評', '議事録'
+      '部', '課', '職種', '大分類', '中分類', '小分類', '要約', '講評', '議事録'
     ];
     
     fields.forEach(field => {
@@ -335,7 +335,13 @@ function App() {
     }
     
     const departmentEl = meetingInfoContainer.querySelector('.meeting-info-department-value');
-    if (departmentEl) result['部門'] = departmentEl.textContent?.trim() || '';
+    if (departmentEl) result['部'] = departmentEl.textContent?.trim() || '';
+
+    const sectionEl = meetingInfoContainer.querySelector('.meeting-info-section-value');
+    if (sectionEl) result['課'] = sectionEl.textContent?.trim() || '';
+
+    const jobTypeEl = meetingInfoContainer.querySelector('.meeting-info-jobtype-value');
+    if (jobTypeEl) result['職種'] = jobTypeEl.textContent?.trim() || '';
 
     // 分類情報の抽出を追加
     const category1El = meetingInfoContainer.querySelector('.meeting-info-category1-value');
@@ -462,7 +468,9 @@ function App() {
         講評: parsedData['講評'] || parsedData['review'] || '',
         機密レベル: parsedData['機密レベル'] || '社外秘', // デフォルトは「社外秘」
         // 以下は読み取り専用で表示する分類情報
-        部門: parsedData['部門'] || parsedData['department'] || '',
+        部: parsedData['部'] || parsedData['department'] || '',
+        課: parsedData['課'] || '',
+        職種: parsedData['職種'] || '',
         大分類: parsedData['大分類'] || parsedData['category1'] || '',
         中分類: parsedData['中分類'] || parsedData['category2'] || '',
         小分類: parsedData['小分類'] || parsedData['category3'] || '',
@@ -1377,8 +1385,12 @@ function App() {
                   
                   
                   {/* 表示はするが編集不可の分類フィールド */}
-                  <label>部門</label>
-                  <input type="text" value={meetingInfo.部門 || ''} onChange={e => setMeetingInfo({...meetingInfo, 部門: e.target.value})} />
+                  <label>部</label>
+                  <input type="text" value={meetingInfo.部 || ''} onChange={e => setMeetingInfo({...meetingInfo, 部: e.target.value})} />
+                  <label>課</label>
+                  <input type="text" value={meetingInfo.課 || ''} onChange={e => setMeetingInfo({...meetingInfo, 課: e.target.value})} />
+                  <label>職種</label>
+                  <input type="text" value={meetingInfo.職種 || ''} onChange={e => setMeetingInfo({...meetingInfo, 職種: e.target.value})} />
                   <label>大分類</label>
                   <input type="text" value={meetingInfo.大分類 || ''} onChange={e => setMeetingInfo({...meetingInfo, 大分類: e.target.value})} />
                   <label>中分類</label>

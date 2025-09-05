@@ -121,7 +121,9 @@ export class HtmlExportService {
   会議場所?: string;
   要約?: string;
   講評?: string;
-  部門?: string;
+  部?: string;
+  課?: string;
+  職種?: string;
   大分類?: string;
   中分類?: string;
   小分類?: string;
@@ -134,7 +136,9 @@ export class HtmlExportService {
     const location = meetingInfo.会議場所 || '';
   const summary = (meetingInfo.要約 || '').toString();
   const review = (meetingInfo.講評 || '').toString();
-  const department = meetingInfo.部門 || '';
+  const bu = meetingInfo.部 || '';
+  const ka = meetingInfo.課 || '';
+  const jobType = meetingInfo.職種 || '';
   const category1 = meetingInfo.大分類 || '';
   const category2 = meetingInfo.中分類 || '';
   const category3 = meetingInfo.小分類 || '';
@@ -158,7 +162,9 @@ export class HtmlExportService {
     const summaryHtml = processLineBreaks(summary);
     const reviewHtml = processLineBreaks(review);
 
-    const departmentHtml = department ? `<h3 class="meeting-info-department">部門</h3><p class="meeting-info-department-value">${HtmlExportService.escapeHtml(department)}</p>` : '';
+    const buHtml = bu ? `<h3 class="meeting-info-department">部</h3><p class="meeting-info-department-value">${HtmlExportService.escapeHtml(bu)}</p>` : '';
+    const kaHtml = ka ? `<h3 class="meeting-info-section">課</h3><p class="meeting-info-section-value">${HtmlExportService.escapeHtml(ka)}</p>` : '';
+    const jobTypeHtml = jobType ? `<h3 class="meeting-info-jobtype">職種</h3><p class="meeting-info-jobtype-value">${HtmlExportService.escapeHtml(jobType)}</p>` : '';
     const category1Html = category1 ? `<h3 class="meeting-info-category1">大分類</h3><p class="meeting-info-category1-value">${HtmlExportService.escapeHtml(category1)}</p>` : '';
     const category2Html = category2 ? `<h3 class="meeting-info-category2">中分類</h3><p class="meeting-info-category2-value">${HtmlExportService.escapeHtml(category2)}</p>` : '';
     const category3Html = category3 ? `<h3 class="meeting-info-category3">小分類</h3><p class="meeting-info-category3-value">${HtmlExportService.escapeHtml(category3)}</p>` : '';
@@ -168,7 +174,9 @@ export class HtmlExportService {
         <h1 class="meeting-info-title">${HtmlExportService.escapeHtml(title)}</h1>
         <h3 class="meeting-info-datetime">会議日時: ${HtmlExportService.escapeHtml(datetime)}</h3>
         <h3 class="meeting-info-location">場所: ${HtmlExportService.escapeHtml(location)}</h3>
-        ${departmentHtml}
+        ${buHtml}
+        ${kaHtml}
+        ${jobTypeHtml}
         ${category1Html}
         ${category2Html}
         ${category3Html}
@@ -185,6 +193,77 @@ export class HtmlExportService {
     `;
 
     return fragment;
+  }
+
+  // XML形式で出力
+  static buildXmlFragment(meetingInfo: {
+    会議タイトル?: string;
+    参加者?: string[] | string;
+    会議日時?: string;
+    会議場所?: string;
+    要約?: string;
+    講評?: string;
+    部?: string;
+    課?: string;
+    職種?: string;
+    大分類?: string;
+    中分類?: string;
+    小分類?: string;
+    機密レベル?: string;
+  } | null | undefined, minutesHtml: string): string {
+    if (!meetingInfo) return '';
+
+    const title = meetingInfo.会議タイトル || '';
+    const datetime = meetingInfo.会議日時 || '';
+    const location = meetingInfo.会議場所 || '';
+    const summary = (meetingInfo.要約 || '').toString();
+    const review = (meetingInfo.講評 || '').toString();
+    const bu = meetingInfo.部 || '';
+    const ka = meetingInfo.課 || '';
+    const jobType = meetingInfo.職種 || '';
+    const category1 = meetingInfo.大分類 || '';
+    const category2 = meetingInfo.中分類 || '';
+    const category3 = meetingInfo.小分類 || '';
+
+    let participants: string[] | string = meetingInfo.参加者 || [];
+    if (typeof participants === 'string') {
+      participants = participants.split(/\r?\n/).filter(Boolean);
+    }
+
+    // 参加者を配列として出力
+    const participantsArray = Array.isArray(participants) ? participants : [String(participants)];
+    const participantsXml = participantsArray.map(p => this.escapeXml(p)).join(',');
+
+    const xml = `<会議タイトル>${this.escapeXml(title)}</会議タイトル>
+<参加者>${participantsXml}</参加者>
+<会議日時>${this.escapeXml(datetime)}</会議日時>
+<会議場所>${this.escapeXml(location)}</会議場所>
+<部>${this.escapeXml(bu)}</部>
+<課>${this.escapeXml(ka)}</課>
+<職種>${this.escapeXml(jobType)}</職種>
+<大分類>${this.escapeXml(category1)}</大分類>
+<中分類>${this.escapeXml(category2)}</中分類>
+<小分類>${this.escapeXml(category3)}</小分類>
+<要約>${this.escapeXml(summary)}</要約>
+<講評>${this.escapeXml(review)}</講評>
+<議事録>${this.escapeXml(minutesHtml)}</議事録>`;
+
+    return xml;
+  }
+
+  // XMLとしてクリップボードにコピー
+  static async copyXmlToClipboard(meetingInfo: any, minutesHtml: string): Promise<void> {
+    const xmlContent = this.buildXmlFragment(meetingInfo, minutesHtml);
+    await navigator.clipboard.writeText(xmlContent);
+  }
+
+  private static escapeXml(str: string): string {
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
   }
 
   private static escapeHtml(str: string): string {

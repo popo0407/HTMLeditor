@@ -49,15 +49,15 @@ def generate_pdf_filename(meeting_info: dict) -> str:
     logger.info(f"PDF filename generation - meeting_info: {meeting_info}")
     
     # 会議タイトルを取得
-    meeting_title = meeting_info.get('会議タイトル') or meeting_info.get('title') or '議事録'
+    meeting_title = meeting_info.get('会議タイトル', '議事録')
     logger.info(f"PDF filename generation - meeting_title: {meeting_title}")
     
     # 機密レベルを取得（デフォルトは「社外秘」）
-    confidential_level = meeting_info.get('機密レベル') or '社外秘'
+    confidential_level = meeting_info.get('機密レベル', '社外秘')
     logger.info(f"PDF filename generation - confidential_level: {confidential_level}")
     
     # 会議日時を取得してフォーマット
-    meeting_datetime = meeting_info.get('会議日時') or meeting_info.get('datetime') or ''
+    meeting_datetime = meeting_info.get('会議日時', '')
     meeting_date = ''
     logger.info(f"PDF filename generation - meeting_datetime: {meeting_datetime}")
     
@@ -102,15 +102,15 @@ def generate_source_data_filename(meeting_info: dict, extension: str = 'txt') ->
     logger.info(f"Source data filename generation - meeting_info: {meeting_info}")
     
     # 会議タイトルを取得
-    meeting_title = meeting_info.get('会議タイトル') or meeting_info.get('title') or '議事録'
+    meeting_title = meeting_info.get('会議タイトル', '議事録')
     logger.info(f"Source data filename generation - meeting_title: {meeting_title}")
     
     # 機密レベルを取得（デフォルトは「社外秘」）
-    confidential_level = meeting_info.get('機密レベル') or '社外秘'
+    confidential_level = meeting_info.get('機密レベル', '社外秘')
     logger.info(f"Source data filename generation - confidential_level: {confidential_level}")
     
     # 会議日時を取得してフォーマット
-    meeting_datetime = meeting_info.get('会議日時') or meeting_info.get('datetime') or ''
+    meeting_datetime = meeting_info.get('会議日時', '')
     meeting_date = ''
     logger.info(f"Source data filename generation - meeting_datetime: {meeting_datetime}")
     
@@ -202,15 +202,18 @@ async def send_pdf_email(
 
         # prepare JSON body for email (only the requested fields)
         # prepare body JSON for email; classification fields removed intentionally
+        meeting_data = request.meetingInfo or {}
         body_json = {
-            "会議タイトル": (request.meetingInfo or {}).get('会議タイトル') or (request.meetingInfo or {}).get('title') or '',
-            "参加者": (request.meetingInfo or {}).get('参加者') or (request.meetingInfo or {}).get('participants') or [],
-            "会議日時": (request.meetingInfo or {}).get('会議日時') or (request.meetingInfo or {}).get('datetime') or '',
-            "会議場所": (request.meetingInfo or {}).get('会議場所') or (request.meetingInfo or {}).get('location') or '',
-            "部門": (request.meetingInfo or {}).get('部門') or (request.meetingInfo or {}).get('department') or '',
-            "大分類": (request.meetingInfo or {}).get('大分類') or (request.meetingInfo or {}).get('category1') or '',
-            "中分類": (request.meetingInfo or {}).get('中分類') or (request.meetingInfo or {}).get('category2') or '',
-            "小分類": (request.meetingInfo or {}).get('小分類') or (request.meetingInfo or {}).get('category3') or '',
+            "会議タイトル": meeting_data.get('会議タイトル', ''),
+            "参加者": meeting_data.get('参加者', []),
+            "会議日時": meeting_data.get('会議日時', ''),
+            "会議場所": meeting_data.get('会議場所', ''),
+            "部": meeting_data.get('部', ''),
+            "課": meeting_data.get('課', ''),
+            "職種": meeting_data.get('職種', ''),
+            "大分類": meeting_data.get('大分類', ''),
+            "中分類": meeting_data.get('中分類', ''),
+            "小分類": meeting_data.get('小分類', ''),
         }
 
         # PDF 生成 (集中化サービス)
