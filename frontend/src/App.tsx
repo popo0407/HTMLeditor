@@ -957,7 +957,7 @@ function App() {
           <p><strong>「会議情報取得」ブックマークレット</strong>を実行して、会議情報を取得してください。</p>
           <p>クリップボードに会議情報が自動でコピーされて、議事録生成用のGenAIが新しいタブで開きます。</p>
 
-          <button onClick={() => window.open("https://d3r0xupf0a2onu.cloudfront.net/use-case-builder/execute/7abad9ce-a83f-4ec6-91fe-4e843ec0add1", "_blank")} className="back-button">
+          <button onClick={() => window.open("https://d3r0xupf0a2onu.cloudfront.net/use-case-builder/execute/6fadf23d-6d52-4029-a3bb-73a3b9f09cb2", "_blank")} className="back-button">
             議事録生成用のGenAIを開く
           </button>
         </div>
@@ -1012,7 +1012,7 @@ function App() {
       'const startTime=Date.now();',
       'while(Date.now()-startTime<maxWaitTime){',
       'const element=document.querySelector(selector);',
-      'if(element)return element;',
+      'if(element){await wait(1000);return element;}',
       'await wait(1000);',
       '}',
       'throw new Error(selector+" が見つかりませんでした");',
@@ -1129,7 +1129,7 @@ function App() {
       'setTimeout(()=>{',
       'progressWindow.close();',
       'alert("✅ 完了！会議情報と誤字修正リストを取得し、クリップボードにコピーしました");',
-      'window.open("https://d3r0xupf0a2onu.cloudfront.net/use-case-builder/execute/7abad9ce-a83f-4ec6-91fe-4e843ec0add1","_blank");',
+      'window.open("https://d3r0xupf0a2onu.cloudfront.net/use-case-builder/execute/6fadf23d-6d52-4029-a3bb-73a3b9f09cb2","_blank");',
       '},1000);',
       '}catch(clipboardError){progressWindow.close();alert("❌ クリップボードコピー失敗");}',
       '}',
