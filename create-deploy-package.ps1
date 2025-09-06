@@ -90,6 +90,15 @@ Write-Host "フロントエンドビルド結果をコピー中..." -ForegroundC
 New-Item -ItemType Directory -Path "$tempDir\frontend" -Force | Out-Null
 robocopy "$sourceProjectRoot\frontend\build" "$tempDir\frontend" /E /NFL /NDL /NJH /NJS
 
+# TinyMCEローカルファイルを明示的にコピー
+Write-Host "TinyMCEローカルファイルをコピー中..." -ForegroundColor Yellow
+if (Test-Path "$sourceProjectRoot\frontend\public\tinymce") {
+    robocopy "$sourceProjectRoot\frontend\public\tinymce" "$tempDir\frontend\tinymce" /E /NFL /NDL /NJH /NJS
+    Write-Host "  ✓ TinyMCEファイルをコピーしました" -ForegroundColor Green
+} else {
+    Write-Host "  ❌ TinyMCEフォルダが見つかりません" -ForegroundColor Red
+}
+
 # パッケージ内容表示
 Write-Host ""
 Write-Host "パッケージ内容:" -ForegroundColor Magenta

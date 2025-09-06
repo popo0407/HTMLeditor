@@ -1,10 +1,13 @@
-// APIキーを取得（フォールバック付き）
-const apiKey = process.env.REACT_APP_TINYMCE_APIKEY || 'a8wnlcorvun75nc9v47gtkaza8c0ogfijxb4nwvauc2t942x';
-console.log('Environment API Key:', process.env.REACT_APP_TINYMCE_APIKEY);
-console.log('Using API Key:', apiKey);
+// ローカルのTinyMCEファイルを使用するため、APIキーは不要
+console.log('Using local TinyMCE files instead of cloud API');
 
 // 基本的なTinyMCE設定
 export const tinymceConfig: any = {
+  // GPLライセンスを使用（オープンソース）
+  license_key: 'gpl',
+  // public/tinymceディレクトリを使用（APIキー不要）
+  base_url: '/tinymce',
+  suffix: '.min',
   height: 500,
   menubar: true,
   plugins: [
@@ -25,7 +28,6 @@ export const tinymceConfig: any = {
     "table",
     "help",
     "wordcount",
-    "paste",
   ],
   toolbar: [
     "undo redo | formatselect | bold italic underline strikethrough | alignleft aligncenter alignright alignjustify",
@@ -284,5 +286,4 @@ export const tinymceConfig: any = {
   },
 };
 
-// APIキーをエクスポート
-export { apiKey };
+// ローカルファイルを使用するため、APIキーは不要

@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState } from "react";
 import { Editor } from "@tinymce/tinymce-react";
-import { tinymceConfig, apiKey } from "../config/tinymce-config";
+import { tinymceConfig } from "../config/tinymce-config";
 import "../styles/TinyMCEEditor.css";
 
 interface TinyMCEEditorProps {
@@ -58,7 +58,7 @@ export const TinyMCEEditor: React.FC<TinyMCEEditorProps> = ({
       {/* メインエディタ */}
       <div className="editor-main">
         <Editor
-          apiKey={apiKey}
+          tinymceScriptSrc="/tinymce/tinymce.min.js"
           onInit={handleInit}
           value={currentContent} // initialValueからvalueに変更し、stateを直接渡す
           init={customConfig}
