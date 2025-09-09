@@ -12,6 +12,7 @@ from services.mail_service import MailService
 from app.config.settings import get_settings
 from services.minutes_pdf_service import generate_minutes_pdf
 from services.word_document_service import WordDocumentService
+from app.services.department_service import DepartmentService
 import datetime
 import re
 
@@ -214,6 +215,7 @@ async def send_pdf_email(
             "大分類": meeting_data.get('大分類', ''),
             "中分類": meeting_data.get('中分類', ''),
             "小分類": meeting_data.get('小分類', ''),
+            "発行者": meeting_data.get('発行者', ''),
         }
 
         # PDF 生成 (集中化サービス)
@@ -224,7 +226,38 @@ async def send_pdf_email(
 
         # subject and recipient
         subject = request.subject or '議事録'
-        recipients = [request.recipient_email] if request.recipient_email else [settings.DEFAULT_RECIPIENT_EMAIL]
+        
+        # 部門のメールアドレスを取得して送信先を決定
+        recipients = []
+        if request.recipient_email:
+            # 明示的に受信者が指定されている場合はそれを使用
+            recipients = [request.recipient_email]
+        else:
+            # 部門情報から送信先を決定
+            meeting_data = request.meetingInfo or {}
+            bu_name = meeting_data.get('部', '')
+            ka_name = meeting_data.get('課', '')
+            
+            # 部門のメールアドレスを検索
+            department_email = None
+            if bu_name and ka_name:
+                departments = DepartmentService.get_all_departments()
+                for dept in departments:
+                    if dept.bu_name == bu_name and dept.ka_name == ka_name and dept.email_address:
+                        department_email = dept.email_address
+                        logger.info(f"部門メールアドレスを取得: {department_email} (部門: {bu_name}/{ka_name})")
+                        break
+            
+            if department_email:
+                recipients = [department_email]
+                logger.info(f"部門メールアドレスに送信: {department_email}")
+            else:
+                # 部門のメールアドレスが見つからない場合はデフォルトを使用
+                recipients = [settings.DEFAULT_RECIPIENT_EMAIL]
+                if bu_name and ka_name:
+                    logger.warning(f"部門 {bu_name}/{ka_name} のメールアドレスが見つからないため、デフォルト宛先を使用: {settings.DEFAULT_RECIPIENT_EMAIL}")
+                else:
+                    logger.info(f"部門情報が不完全なため、デフォルト宛先を使用: {settings.DEFAULT_RECIPIENT_EMAIL}")
 
         # ファイル名を新しい形式で生成（【社外秘】_会議日（YYYY-MM-DD）_会議タイトル）
         pdf_filename = f"{generate_pdf_filename(request.meetingInfo or {})}.pdf"

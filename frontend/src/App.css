@@ -1442,3 +1442,322 @@
   border-color: #007bff;
   box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
 }
+
+/* タブナビゲーションのスタイル */
+.tab-navigation {
+  display: flex;
+  border-bottom: 2px solid #e9ecef;
+  margin-bottom: 20px;
+  background-color: #f8f9fa;
+  border-radius: 8px 8px 0 0;
+  overflow: hidden;
+}
+
+.tab-button {
+  flex: 1;
+  padding: 12px 20px;
+  border: none;
+  background-color: transparent;
+  color: #6c757d;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border-bottom: 3px solid transparent;
+}
+
+.tab-button:hover {
+  background-color: #e9ecef;
+  color: #495057;
+}
+
+.tab-button.active {
+  background-color: white;
+  color: #007bff;
+  border-bottom-color: #007bff;
+  font-weight: 600;
+}
+
+/* 職種管理のスタイル */
+.jobtypes-content {
+  padding: 20px;
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.jobtypes-content h3 {
+  margin-top: 0;
+  color: #212529;
+  font-size: 24px;
+  margin-bottom: 20px;
+}
+
+.jobtypes-list {
+  margin-bottom: 20px;
+}
+
+.jobtype-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border: 1px solid #e9ecef;
+  border-radius: 6px;
+  margin-bottom: 8px;
+  background-color: #f8f9fa;
+  transition: background-color 0.2s ease;
+}
+
+.jobtype-item:hover {
+  background-color: #e9ecef;
+}
+
+.jobtype-item span {
+  font-weight: 500;
+  color: #212529;
+  flex-grow: 1;
+}
+
+.jobtype-item .edit-btn,
+.jobtype-item .delete-btn {
+  margin-left: 8px;
+  padding: 6px 12px;
+  border: none;
+  border-radius: 4px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.jobtype-item .edit-btn {
+  background-color: #ffc107;
+  color: #212529;
+}
+
+.jobtype-item .edit-btn:hover {
+  background-color: #e0a800;
+}
+
+.jobtype-item .delete-btn {
+  background-color: #dc3545;
+  color: white;
+}
+
+.jobtype-item .delete-btn:hover {
+  background-color: #c82333;
+}
+
+.add-jobtype-btn {
+  padding: 10px 20px;
+  background-color: #28a745;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.add-jobtype-btn:hover {
+  background-color: #218838;
+}
+
+/* メール送信制限のスタイル */
+.sidebar-button.disabled {
+  background-color: #6c757d;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.sidebar-button.disabled:hover {
+  background-color: #6c757d;
+  transform: none;
+}
+
+.warning-text.small {
+  font-size: 12px;
+  margin-top: 5px;
+  margin-bottom: 0;
+}
+
+/* 部門編集ボタンのスタイル */
+.edit-department-button {
+  padding: 4px 8px;
+  margin-left: 8px;
+  background-color: #ffc107;
+  color: #212529;
+  border: none;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.edit-department-button:hover {
+  background-color: #e0a800;
+}
+
+.edit-department-button:disabled {
+  background-color: #6c757d;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* 職種管理のスタイル */
+.job-types-content {
+  padding: 15px;
+}
+
+.job-types-header {
+  margin-bottom: 20px;
+}
+
+.job-types-header h4 {
+  margin: 0 0 5px 0;
+  color: #333;
+}
+
+.job-types-header p {
+  margin: 0;
+  color: #666;
+  font-size: 14px;
+}
+
+.add-job-type-form {
+  background: #f8f9fa;
+  padding: 15px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+.add-job-type-form h5 {
+  margin: 0 0 10px 0;
+  color: #333;
+}
+
+.form-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.form-row input {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.add-button {
+  background: #007bff;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.add-button:hover:not(:disabled) {
+  background: #0056b3;
+}
+
+.add-button:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
+.job-types-list h5 {
+  margin: 0 0 15px 0;
+  color: #333;
+}
+
+.job-types-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.job-types-table th,
+.job-types-table td {
+  padding: 12px;
+  text-align: left;
+  border-bottom: 1px solid #eee;
+}
+
+.job-types-table th {
+  background: #f8f9fa;
+  font-weight: 600;
+  color: #333;
+}
+
+.job-types-table tr:last-child td {
+  border-bottom: none;
+}
+
+.job-type-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.save-button {
+  background: #007bff;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.save-button:hover:not(:disabled) {
+  background: #0056b3;
+}
+
+.cancel-button {
+  background: #6c757d;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.cancel-button:hover:not(:disabled) {
+  background: #545b62;
+}
+
+.save-button:disabled,
+.cancel-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.no-data {
+  text-align: center;
+  color: #666;
+  font-style: italic;
+  padding: 20px;
+}
+
+.back-to-department-button {
+  background: #6c757d;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  margin-top: 10px;
+}
+
+.back-to-department-button:hover:not(:disabled) {
+  background: #545b62;
+}

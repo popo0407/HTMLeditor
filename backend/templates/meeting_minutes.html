@@ -69,6 +69,11 @@
     <div>{{ (meeting.review or '') | process_line_breaks | safe }}</div>
   </section>
 
+  <section class="issuer">
+    <h3>発行者</h3>
+    <div>{{ meeting.発行者 or meeting.issuer or '' }}</div>
+  </section>
+
   <section class="meta">
     <h3>部門情報</h3>
     <div>

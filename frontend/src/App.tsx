@@ -12,10 +12,13 @@ import { sendPdfMail, PdfMailSendRequest } from './services/apiService';
 import { HtmlExportService } from './tinymceEditor/services/htmlExportService';
 import { 
   Department, 
-  DepartmentWithCorrections, 
+  DepartmentWithDetails, 
+  JobType,
   getAllDepartments, 
-  getDepartmentWithCorrections, 
-  getCorrectionsForClipboard 
+  getDepartmentWithDetails, 
+  getCorrectionsForClipboardWithIssuer,
+  createDepartmentMember,
+  getAllJobTypes
 } from './services/departmentService';
 import { DepartmentManagement } from './components/DepartmentManagement';
 
@@ -29,6 +32,7 @@ function App() {
     会議場所: '',
     要約: '',
     講評: '',
+    発行者: '', // 発行者フィールドを追加
     部門: '',
     大分類: '',
     中分類: '',
@@ -51,12 +55,19 @@ function App() {
 
   // 部門選択の状態
   const [departments, setDepartments] = useState<Department[]>([]);
-  const [selectedDepartment, setSelectedDepartment] = useState<DepartmentWithCorrections | null>(null);
+  const [selectedDepartment, setSelectedDepartment] = useState<DepartmentWithDetails | null>(null);
+  
+  // 職種リストの状態
+  const [jobTypes, setJobTypes] = useState<JobType[]>([]);
   
   // 部門選択の階層状態
   const [selectedBu, setSelectedBu] = useState<string>(''); // 選択された部
   const [availableBus, setAvailableBus] = useState<string[]>([]); // 利用可能な部のリスト
   const [availableKas, setAvailableKas] = useState<Department[]>([]); // 選択された部の課のリスト
+  
+  // 発行者選択の状態
+  const [selectedIssuer, setSelectedIssuer] = useState<string>(''); // 選択された議事録発行者
+  const [freeIssuerInput, setFreeIssuerInput] = useState<string>(''); // 自由入力欄
 
   // HtmlExportServiceは直接使用するため、useRefは不要
 
@@ -267,7 +278,7 @@ function App() {
     // 各フィールドをXMLタグから抽出
     const fields = [
       '会議タイトル', '参加者', '会議日時', '会議場所', 
-      '部', '課', '職種', '大分類', '中分類', '小分類', '要約', '講評', '議事録'
+      '部', '課', '職種', '大分類', '中分類', '小分類', '要約', '講評', '発行者', '議事録'
     ];
     
     fields.forEach(field => {
@@ -399,6 +410,12 @@ function App() {
         .trim();
     }
     
+    // 発行者フィールドを抽出
+    const issuerEl = meetingInfoContainer.querySelector('.meeting-info-issuer-value');
+    if (issuerEl) {
+      result['発行者'] = issuerEl.textContent?.trim() || '';
+    }
+    
     // 議事録部分を抽出
     const minutesEl = tempDiv.querySelector('.meeting-minutes-content');
     if (minutesEl) {
@@ -466,6 +483,7 @@ function App() {
         会議場所: parsedData['会議場所'] || parsedData['会議場所'] || '',
         要約: parsedData['要約'] || parsedData['summary'] || '',
         講評: parsedData['講評'] || parsedData['review'] || '',
+        発行者: parsedData['発行者'] || parsedData['issuer'] || parsedData['Issuer'] || '',
         機密レベル: parsedData['機密レベル'] || '社外秘', // デフォルトは「社外秘」
         // 以下は読み取り専用で表示する分類情報
         部: parsedData['部'] || parsedData['department'] || '',
@@ -625,6 +643,17 @@ function App() {
     }
   };
 
+  // 職種リストを読み込む関数
+  const loadJobTypes = async () => {
+    try {
+      const types = await getAllJobTypes();
+      setJobTypes(types);
+    } catch (error) {
+      console.error('職種の取得に失敗しました:', error);
+      alert('職種の取得に失敗しました。');
+    }
+  };
+
   const handleBuSelect = (buName: string) => {
     setSelectedBu(buName);
     // 選択された部の課一覧を抽出
@@ -640,7 +669,7 @@ function App() {
 
   const handleDepartmentSelect = async (departmentId: number) => {
     try {
-      const department = await getDepartmentWithCorrections(departmentId);
+      const department = await getDepartmentWithDetails(departmentId);
       setSelectedDepartment(department);
     } catch (error) {
       console.error('部門の詳細取得に失敗しました:', error);
@@ -654,18 +683,27 @@ function App() {
       return;
     }
 
+    // 発行者を確定する
+    let finalIssuer = selectedIssuer;
+    if (!finalIssuer && freeIssuerInput.trim()) {
+      // 自由入力欄に入力がある場合はそれを発行者とし、メンバーに追加
+      finalIssuer = freeIssuerInput.trim();
+      try {
+        await createDepartmentMember(selectedDepartment.id, finalIssuer);
+        console.log(`新しいメンバーを追加しました: ${finalIssuer}`);
+      } catch (error) {
+        console.log(`メンバーは既に存在するか、追加に失敗しました: ${error}`);
+        // エラーでも続行（既存メンバーの可能性があるため）
+      }
+    }
+
+    if (!finalIssuer) {
+      alert('議事録発行者を選択または入力してください。');
+      return;
+    }
+
     try {
-      const correctionsData = await getCorrectionsForClipboard(selectedDepartment.id);
-      
-      // 部門情報を「部/課/職種」の形でまとめる
-      const departmentInfo = correctionsData.department_info;
-      const departmentDisplay = `${departmentInfo.bu_name}/${departmentInfo.ka_name}${departmentInfo.job_type ? `/${departmentInfo.job_type}` : ''}`;
-      
-      // 部門情報と誤字修正リストを含むJSONを作成
-      const clipboardData = {
-        Department: departmentDisplay,
-        typoCorrectionList: correctionsData.corrections
-      };
+      const clipboardData = await getCorrectionsForClipboardWithIssuer(selectedDepartment.id, finalIssuer);
       
       // JSON形式でクリップボードにコピー
       const jsonData = JSON.stringify(clipboardData, null, 2);
@@ -674,8 +712,8 @@ function App() {
       // チャットページを開く
       handleOpenTeamsChat();
     } catch (error) {
-      console.error('誤字修正リストのコピーに失敗しました:', error);
-      alert('誤字修正リストのコピーに失敗しました。');
+      console.error('クリップボードデータのコピーに失敗しました:', error);
+      alert('クリップボードデータのコピーに失敗しました。');
     }
   };
 
@@ -683,6 +721,7 @@ function App() {
   React.useEffect(() => {
     if (currentStep === 'url-input') {
       loadDepartments();
+      loadJobTypes();
     }
   }, [currentStep]);
 
@@ -857,12 +896,18 @@ function App() {
               ブックマークレットの登録
             </button>
           </p>
-          <p>ブックマークレットが<strong>「会議情報取得ver03」</strong>でない方は再登録してください。更新日: 2025年9月5日
+          <p>ブックマークレットが<strong>「会議情報取得ver04」</strong>でない方は再登録してください。更新日: 2025年9月10日
           </p>
         </div>
         
         <div className="url-input-section">
           <h3>1. 部門選択</h3>
+          <button 
+            onClick={() => setCurrentStep('department-management')}
+            className="manage-link-button"
+          >
+            部門管理ページ
+          </button>
           <p>部門に合った誤字修正を適用するため部門を選択してください。</p>
           
           {/* 部門選択UI */}
@@ -912,16 +957,52 @@ function App() {
                 )}
                 
                 {selectedDepartment && (
-                  <div className="selected-department-inline">
-                    <p className="selected-text">
-                      ✓ 選択済み: <strong>{selectedDepartment.bu_name} {selectedDepartment.ka_name}</strong>
-                      <button 
-                        onClick={() => setCurrentStep('department-management')}
-                        className="manage-link-button"
-                      >
-                        管理
-                      </button>
-                    </p>
+                  <div className="selected-department-inline">                    
+                    {/* 発行者選択セクション */}
+                    <div className="issuer-selection">
+                      <p><strong>議事録発行者を選択してください：</strong></p>
+                      
+                      {/* 既存メンバーからの選択 */}
+                      {selectedDepartment.members && selectedDepartment.members.length > 0 && (
+                        <div className="member-buttons">
+                          <div className="department-buttons-inline">
+                            {selectedDepartment.members.map((member) => (
+                              <button
+                                key={member.id}
+                                onClick={() => {
+                                  setSelectedIssuer(member.member_name);
+                                  setFreeIssuerInput(''); // 自由入力をクリア
+                                }}
+                                className={`department-button-small ${selectedIssuer === member.member_name ? 'selected' : ''}`}
+                              >
+                                {member.member_name}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* 自由入力欄 */}
+                      <div className="free-issuer-input">
+                        <p>または新しい発行者名を入力：</p>
+                        <input
+                          type="text"
+                          value={freeIssuerInput}
+                          onChange={(e) => {
+                            setFreeIssuerInput(e.target.value);
+                            if (e.target.value.trim()) {
+                              setSelectedIssuer(''); // 既存選択をクリア
+                            }
+                          }}
+                          placeholder="発行者名を入力"
+                          className="issuer-input"
+                        />
+                        {freeIssuerInput.trim() && (
+                          <p className="note-text">※ 入力された名前は部門メンバーとして自動登録されます</p>
+                        )}
+                      </div>
+
+                    </div>
                   </div>
                 )}
               </>
@@ -942,13 +1023,17 @@ function App() {
           <button 
             onClick={selectedDepartment ? handleOpenChatWithCorrections : handleOpenTeamsChat} 
             className="url-button"
-            disabled={!selectedDepartment}
+            disabled={!selectedDepartment || (!selectedIssuer && !freeIssuerInput.trim())}
           >
             {selectedDepartment ? 'チャットページを開く' : 'チャットページを開く'}
           </button>
           {!selectedDepartment && (
             <p className="warning-text">※ 部門を選択してからチャットページを開いてください</p>
           )}
+          {selectedDepartment && !selectedIssuer && !freeIssuerInput.trim() && (
+            <p className="warning-text">※ 議事録発行者を選択または入力してください</p>
+          )}
+
           <p>新しいタブで開いたTeamsで「代わりにWebアプリを実行」を選択すると、Teamsチャットページが開きます。</p>
         </div>
         
@@ -976,7 +1061,6 @@ function App() {
     </div>
   );
 
-  // ▼▼▼ ここから追加 (新しい画面用の関数) ▼▼▼
   // ブックマークレット登録ページ
   const renderBookmarkletInstallStep = () => {
     // ブックマークレットのコードを文字列として定義
@@ -1090,7 +1174,7 @@ function App() {
       'const scrollStep=viewHeight*1.5;',
       'let currentScroll=0,loop=0;',
       'progressWindow.updateProgress(75);',
-      'while(currentScroll<totalHeight&&loop<100){',
+      'while(currentScroll<totalHeight&&loop<200){',
       'loop++;',
       'currentScroll+=scrollStep;',
       'c.scrollTop=currentScroll;',
@@ -1119,7 +1203,7 @@ function App() {
       '}',
       'progressWindow.updateProgress(95);',
       'progressWindow.updateStatus("結果を処理中...");',
-      'let result={title,participants,datetime,transcript,Department:cachedData.Department,typoCorrectionList:cachedData.typoCorrectionList};',
+      'let result={title,participants,datetime,transcript,Department:cachedData.Department,Issuer:cachedData.Issuer,typoCorrectionList:cachedData.typoCorrectionList};',
       'if(!transcript){progressWindow.close();alert("❌ 会議情報を取得できませんでした");}',
       'else{',
       'try{',
@@ -1151,7 +1235,7 @@ function App() {
             className="bookmarklet-link"
             onClick={(e) => e.preventDefault()} // 誤クリックで実行されないようにする
           >
-            会議情報取得ver03
+            会議情報取得ver04
           </a>
           <p>ブックマークバーが出ていない、わからない人は ctrl+shift+B を押してください。</p>
           <p>ブックマークバーが表示されます。</p>
@@ -1249,9 +1333,20 @@ function App() {
           
           <div className="sidebar-section">
             <h3>メール送信</h3>
-            <button onClick={handleSendPdfMail} className="sidebar-button">
-              PDF添付
-            </button>
+            {selectedDepartment?.email_address ? (
+              <button onClick={handleSendPdfMail} className="sidebar-button">
+                PDF添付
+              </button>
+            ) : (
+              <div>
+                <button className="sidebar-button disabled" disabled>
+                  PDF添付
+                </button>
+                <p className="warning-text small">
+                  ⚠ メールアドレスを登録してください
+                </p>
+              </div>
+            )}
           </div>
         </div>
       </aside>
@@ -1382,6 +1477,8 @@ function App() {
                   <textarea rows={6} value={meetingInfo.要約 || ''} onChange={e => setMeetingInfo({...meetingInfo, 要約: e.target.value})} />
                   <label>講評</label>
                   <textarea rows={6} value={meetingInfo.講評 || ''} onChange={e => setMeetingInfo({...meetingInfo, 講評: e.target.value})} />
+                  <label>発行者</label>
+                  <input type="text" value={meetingInfo.発行者 || ''} onChange={e => setMeetingInfo({...meetingInfo, 発行者: e.target.value})} />
                   
                   
                   {/* 表示はするが編集不可の分類フィールド */}
@@ -1390,7 +1487,17 @@ function App() {
                   <label>課</label>
                   <input type="text" value={meetingInfo.課 || ''} onChange={e => setMeetingInfo({...meetingInfo, 課: e.target.value})} />
                   <label>職種</label>
-                  <input type="text" value={meetingInfo.職種 || ''} onChange={e => setMeetingInfo({...meetingInfo, 職種: e.target.value})} />
+                  <select 
+                    value={meetingInfo.職種 || ''} 
+                    onChange={e => setMeetingInfo({...meetingInfo, 職種: e.target.value})}
+                  >
+                    <option value="">-- 職種を選択 --</option>
+                    {jobTypes.map(jobType => (
+                      <option key={jobType.id} value={jobType.name}>
+                        {jobType.name}
+                      </option>
+                    ))}
+                  </select>
                   <label>大分類</label>
                   <input type="text" value={meetingInfo.大分類 || ''} onChange={e => setMeetingInfo({...meetingInfo, 大分類: e.target.value})} />
                   <label>中分類</label>

@@ -121,6 +121,7 @@ export class HtmlExportService {
   会議場所?: string;
   要約?: string;
   講評?: string;
+  発行者?: string;
   部?: string;
   課?: string;
   職種?: string;
@@ -136,6 +137,7 @@ export class HtmlExportService {
     const location = meetingInfo.会議場所 || '';
   const summary = (meetingInfo.要約 || '').toString();
   const review = (meetingInfo.講評 || '').toString();
+  const issuer = meetingInfo.発行者 || '';
   const bu = meetingInfo.部 || '';
   const ka = meetingInfo.課 || '';
   const jobType = meetingInfo.職種 || '';
@@ -169,6 +171,8 @@ export class HtmlExportService {
     const category2Html = category2 ? `<h3 class="meeting-info-category2">中分類</h3><p class="meeting-info-category2-value">${HtmlExportService.escapeHtml(category2)}</p>` : '';
     const category3Html = category3 ? `<h3 class="meeting-info-category3">小分類</h3><p class="meeting-info-category3-value">${HtmlExportService.escapeHtml(category3)}</p>` : '';
 
+    const issuerHtml = issuer ? `<h3 class="meeting-info-issuer">発行者</h3><p class="meeting-info-issuer-value">${HtmlExportService.escapeHtml(issuer)}</p>` : '';
+
     const fragment = `
       <div class="meeting-info-container">
         <h1 class="meeting-info-title">${HtmlExportService.escapeHtml(title)}</h1>
@@ -186,6 +190,7 @@ export class HtmlExportService {
         <p class="meeting-info-summary">${summaryHtml}</p>
         <h3 class="meeting-info-review-label">講評</h3>
         <p class="meeting-info-review">${reviewHtml}</p>
+        ${issuerHtml}
       </div>
       <div class="meeting-minutes-content">
         ${minutesHtml || ''}
@@ -203,6 +208,7 @@ export class HtmlExportService {
     会議場所?: string;
     要約?: string;
     講評?: string;
+    発行者?: string;
     部?: string;
     課?: string;
     職種?: string;
@@ -218,6 +224,7 @@ export class HtmlExportService {
     const location = meetingInfo.会議場所 || '';
     const summary = (meetingInfo.要約 || '').toString();
     const review = (meetingInfo.講評 || '').toString();
+    const issuer = meetingInfo.発行者 || '';
     const bu = meetingInfo.部 || '';
     const ka = meetingInfo.課 || '';
     const jobType = meetingInfo.職種 || '';
@@ -246,6 +253,7 @@ export class HtmlExportService {
 <小分類>${this.escapeXml(category3)}</小分類>
 <要約>${this.escapeXml(summary)}</要約>
 <講評>${this.escapeXml(review)}</講評>
+<発行者>${this.escapeXml(issuer)}</発行者>
 <議事録>${this.escapeXml(minutesHtml)}</議事録>`;
 
     return xml;
