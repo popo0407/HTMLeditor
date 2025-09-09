@@ -46,7 +46,6 @@ class Settings(BaseSettings):
     # === メール送信設定（実際に使用されている項目のみ） ===
     MAIL_HOST: str = ""
     MAIL_PORT: int = 0
-    DEFAULT_RECIPIENT_EMAIL: str = ""
     SENDER_EMAIL: str = ""
     
     # === 静的ファイル設定 ===
@@ -121,7 +120,6 @@ class Settings(BaseSettings):
             メールテンプレート設定の辞書
         """
         return {
-            'default_recipient': self.DEFAULT_RECIPIENT_EMAIL,
             'subject_templates': [],
             'default_subject': "HTML Editor からの送信",
             'body_templates': [],

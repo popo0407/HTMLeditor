@@ -197,8 +197,7 @@ async def send_pdf_email(
             host=settings.MAIL_HOST,
             port=settings.MAIL_PORT,
             username=settings.SENDER_EMAIL,
-            password="",
-            default_recipient=settings.DEFAULT_RECIPIENT_EMAIL
+            password=""
         )
 
         # prepare JSON body for email (only the requested fields)
@@ -238,26 +237,23 @@ async def send_pdf_email(
             bu_name = meeting_data.get('部', '')
             ka_name = meeting_data.get('課', '')
             
+            if not bu_name or not ka_name:
+                raise HTTPException(status_code=400, detail="部門情報（部名・課名）が不完全です")
+            
             # 部門のメールアドレスを検索
             department_email = None
-            if bu_name and ka_name:
-                departments = DepartmentService.get_all_departments()
-                for dept in departments:
-                    if dept.bu_name == bu_name and dept.ka_name == ka_name and dept.email_address:
-                        department_email = dept.email_address
-                        logger.info(f"部門メールアドレスを取得: {department_email} (部門: {bu_name}/{ka_name})")
-                        break
+            departments = DepartmentService.get_all_departments()
+            for dept in departments:
+                if dept.bu_name == bu_name and dept.ka_name == ka_name and dept.email_address:
+                    department_email = dept.email_address
+                    logger.info(f"部門メールアドレスを取得: {department_email} (部門: {bu_name}/{ka_name})")
+                    break
             
-            if department_email:
-                recipients = [department_email]
-                logger.info(f"部門メールアドレスに送信: {department_email}")
-            else:
-                # 部門のメールアドレスが見つからない場合はデフォルトを使用
-                recipients = [settings.DEFAULT_RECIPIENT_EMAIL]
-                if bu_name and ka_name:
-                    logger.warning(f"部門 {bu_name}/{ka_name} のメールアドレスが見つからないため、デフォルト宛先を使用: {settings.DEFAULT_RECIPIENT_EMAIL}")
-                else:
-                    logger.info(f"部門情報が不完全なため、デフォルト宛先を使用: {settings.DEFAULT_RECIPIENT_EMAIL}")
+            if not department_email:
+                raise HTTPException(status_code=400, detail=f"部門 {bu_name}/{ka_name} のメールアドレスが登録されていません")
+            
+            recipients = [department_email]
+            logger.info(f"部門メールアドレスに送信: {department_email}")
 
         # ファイル名を新しい形式で生成（【社外秘】_会議日（YYYY-MM-DD）_会議タイトル）
         pdf_filename = f"{generate_pdf_filename(request.meetingInfo or {})}.pdf"
@@ -371,8 +367,7 @@ async def test_mail_connection(settings = Depends(get_settings)):
             host=settings.MAIL_HOST,
             port=settings.MAIL_PORT,
             username=settings.SENDER_EMAIL,
-            password="",  # 環境変数から取得
-            default_recipient=settings.DEFAULT_RECIPIENT_EMAIL
+            password=""  # 環境変数から取得
         )
         
         # 接続テスト

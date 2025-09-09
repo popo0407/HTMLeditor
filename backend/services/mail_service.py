@@ -20,12 +20,11 @@ logger = logging.getLogger(__name__)
 class MailService:
     """メール送信サービス"""
 
-    def __init__(self, host: str, port: int, username: str, password: str = "", default_recipient: str = ""):
+    def __init__(self, host: str, port: int, username: str, password: str = ""):
         self.host = host
         self.port = port
         self.username = username
         self.password = password or os.getenv('SMTP_PASSWORD', '')
-        self.default_recipient = default_recipient
         self.context = ssl.create_default_context()
     # send_fixed_email and send_html_email removed: application only sends PDF-attached emails now
 

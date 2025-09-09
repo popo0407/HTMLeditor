@@ -71,7 +71,7 @@ function App() {
 
   // HtmlExportServiceは直接使用するため、useRefは不要
 
-  // No client-side template loading. Backend uses DEFAULT_RECIPIENT_EMAIL from .env.
+  // メール送信時は部門のメールアドレスを使用
 
   // 共通バリデーション関数
   const validateAndExecute = async (
