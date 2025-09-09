@@ -20,7 +20,6 @@ export const TinyMCEEditor: React.FC<TinyMCEEditorProps> = ({
 }) => {
   const editorRef = useRef<any>(null);
   const [currentContent, setCurrentContent] = useState(value);
-  const [editorInstance, setEditorInstance] = useState<any>(null);
 
   // valueプロパティの変更を監視してcurrentContentと同期
   useEffect(() => {
@@ -34,15 +33,8 @@ export const TinyMCEEditor: React.FC<TinyMCEEditorProps> = ({
     onContentChange?.(content);
   };
 
-  const handleSave = () => {
-    const content = editorRef.current?.getContent();
-    onSave?.(content);
-  };
-
   const handleInit = (evt: any, editor: any) => {
-    console.log('TinyMCE initialized:', editor);
     editorRef.current = editor;
-    setEditorInstance(editor);
   };
 
 

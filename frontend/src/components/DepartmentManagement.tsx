@@ -512,7 +512,7 @@ export const DepartmentManagement: React.FC<DepartmentManagementProps> = ({ onBa
       if (selectedDepartment) {
         await loadDepartmentMembers(selectedDepartment.id);
       }
-      alert('メンバーを削除しました。');
+      // メンバー削除成功時のアラートを削除
     } catch (error) {
       console.error('メンバーの削除に失敗しました:', error);
       alert('メンバーの削除に失敗しました。');
@@ -533,7 +533,7 @@ export const DepartmentManagement: React.FC<DepartmentManagementProps> = ({ onBa
       await createJobType({ name: newJobType.name.trim() });
       await loadJobTypes();
       setNewJobType({ name: '' });
-      alert('職種を追加しました。');
+      // 職種追加成功時のアラートを削除
     } catch (error) {
       console.error('職種の追加に失敗しました:', error);
       alert('職種の追加に失敗しました。');
@@ -568,7 +568,7 @@ export const DepartmentManagement: React.FC<DepartmentManagementProps> = ({ onBa
       setIsLoading(true);
       await deleteJobType(jobTypeId);
       await loadJobTypes();
-      alert('職種を削除しました。');
+      // 職種削除成功時のアラートを削除
     } catch (error) {
       console.error('職種の削除に失敗しました:', error);
       alert('職種の削除に失敗しました。この職種を使用している部門がある可能性があります。');

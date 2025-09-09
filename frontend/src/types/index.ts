@@ -12,10 +12,3 @@ export interface MailSendRequest {
   html_content: string;
 }
 
-// メールテンプレート用の型定義
-export interface EmailTemplates {
-  default_recipient: string;
-  subject_templates: string[];
-  default_subject: string;
-  body_templates: string[];
-}

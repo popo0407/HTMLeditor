@@ -23,7 +23,6 @@ import {
 import { DepartmentManagement } from './components/DepartmentManagement';
 
 function App() {
-  // emailTemplates removed: backend provides fixed recipient via settings
   const [importText, setImportText] = useState('');
   const [meetingInfo, setMeetingInfo] = useState<any>({
     会議タイトル: '',
@@ -1020,6 +1019,12 @@ function App() {
             placeholder="https://teams.microsoft.com/l/meetup-join/..."
             className="url-input"
           />
+          {!selectedDepartment && (
+            <p className="warning-text">※ 部門を選択してからチャットページを開いてください</p>
+          )}
+          {selectedDepartment && !selectedIssuer && !freeIssuerInput.trim() && (
+            <p className="warning-text">※ 議事録発行者を選択または入力してください</p>
+          )}
           <button 
             onClick={selectedDepartment ? handleOpenChatWithCorrections : handleOpenTeamsChat} 
             className="url-button"
@@ -1027,12 +1032,7 @@ function App() {
           >
             {selectedDepartment ? 'チャットページを開く' : 'チャットページを開く'}
           </button>
-          {!selectedDepartment && (
-            <p className="warning-text">※ 部門を選択してからチャットページを開いてください</p>
-          )}
-          {selectedDepartment && !selectedIssuer && !freeIssuerInput.trim() && (
-            <p className="warning-text">※ 議事録発行者を選択または入力してください</p>
-          )}
+
 
           <p>新しいタブで開いたTeamsで「代わりにWebアプリを実行」を選択すると、Teamsチャットページが開きます。</p>
         </div>

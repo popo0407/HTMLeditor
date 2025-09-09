@@ -1,6 +1,3 @@
-// ローカルのTinyMCEファイルを使用するため、APIキーは不要
-console.log('Using local TinyMCE files instead of cloud API');
-
 // 基本的なTinyMCE設定
 export const tinymceConfig: any = {
   // GPLライセンスを使用（オープンソース）
@@ -66,7 +63,6 @@ export const tinymceConfig: any = {
     .custom-table th { background-color: #f8f9fa; font-weight: bold; }
   `,
   setup: function (editor: any) {
-    console.log('TinyMCE initialized successfully');
     
     // セパレーターを登録
     editor.ui.registry.addButton('separator', {

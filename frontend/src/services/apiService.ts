@@ -32,13 +32,6 @@ export interface MailSendResponse {
   message: string;
 }
 
-export interface EmailTemplatesResponse {
-  default_recipient: string;
-  subject_templates: string[];
-  default_subject: string;
-  body_templates: string[];
-}
-
 /**
  * HTML添付メールを送信（固定のタイトルと本文）
  */
