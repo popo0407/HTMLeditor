@@ -67,6 +67,7 @@ function App() {
   // 発行者選択の状態
   const [selectedIssuer, setSelectedIssuer] = useState<string>(''); // 選択された議事録発行者
   const [freeIssuerInput, setFreeIssuerInput] = useState<string>(''); // 自由入力欄
+  const [showAllMembers, setShowAllMembers] = useState<boolean>(true); // 全メンバー表示フラグ
 
   // HtmlExportServiceは直接使用するため、useRefは不要
 
@@ -959,25 +960,54 @@ function App() {
                   <div className="selected-department-inline">                    
                     {/* 発行者選択セクション */}
                     <div className="issuer-selection">
-                      <p><strong>議事録発行者を選択してください：</strong></p>
+                      {selectedIssuer && !showAllMembers ? (
+                        // 発行者が選択されている場合：タイトル部分に変更ボタンを表示
+                        <div className="issuer-header">
+                          <button
+                            onClick={() => setShowAllMembers(true)}
+                            className="change-issuer-button"
+                          >
+                            議事録発行者を変更する
+                          </button>
+                        </div>
+                      ) : (
+                        // 発行者が未選択、または全メンバー表示モード：選択を促すメッセージを表示
+                        <p><strong>議事録発行者を選択してください：</strong></p>
+                      )}
                       
                       {/* 既存メンバーからの選択 */}
                       {selectedDepartment.members && selectedDepartment.members.length > 0 && (
                         <div className="member-buttons">
-                          <div className="department-buttons-inline">
-                            {selectedDepartment.members.map((member) => (
-                              <button
-                                key={member.id}
-                                onClick={() => {
-                                  setSelectedIssuer(member.member_name);
-                                  setFreeIssuerInput(''); // 自由入力をクリア
-                                }}
-                                className={`department-button-small ${selectedIssuer === member.member_name ? 'selected' : ''}`}
-                              >
-                                {member.member_name}
-                              </button>
-                            ))}
-                          </div>
+                          {selectedIssuer && !showAllMembers ? (
+                            // 発行者が選択されている場合：選択された発行者のみ表示
+                            <div className="selected-issuer-display">
+                              <div className="department-buttons-inline">
+                                <button
+                                  className="department-button-small selected"
+                                  disabled
+                                >
+                                  {selectedIssuer}
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            // 発行者が未選択、または全メンバー表示モード：全メンバー表示
+                            <div className="department-buttons-inline">
+                              {selectedDepartment.members.map((member) => (
+                                <button
+                                  key={member.id}
+                                  onClick={() => {
+                                    setSelectedIssuer(member.member_name);
+                                    setFreeIssuerInput(''); // 自由入力をクリア
+                                    setShowAllMembers(false); // 選択後は選択されたメンバーのみ表示
+                                  }}
+                                  className={`department-button-small ${selectedIssuer === member.member_name ? 'selected' : ''}`}
+                                >
+                                  {member.member_name}
+                                </button>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       )}
                       
@@ -991,6 +1021,7 @@ function App() {
                             setFreeIssuerInput(e.target.value);
                             if (e.target.value.trim()) {
                               setSelectedIssuer(''); // 既存選択をクリア
+                              setShowAllMembers(true); // 自由入力時は全メンバー表示状態に戻す
                             }
                           }}
                           placeholder="発行者名を入力"
@@ -1042,7 +1073,7 @@ function App() {
           <p><strong>「会議情報取得」ブックマークレット</strong>を実行して、会議情報を取得してください。</p>
           <p>クリップボードに会議情報が自動でコピーされて、議事録生成用のGenAIが新しいタブで開きます。</p>
 
-          <button onClick={() => window.open("https://d3r0xupf0a2onu.cloudfront.net/use-case-builder/execute/6fadf23d-6d52-4029-a3bb-73a3b9f09cb2", "_blank")} className="back-button">
+          <button onClick={() => window.open("https://d3r0xupf0a2onu.cloudfront.net/use-case-builder/execute/7abad9ce-a83f-4ec6-91fe-4e843ec0add1", "_blank")} className="back-button">
             議事録生成用のGenAIを開く
           </button>
         </div>
@@ -1213,7 +1244,7 @@ function App() {
       'setTimeout(()=>{',
       'progressWindow.close();',
       'alert("✅ 完了！会議情報と誤字修正リストを取得し、クリップボードにコピーしました");',
-      'window.open("https://d3r0xupf0a2onu.cloudfront.net/use-case-builder/execute/6fadf23d-6d52-4029-a3bb-73a3b9f09cb2","_blank");',
+      'window.open("https://d3r0xupf0a2onu.cloudfront.net/use-case-builder/execute/7abad9ce-a83f-4ec6-91fe-4e843ec0add1","_blank");',
       '},1000);',
       '}catch(clipboardError){progressWindow.close();alert("❌ クリップボードコピー失敗");}',
       '}',

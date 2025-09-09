@@ -1761,3 +1761,34 @@
 .back-to-department-button:hover:not(:disabled) {
   background: #545b62;
 }
+
+/* 発行者選択関連のスタイル */
+.issuer-header {
+  margin-bottom: 15px;
+}
+
+.selected-issuer-display {
+  margin-bottom: 15px;
+}
+
+.change-issuer-button {
+  background: #28a745;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.2s;
+}
+
+.change-issuer-button:hover {
+  background: #218838;
+}
+
+.selected-issuer-display .department-button-small.selected:disabled {
+  opacity: 1;
+  cursor: default;
+  background: #007bff;
+  color: white;
+}
