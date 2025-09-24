@@ -5,6 +5,6 @@
 APIルートを機能別に分割して管理
 """
 
-from . import mail_routes, pdf_routes
+from . import mail_routes, pdf_routes, department_routes
 
-__all__ = ["mail_routes", "pdf_routes"]
+__all__ = ["mail_routes", "pdf_routes", "department_routes"]

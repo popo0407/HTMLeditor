@@ -21,6 +21,15 @@ from app.config import get_settings
 from app.config.database import init_database
 from pathlib import Path
 
+# デバッグ: インポートされたルーターの確認
+print(f"DEBUG - mail_routes.router: {hasattr(mail_routes, 'router')}")
+print(f"DEBUG - pdf_routes.router: {hasattr(pdf_routes, 'router')}")
+print(f"DEBUG - department_routes.router: {hasattr(department_routes, 'router')}")
+if hasattr(department_routes, 'router'):
+    print(f"DEBUG - department_routes.router routes: {len(department_routes.router.routes)}")
+else:
+    print("ERROR - department_routes.router not found!")
+
 # ログ設定
 log_dir = Path("logs")
 log_dir.mkdir(exist_ok=True)
@@ -78,6 +87,13 @@ app.include_router(mail_routes.router, prefix="/api/mail", tags=["mail"])
 app.include_router(pdf_routes.router, prefix="/api/pdf", tags=["pdf"])
 # 部門管理APIは /api/departments を起点とする
 app.include_router(department_routes.router, prefix="/api/departments", tags=["departments"])
+
+# デバッグ: 登録されたルートを確認
+print("=== 登録されたルート一覧 ===")
+for route in app.routes:
+    if hasattr(route, 'path') and hasattr(route, 'methods'):
+        print(f"Path: {route.path}, Methods: {route.methods}")
+print("========================")
 
 
 @app.get("/")

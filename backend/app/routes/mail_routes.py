@@ -16,6 +16,9 @@ from app.services.department_service import DepartmentService
 import datetime
 import re
 
+import logging
+logger = logging.getLogger(__name__)
+
 router = APIRouter()
 
 def sanitize_filename(filename: str) -> str:
@@ -43,8 +46,6 @@ def sanitize_filename(filename: str) -> str:
 
 def generate_pdf_filename(meeting_info: dict) -> str:
     """会議情報に基づいてPDFファイル名を生成（【機密レベル】_会議日（YYYY-MM-DD）_会議タイトル）"""
-    import logging
-    logger = logging.getLogger(__name__)
     
     # デバッグ用：会議情報をログ出力
     logger.info(f"PDF filename generation - meeting_info: {meeting_info}")
@@ -96,8 +97,6 @@ def generate_pdf_filename(meeting_info: dict) -> str:
 
 def generate_source_data_filename(meeting_info: dict, extension: str = 'txt') -> str:
     """会議情報に基づいて元データファイル名を生成（【機密レベル】_会議日（YYYY-MM-DD）_会議タイトル_元データ）"""
-    import logging
-    logger = logging.getLogger(__name__)
     
     # デバッグ用：会議情報をログ出力
     logger.info(f"Source data filename generation - meeting_info: {meeting_info}")
@@ -259,8 +258,6 @@ async def send_pdf_email(
         pdf_filename = f"{generate_pdf_filename(request.meetingInfo or {})}.pdf"
         
         # デバッグログ
-        import logging
-        logger = logging.getLogger(__name__)
         logger.info(f"Generated PDF filename: {pdf_filename}")
 
         # 元データファイルの準備

@@ -21,6 +21,7 @@ import {
   getAllJobTypes
 } from './services/departmentService';
 import { DepartmentManagement } from './components/DepartmentManagement';
+import { LoadingSpinner } from './components/LoadingSpinner';
 
 function App() {
   const [importText, setImportText] = useState('');
@@ -69,6 +70,11 @@ function App() {
   const [freeIssuerInput, setFreeIssuerInput] = useState<string>(''); // 自由入力欄
   const [showAllMembers, setShowAllMembers] = useState<boolean>(true); // 全メンバー表示フラグ
 
+  // 作業中状態の管理
+  const [isHtmlDownloading, setIsHtmlDownloading] = useState(false);
+  const [isPdfDownloading, setIsPdfDownloading] = useState(false);
+  const [isEmailSending, setIsEmailSending] = useState(false);
+
   // HtmlExportServiceは直接使用するため、useRefは不要
 
   // メール送信時は部門のメールアドレスを使用
@@ -77,7 +83,8 @@ function App() {
   const validateAndExecute = async (
     meetingInfo: any, 
     operation: () => Promise<void>,
-    operationName: string
+    operationName: string,
+    setLoadingState?: (loading: boolean) => void
   ): Promise<void> => {
     // 必須項目チェック
     if (!meetingInfo?.会議タイトル?.trim()) {
@@ -91,15 +98,25 @@ function App() {
     
     // 会議日時形式チェック
     if (!validateDateTimeFormat(meetingInfo.会議日時)) {
-      alert('会議日時の形式が正しくありません。YYYY-MM-DD hh:mm:ss の形式で入力してください。\n例: 2025-01-01 14:00:00');
+      alert('会議日時の形式が正しくありません。YYYY-MM-DD hh:mm:ss の形式で入力してください。\\n例: 2025-01-01 14:00:00');
       return;
     }
 
     try {
+      // ローディング状態を開始
+      if (setLoadingState) {
+        setLoadingState(true);
+      }
+      
       await operation();
     } catch (error) {
       console.error(`${operationName}に失敗しました:`, error);
       alert(`${operationName}に失敗しました。`);
+    } finally {
+      // ローディング状態を終了
+      if (setLoadingState) {
+        setLoadingState(false);
+      }
     }
   };
 
@@ -296,8 +313,8 @@ function App() {
             if (value.startsWith('[') && value.endsWith(']')) {
               result[field] = JSON.parse(value);
             } else {
-              // カンマ区切りの場合
-              result[field] = value.split(',').map(item => item.trim()).filter(item => item);
+              // カンマ区切りの場合（半角カンマ,と全角カンマ、の両方に対応）
+              result[field] = value.split(/[,、]/).map(item => item.trim()).filter(item => item);
             }
           } catch (e) {
             // パースできない場合は文字列のまま
@@ -782,7 +799,7 @@ function App() {
         `${filename}.html`,
         'エクスポートされたドキュメント'
       );
-    }, 'HTMLダウンロード');
+    }, 'HTMLダウンロード', setIsHtmlDownloading);
   };
 
   const handleDownloadPdf = async () => {
@@ -818,7 +835,7 @@ function App() {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
       alert('PDFファイルをダウンロードしました。');
-    }, 'PDFダウンロード');
+    }, 'PDFダウンロード', setIsPdfDownloading);
   };
 
   // HTML添付送信はフロントで廃止。PDF送信はJSONを送るフローとする。
@@ -875,7 +892,7 @@ function App() {
         ` + 元データファイル (${sourceDataFileAttachment.name})` : 
         (sourceDataTextContent ? ' + 元データテキスト' : '');
       alert(`PDF${attachmentInfo}添付メールを送信しました。`);
-    }, 'PDF添付メール送信');
+    }, 'PDF添付メール送信', setIsEmailSending);
   };
 
   // URL入力画面
@@ -896,7 +913,7 @@ function App() {
               ブックマークレットの登録
             </button>
           </p>
-          <p>ブックマークレットが<strong>「会議情報取得ver04」</strong>でない方は再登録してください。更新日: 2025年9月10日
+          <p>ブックマークレットが<strong>「会議情報取得ver05」</strong>でない方は再登録してください。更新日: 2025年9月24日
           </p>
         </div>
         
@@ -1098,6 +1115,7 @@ function App() {
     const bookmarkletCode = [
       'javascript:(function(){',
       'const wait=(ms)=>new Promise(res=>setTimeout(res,ms));',
+      'const d=(str)=>decodeURIComponent(str);',
       'const createProgressWindow=()=>{',
       'const overlay=document.createElement("div");',
       'overlay.id="meeting-progress-overlay";',
@@ -1105,7 +1123,7 @@ function App() {
       'const window=document.createElement("div");',
       'window.style.cssText="background:white;padding:20px;border-radius:10px;box-shadow:0 4px 20px rgba(0,0,0,0.3);min-width:300px;text-align:center;font-family:Arial,sans-serif;";',
       'const title=document.createElement("h3");',
-      'title.textContent="会議情報取得中...";',
+      `title.textContent=d("${encodeURIComponent('会議情報取得中...')}");`,
       'title.style.cssText="margin:0 0 15px 0;color:#333;";',
       'const status=document.createElement("div");',
       'status.id="progress-status";',
@@ -1123,6 +1141,47 @@ function App() {
       'document.body.appendChild(overlay);',
       'return{updateStatus:(text)=>{document.getElementById("progress-status").textContent=text;},updateProgress:(percent)=>{document.getElementById("progress-bar").style.width=percent+"%";},close:()=>{document.body.removeChild(overlay);}};',
       '};',
+      'const createSelectionDialog=(options,optionElements)=>{',
+      'return new Promise((resolve)=>{',
+      'const overlay=document.createElement("div");',
+      'overlay.style.cssText="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:10001;display:flex;justify-content:center;align-items:center;";',
+      'const dialog=document.createElement("div");',
+      'dialog.style.cssText="background:white;padding:20px;border-radius:10px;box-shadow:0 4px 20px rgba(0,0,0,0.3);min-width:400px;max-width:600px;font-family:Arial,sans-serif;";',
+      'const title=document.createElement("h3");',
+      `title.textContent=d("${encodeURIComponent('会議日時を選択してください')}");`,
+      'title.style.cssText="margin:0 0 15px 0;color:#333;text-align:center;";',
+      'dialog.appendChild(title);',
+      'const optionsContainer=document.createElement("div");',
+      'optionsContainer.style.cssText="max-height:300px;overflow-y:auto;margin:15px 0;";',
+      'options.forEach((option,index)=>{',
+      'const optionDiv=document.createElement("div");',
+      'optionDiv.style.cssText="padding:10px;margin:5px 0;border:1px solid #ddd;border-radius:5px;cursor:pointer;transition:background-color 0.2s;";',
+      'optionDiv.textContent=option;',
+      'optionDiv.addEventListener("mouseenter",()=>{optionDiv.style.backgroundColor="#f0f0f0";});',
+      'optionDiv.addEventListener("mouseleave",()=>{optionDiv.style.backgroundColor="white";});',
+      'optionDiv.addEventListener("click",()=>{',
+      'document.body.removeChild(overlay);',
+      'const selectedElement=optionElements[index];',
+      'if(selectedElement&&typeof selectedElement.click===\'function\'){selectedElement.click();}',
+      'resolve(option);',
+      '});',
+      'optionsContainer.appendChild(optionDiv);',
+      '});',
+      'dialog.appendChild(optionsContainer);',
+      'const cancelBtn=document.createElement("button");',
+      `cancelBtn.textContent=d("${encodeURIComponent('キャンセル')}");`,
+      'cancelBtn.style.cssText="padding:8px 16px;background:#ccc;border:none;border-radius:5px;cursor:pointer;margin-top:10px;";',
+      'cancelBtn.addEventListener("click",()=>{',
+      'document.body.removeChild(overlay);',
+      'const escEvent=new KeyboardEvent(\'keydown\',{key:\'Escape\',code:\'Escape\',keyCode:27,which:27,bubbles:true});',
+      'document.dispatchEvent(escEvent);',
+      'resolve(null);',
+      '});',
+      'dialog.appendChild(cancelBtn);',
+      'overlay.appendChild(dialog);',
+      'document.body.appendChild(overlay);',
+      '});',
+      '};',
       'const waitForElement=async(selector,maxWaitTime=20000)=>{',
       'const startTime=Date.now();',
       'while(Date.now()-startTime<maxWaitTime){',
@@ -1130,66 +1189,99 @@ function App() {
       'if(element){await wait(1000);return element;}',
       'await wait(1000);',
       '}',
-      'throw new Error(selector+" が見つかりませんでした");',
+      `throw new Error(selector+d("${encodeURIComponent(' が見つかりませんでした')}"));`,
       '};',
-      '(async()=>{',
-      'const progressWindow=createProgressWindow();',
-      'try{',
-      'let cachedData=null;',
-      'try{',
-      'progressWindow.updateStatus("クリップボード情報を取得中...");',
-      'const clipboardText=await navigator.clipboard.readText();',
-      'try{cachedData=JSON.parse(clipboardText);}catch(_){throw new Error("HTMLEditorからチャット画面を開いてください");}',
-      'if(typeof cachedData!=="object"){throw new Error("HTMLEditorからチャット画面を開いてください");}',
-      'progressWindow.updateStatus("クリップボード情報取得成功");',
-      'progressWindow.updateProgress(5);',
-      '}catch(e){progressWindow.close();alert("❌ "+e.message);return;}',
-      'progressWindow.updateStatus("会議詳細ボタンを探しています...");',
-      'progressWindow.updateProgress(10);',
-      'let detailBtn=await waitForElement("button[data-tid=\\"chat-meeting-details\\"]");',
-      'detailBtn.click();',
-      'progressWindow.updateStatus("会議詳細を開きました");',
-      'progressWindow.updateProgress(20);',
-      'progressWindow.updateStatus("会議タイトルを取得中...");',
+      'const waitForElementOptional=async(selector,maxWaitTime=10000)=>{',
+      'const startTime=Date.now();',
+      'while(Date.now()-startTime<maxWaitTime){',
+      'const element=document.querySelector(selector);',
+      'if(element){await wait(1000);return element;}',
+      'await wait(1000);',
+      '}',
+      'return null;',
+      '};',
+      'const getDateTimeFromRecapHeader=async()=>{',
       'await wait(2000);',
-      'let titleEl=await waitForElement("span[data-tid=\\"calv2-sf-meeting-subject-view\\"]");',
-      'let title=titleEl?.innerText||null;',
-      'progressWindow.updateProgress(30);',
-      'progressWindow.updateStatus("参加者情報を取得中...");',
-      'let participants=[...document.querySelectorAll("div.ms-TooltipHost")].map(el=>el.innerText);',
-      'progressWindow.updateProgress(40);',
-      'progressWindow.updateStatus("まとめボタンを探しています...");',
-      'let summaryBtn=await waitForElement("div[data-tid=\\"data-tid-まとめ\\"]");',
-      'summaryBtn.click();',
-      'progressWindow.updateStatus("まとめを開きました");',
-      'progressWindow.updateProgress(50);',
-      'progressWindow.updateStatus("日時情報を取得中...");',
+      'const recapHeader=document.querySelector(\'[data-tid="intelligent-recap-header"]\');',
+      `if(!recapHeader){throw new Error(d("${encodeURIComponent('まとめヘッダーが見つかりません')}"));}`,
+      'const dropdown=recapHeader.querySelector(\'[data-testid="intelligent-recap-instance-select-dropdown"]\');',
+      'if(dropdown){',
+      'const currentSelection=dropdown.querySelector(\'span\')?.innerText;',
+      'if(currentSelection){',
+      'dropdown.click();',
+      'await wait(1000);',
+      'const dropdownOptions=document.querySelectorAll(\'[role="option"]\');',
+      'if(dropdownOptions.length>1){',
+      'const options=Array.from(dropdownOptions).map(opt=>opt.innerText).filter(text=>text&&/\\\\d/.test(text));',
+      'const optionElements=Array.from(dropdownOptions).filter((opt,index)=>{',
+      'const text=opt.innerText;',
+      'return text&&/\\\\d/.test(text);',
+      '});',
+      'if(options.length>1){',
+      'const selectedDateTime=await createSelectionDialog(options,optionElements);',
+      'await wait(5000);',
+      'return selectedDateTime?[selectedDateTime]:[];',
+      '}',
+      '}',
+      'const escEvent=new KeyboardEvent(\'keydown\',{key:\'Escape\',code:\'Escape\',keyCode:27,which:27,bubbles:true});',
+      'document.dispatchEvent(escEvent);',
+      'await wait(500);',
+      'return[currentSelection];',
+      '}',
+      '}',
+      'const singleSpan=recapHeader.querySelector(\'span\');',
+      'if(singleSpan&&singleSpan.innerText&&/\\\\d/.test(singleSpan.innerText)){',
+      'return[singleSpan.innerText];',
+      '}',
+      'return[];',
+      '};',
+      'const getAllParticipants=async(progressWindow)=>{',
+      `progressWindow.updateStatus(d("${encodeURIComponent('参加者情報を取得中...')}"));`,
+      'let participants=[];',
+      'const trackingView=document.querySelector(\'[data-tid="calv2-sf-tracking-view"]\');',
+      'if(!trackingView){return[];}',
+      'const showMoreBtn=document.querySelector(\'[data-tid="show-more-attendee-tracking-view"]\');',
+      'if(showMoreBtn){',
+      `progressWindow.updateStatus(d("${encodeURIComponent('その他の出席者を表示中...')}"));`,
+      'showMoreBtn.click();',
       'await wait(2000);',
-      'let datetime=[...document.querySelectorAll("span.fui-StyledText")].map(el=>el.innerText).filter(t=>/\\d/.test(t));',
-      'progressWindow.updateProgress(60);',
-      'progressWindow.updateStatus("文字起こしボタンを探しています...");',
-      'let transcriptBtn=await waitForElement("button[data-tid=\\"Transcript\\"]");',
-      'transcriptBtn.click();',
-      'progressWindow.updateStatus("文字起こしを開きました");',
-      'progressWindow.updateProgress(70);',
-      'progressWindow.updateStatus("文字起こし内容を読み込み中...");',
-      'await wait(3000);',
-      'const c=await waitForElement("[data-is-scrollable=\\"true\\"]");',
-      'let transcript="";',
-      'if(c){',
-      'progressWindow.updateStatus("文字起こしを解析中...");',
+      '}',
+      'const personaElements=document.querySelectorAll(\'.ms-TooltipHost\');',
+      'for(const element of personaElements){',
+      'const name=element.innerText;',
+      'if(name&&name.trim()&&!participants.includes(name.trim())){',
+      'participants.push(name.trim());',
+      '}',
+      '}',
+      'const allPersonaElements=document.querySelectorAll(\'[data-tid="CalendarPersonaPill"] .ms-Persona-primaryText .ms-TooltipHost\');',
+      'for(const element of allPersonaElements){',
+      'const name=element.innerText;',
+      'if(name&&name.trim()&&!participants.includes(name.trim())){',
+      'participants.push(name.trim());',
+      '}',
+      '}',
+      'return participants.filter(name=>name.length>0);',
+      '};',
+      'const getTranscriptFromCurrentTab=async()=>{',
+      'const c=await waitForElementOptional("[data-is-scrollable=\\"true\\"]");',
+      'if(!c){return null;}',
       'let entries=[];',
       'let processedContent=new Set();',
       'const addEntries=(elements)=>{',
       'for(const e of elements){',
-      'let s="（システム）",t="",msg="";',
+      `let s=d("${encodeURIComponent('（システム）')}"),t="",msg="";`,
       'const a=e.getAttribute("aria-label")||"";',
-      'const m=a.match(/^(.+?)\\s+\\d/);',
-      'if(m){s=m[1].trim();}else{const n=e.closest("[class*=\\"rightColumn-\\"]")?.querySelector("[class*=\\"itemDisplayName-\\"]");if(n)s=n.textContent.trim();}',
+      'const m=a.match(/^(.+?)\\\\s+\\\\d/);',
+      'if(m){s=m[1].trim();}else{',
+      'const n=e.closest("[class*=\\"rightColumn-\\"]")?.querySelector("[class*=\\"itemDisplayName-\\"]");',
+      'if(n)s=n.textContent.trim();',
+      '}',
       'const tsEl=e.closest("[class*=\\"rightColumn-\\"]")?.querySelector("[id^=\\"Header-timestamp-\\"]");',
       'if(tsEl)t=tsEl.textContent.trim();',
       'const msgEl=e.querySelector("[id^=\\"sub-entry-\\"]");',
-      'if(msgEl){msg=Array.from(msgEl.childNodes).filter(n=>n.nodeType===3).map(n=>n.textContent.trim()).join(" ");}',
+      'if(msgEl){',
+      'msg=Array.from(msgEl.childNodes).filter(n=>n.nodeType===3).map(n=>n.textContent.trim()).join(" ");',
+      '}',
       'if(!msg)continue;',
       'const uniqueKey=s+"|"+t+"|"+msg;',
       'if(processedContent.has(uniqueKey))continue;',
@@ -1204,19 +1296,18 @@ function App() {
       'const viewHeight=c.clientHeight;',
       'const scrollStep=viewHeight*1.5;',
       'let currentScroll=0,loop=0;',
-      'progressWindow.updateProgress(75);',
       'while(currentScroll<totalHeight&&loop<200){',
       'loop++;',
       'currentScroll+=scrollStep;',
       'c.scrollTop=currentScroll;',
       'await wait(300);',
-      'progressWindow.updateStatus("文字起こしをスクロール中... ("+loop+")");',
-      'if(Math.abs(c.scrollTop-currentScroll)>100){c.scrollTop=currentScroll;await wait(300);}',
+      'if(Math.abs(c.scrollTop-currentScroll)>100){',
+      'c.scrollTop=currentScroll;',
+      'await wait(300);',
+      '}',
       'addEntries(c.querySelectorAll("div[class*=\\"rightColumn-\\"]"));',
       'if(currentScroll>=totalHeight-viewHeight)break;',
       '}',
-      'progressWindow.updateProgress(85);',
-      'progressWindow.updateStatus("最終チェック中...");',
       'c.scrollTop=c.scrollHeight;',
       'await wait(2000);',
       'addEntries(c.querySelectorAll("div[class*=\\"rightColumn-\\"]"));',
@@ -1225,33 +1316,133 @@ function App() {
       'const timeB=b.time.split(":").reduce((acc,time)=>60*acc+parseInt(time,10),0);',
       'return timeA-timeB;',
       '});',
+      'let transcript="";',
       'let lastSpeaker="";',
       'for(const entry of entries){',
-      'if(entry.speaker==="（システム）"&&lastSpeaker){transcript+=entry.content+"\\n\\n";}',
-      'else{if(entry.speaker!=="（システム）"){lastSpeaker=entry.speaker;}',
-      'transcript+=entry.speaker+(entry.time?" ["+entry.time+"]":"")+":\\n"+entry.content+"\\n\\n";}',
+      `if(entry.speaker===d("${encodeURIComponent('（システム）')}")&&lastSpeaker){`,
+      'transcript+=entry.content+"\\\\n\\\\n";',
+      '}else{',
+      `if(entry.speaker!==d("${encodeURIComponent('（システム）')}")){lastSpeaker=entry.speaker;}`,
+      'transcript+=entry.speaker+(entry.time?" ["+entry.time+"]":"")+":"+entry.content+"\\\\n\\\\n";',
       '}',
       '}',
+      'return transcript||null;',
+      '};',
+      'const getAllTranscripts=async(progressWindow)=>{',
+      'const tabList=document.querySelector(\'[data-tid="recap-tab-list"]\');',
+      'if(!tabList){',
+      `progressWindow.updateStatus(d("${encodeURIComponent('文字起こしボタンを探しています...')}"));`,
+      'let transcriptBtn=await waitForElement("button[data-tid=\\"Transcript\\"]");',
+      'transcriptBtn.click();',
+      `progressWindow.updateStatus(d("${encodeURIComponent('文字起こしを開きました')}"));`,
+      'await wait(3000);',
+      `progressWindow.updateStatus(d("${encodeURIComponent('文字起こし内容を読み込み中...')}"));`,
+      'const transcript=await getTranscriptFromCurrentTab();',
+      `if(!transcript){throw new Error(d("${encodeURIComponent('文字起こしデータが見つかりませんでした')}"));}`,
+      'return transcript;',
+      '}',
+      'const tabs=tabList.querySelectorAll(\'[role="tab"]\');',
+      'if(tabs.length<=1){',
+      `progressWindow.updateStatus(d("${encodeURIComponent('文字起こしボタンを探しています...')}"));`,
+      'let transcriptBtn=await waitForElement("button[data-tid=\\"Transcript\\"]");',
+      'transcriptBtn.click();',
+      `progressWindow.updateStatus(d("${encodeURIComponent('文字起こしを開きました')}"));`,
+      'await wait(3000);',
+      `progressWindow.updateStatus(d("${encodeURIComponent('文字起こし内容を読み込み中...')}"));`,
+      'const transcript=await getTranscriptFromCurrentTab();',
+      `if(!transcript){throw new Error(d("${encodeURIComponent('文字起こしデータが見つかりませんでした')}"));}`,
+      'return transcript;',
+      '}else{',
+      'let allTranscripts="";',
+      'let hasAnyTranscript=false;',
+      `progressWindow.updateStatus(d("${encodeURIComponent('複数のパートが見つかりました')}")+" ("+tabs.length+d("${encodeURIComponent('個')}"));`,
+      'for(let i=0;i<tabs.length;i++){',
+      'const tab=tabs[i];',
+      'const tabContent=tab.querySelector(\'.fui-Tab__content span\');',
+      `const tabName=tabContent?.innerText||d("${encodeURIComponent('パート')}")+" "+(i+1);`,
+      `progressWindow.updateStatus(d("${encodeURIComponent('パート')}")+" "+(i+1)+"/"+tabs.length+" ("+tabName+") "+d("${encodeURIComponent('を処理中...')}"));`,
+      'tab.click();',
+      'await wait(3000);',
+      'try{',
+      `progressWindow.updateStatus(d("${encodeURIComponent('文字起こしボタンを探しています...')}")+" ("+tabName+")");`,
+      'let transcriptBtn=await waitForElement("button[data-tid=\\"Transcript\\"]");',
+      'transcriptBtn.click();',
+      `progressWindow.updateStatus(d("${encodeURIComponent('文字起こしを開きました')}")+" ("+tabName+")");`,
+      'await wait(3000);',
+      `progressWindow.updateStatus(d("${encodeURIComponent('文字起こし内容を読み込み中...')}")+" ("+tabName+")");`,
+      'const partTranscript=await getTranscriptFromCurrentTab();',
+      'if(partTranscript){',
+      'hasAnyTranscript=true;',
+      'if(allTranscripts){',
+      'allTranscripts+="\\\\n\\\\n=== "+tabName+" ===\\\\n\\\\n";',
+      '}else{',
+      'allTranscripts="=== "+tabName+" ===\\\\n\\\\n";',
+      '}',
+      'allTranscripts+=partTranscript;',
+      '}else{',
+      `progressWindow.updateStatus(d("${encodeURIComponent('パート')}")+" "+tabName+" "+d("${encodeURIComponent('には文字起こしがありませんでした')}"));`,
+      '}',
+      '}catch(e){',
+      `progressWindow.updateStatus(d("${encodeURIComponent('パート')}")+" "+tabName+" "+d("${encodeURIComponent('の処理中にエラーが発生しました:')}")+" "+e.message);`,
+      '}',
+      '}',
+      `if(!hasAnyTranscript){throw new Error(d("${encodeURIComponent('すべてのパートで文字起こしデータが見つかりませんでした')}"));}`,
+      'return allTranscripts;',
+      '}',
+      '};',
+      '(async()=>{',
+      'const progressWindow=createProgressWindow();',
+      'try{',
+      'let cachedData=null;',
+      'try{',
+      `progressWindow.updateStatus(d("${encodeURIComponent('クリップボード情報を取得中...')}"));`,
+      'const clipboardText=await navigator.clipboard.readText();',
+      `try{cachedData=JSON.parse(clipboardText);}catch(_){throw new Error(d("${encodeURIComponent('HTMLEditorからチャット画面を開いてください')}"));}`,
+      `if(typeof cachedData!=="object"){throw new Error(d("${encodeURIComponent('HTMLEditorからチャット画面を開いてください')}"));}`,
+      `progressWindow.updateStatus(d("${encodeURIComponent('クリップボード情報取得成功')}"));`,
+      'progressWindow.updateProgress(5);',
+      '}catch(e){progressWindow.close();alert("❌ "+e.message);return;}',
+      `progressWindow.updateStatus(d("${encodeURIComponent('会議詳細ボタンを探しています...')}"));`,
+      'progressWindow.updateProgress(10);',
+      'let detailBtn=await waitForElement("button[data-tid=\\"chat-meeting-details\\"]");',
+      'detailBtn.click();',
+      `progressWindow.updateStatus(d("${encodeURIComponent('会議詳細を開きました')}"));`,
+      'progressWindow.updateProgress(20);',
+      `progressWindow.updateStatus(d("${encodeURIComponent('会議タイトルを取得中...')}"));`,
+      'await wait(2000);',
+      'let titleEl=await waitForElement("span[data-tid=\\"calv2-sf-meeting-subject-view\\"]");',
+      'let title=titleEl?.innerText||null;',
+      'progressWindow.updateProgress(30);',
+      'let participants=await getAllParticipants(progressWindow);',
+      'progressWindow.updateProgress(40);',
+      `progressWindow.updateStatus(d("${encodeURIComponent('まとめボタンを探しています...')}"));`,
+      'let summaryBtn=await waitForElement("div[data-tid=\\"data-tid-まとめ\\"]");',
+      'summaryBtn.click();',
+      `progressWindow.updateStatus(d("${encodeURIComponent('まとめを開きました')}"));`,
+      'progressWindow.updateProgress(50);',
+      `progressWindow.updateStatus(d("${encodeURIComponent('日時情報を取得中...')}"));`,
+      'let datetime=await getDateTimeFromRecapHeader();',
+      'progressWindow.updateProgress(60);',
+      `progressWindow.updateStatus(d("${encodeURIComponent('画面の更新を待機中...')}"));`,
+      'await wait(2000);',
+      'progressWindow.updateProgress(65);',
+      'let transcript=await getAllTranscripts(progressWindow);',
       'progressWindow.updateProgress(95);',
-      'progressWindow.updateStatus("結果を処理中...");',
+      `progressWindow.updateStatus(d("${encodeURIComponent('結果を処理中...')}"));`,
       'let result={title,participants,datetime,transcript,Department:cachedData.Department,Issuer:cachedData.Issuer,typoCorrectionList:cachedData.typoCorrectionList};',
-      'if(!transcript){progressWindow.close();alert("❌ 会議情報を取得できませんでした");}',
-      'else{',
       'try{',
       'await navigator.clipboard.writeText(JSON.stringify(result,null,2));',
       'progressWindow.updateProgress(100);',
-      'progressWindow.updateStatus("完了！");',
+      `progressWindow.updateStatus(d("${encodeURIComponent('完了！')}"));`,
       'setTimeout(()=>{',
       'progressWindow.close();',
-      'alert("✅ 完了！会議情報と誤字修正リストを取得し、クリップボードにコピーしました");',
+      `alert("✅ "+d("${encodeURIComponent('完了！会議情報と誤字修正リストを取得し、クリップボードにコピーしました')}"));`,
       'window.open("https://d3r0xupf0a2onu.cloudfront.net/use-case-builder/execute/7abad9ce-a83f-4ec6-91fe-4e843ec0add1","_blank");',
       '},1000);',
-      '}catch(clipboardError){progressWindow.close();alert("❌ クリップボードコピー失敗");}',
-      '}',
-      'console.log("最終結果:",result);',
-      '}catch(e){progressWindow.close();console.error("詳細エラー:",e);alert("❌ 取得失敗: "+(e.message||"unknown error"));}',
-      '})().catch(e=>{console.error("❌ 外側Promiseエラー:",e);});',
-      '})();'
+      `}catch(clipboardError){progressWindow.close();alert("❌ "+d("${encodeURIComponent('クリップボードコピー失敗')}"));}`,
+      `}catch(e){progressWindow.close();console.error(d("${encodeURIComponent('詳細エラー:')}")+"",e);alert("❌ "+d("${encodeURIComponent('取得失敗:')}")+" "+(e.message||"unknown error"));}`,
+      `})().catch(e=>{console.error("❌ "+d("${encodeURIComponent('外側Promiseエラー:')}")+"",e);});`,
+      '})()'
     ].join('');
 
     return (
@@ -1266,7 +1457,7 @@ function App() {
             className="bookmarklet-link"
             onClick={(e) => e.preventDefault()} // 誤クリックで実行されないようにする
           >
-            会議情報取得ver04
+            会議情報取得ver05
           </a>
           <p>ブックマークバーが出ていない、わからない人は ctrl+shift+B を押してください。</p>
           <p>ブックマークバーが表示されます。</p>
@@ -1354,20 +1545,47 @@ function App() {
           
           <div className="sidebar-section">
             <h3>ダウンロード</h3>
-            <button onClick={handleDownloadHtml} className="sidebar-button">
-              HTML形式
-            </button>
-            <button onClick={handleDownloadPdf} className="sidebar-button">
-              PDF形式
-            </button>
+            <LoadingSpinner 
+              isLoading={isHtmlDownloading} 
+              message="HTMLファイルを準備中..."
+            >
+              <button 
+                onClick={handleDownloadHtml} 
+                className="sidebar-button"
+                disabled={isHtmlDownloading || isPdfDownloading || isEmailSending}
+              >
+                HTML形式
+              </button>
+            </LoadingSpinner>
+            <LoadingSpinner 
+              isLoading={isPdfDownloading} 
+              message="PDFファイルを生成中..."
+            >
+              <button 
+                onClick={handleDownloadPdf} 
+                className="sidebar-button"
+                disabled={isHtmlDownloading || isPdfDownloading || isEmailSending}
+              >
+                PDF形式
+              </button>
+            </LoadingSpinner>
           </div>
           
           <div className="sidebar-section">
             <h3>メール送信</h3>
             {selectedDepartment?.email_address ? (
-              <button onClick={handleSendPdfMail} className="sidebar-button">
-                PDF添付
-              </button>
+              <LoadingSpinner 
+                isLoading={isEmailSending} 
+                message="メールを送信中..."
+              >
+                <button 
+                  onClick={handleSendPdfMail} 
+                  className="sidebar-button"
+                  disabled={isHtmlDownloading || isPdfDownloading || isEmailSending}
+                >
+                  PDF添付
+                </button>
+              </LoadingSpinner>
             ) : (
               <div>
                 <button className="sidebar-button disabled" disabled>

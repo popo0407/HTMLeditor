@@ -23,11 +23,16 @@ router = APIRouter(tags=["departments"])
 @router.get("/", response_model=List[Department])
 async def get_all_departments():
     """すべての部門を取得"""
+    print("DEBUG: get_all_departments() が呼ばれました！")
+    logger.info("get_all_departments() endpoint called")
     try:
         departments = DepartmentService.get_all_departments()
+        print(f"DEBUG: 取得した部門数: {len(departments)}")
         return departments
     except Exception as e:
         logger.error(f"部門取得エラー: {e}")
+        print(f"DEBUG: エラー発生: {e}")
+        raise
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="部門の取得に失敗しました"
