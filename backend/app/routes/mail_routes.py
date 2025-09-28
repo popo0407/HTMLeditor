@@ -202,6 +202,13 @@ async def send_pdf_email(
         # prepare JSON body for email (only the requested fields)
         # prepare body JSON for email; classification fields removed intentionally
         meeting_data = request.meetingInfo or {}
+        
+        # 改行を/nに変換するヘルパー関数
+        def convert_newlines_to_slash_n(text):
+            if not text:
+                return ''
+            return str(text).replace('\n', '/n').replace('\r\n', '/n')
+        
         body_json = {
             "会議タイトル": meeting_data.get('会議タイトル', ''),
             "参加者": meeting_data.get('参加者', []),
@@ -213,6 +220,7 @@ async def send_pdf_email(
             "大分類": meeting_data.get('大分類', ''),
             "中分類": meeting_data.get('中分類', ''),
             "小分類": meeting_data.get('小分類', ''),
+            "要約": convert_newlines_to_slash_n(meeting_data.get('要約', '')),
             "発行者": meeting_data.get('発行者', ''),
         }
 

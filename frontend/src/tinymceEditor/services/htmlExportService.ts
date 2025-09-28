@@ -155,9 +155,10 @@ export class HtmlExportService {
 
     // 改行処理のヘルパー関数（\n と /n の両方に対応）
     const processLineBreaks = (text: string): string => {
-      return HtmlExportService.escapeHtml(text)
-        .replace(/\\n/g, '<br/>')   // \n を <br/> に変換
+      if (!text) return '';
+      return HtmlExportService.escapeHtml(String(text))
         .replace(/\/n/g, '<br/>')   // /n を <br/> に変換
+        .replace(/\\n/g, '<br/>')   // \n を <br/> に変換
         .replace(/\r?\n/g, '<br/>'); // 実際の改行を <br/> に変換
     };
 
