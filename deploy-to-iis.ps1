@@ -125,11 +125,44 @@ Set-ItemProperty -Path "IIS:\Sites\$siteFullName" -Name "applicationPool" -Value
 Write-ColorOutput Green "アプリケーションプール '$poolName' をサイトに設定しました。"
 
 
-# 7. 権限設定
+# 7. 権限設定（高速化版）
 Write-ColorOutput Yellow "ステップ 6: ファイル権限の設定..."
-icacls $DeployPath /grant "IIS_IUSRS:(OI)(CI)RX" /T
-icacls $BackendDeploy /grant "IIS_IUSRS:(OI)(CI)F" /T # バックエンドには書き込み権限(F)も付与
-Write-ColorOutput Green "ファイル権限を設定しました。"
+
+# 既存権限の確認（軽量チェック）
+Write-ColorOutput White "  - 既存権限をチェック中..."
+$frontendPermCheck = icacls $FrontendDeploy 2>$null | Select-String "IIS_IUSRS.*RX"
+$backendPermCheck = icacls $BackendDeploy 2>$null | Select-String "IIS_IUSRS.*F"
+
+$needsFrontendPerm = $null -eq $frontendPermCheck
+$needsBackendPerm = $null -eq $backendPermCheck
+
+if (-not $needsFrontendPerm -and -not $needsBackendPerm) {
+    Write-ColorOutput Green "権限は既に正しく設定されています。スキップします。"
+} else {
+    # 並列処理で権限設定を実行（高速化）
+    $jobs = @()
+    
+    if ($needsFrontendPerm) {
+        Write-ColorOutput White "  - フロントエンドディレクトリの権限設定を並列実行中..."
+        $jobs += Start-Job -ScriptBlock {
+            icacls $args[0] /grant "IIS_IUSRS:(OI)(CI)RX" /T /Q 2>$null
+        } -ArgumentList $FrontendDeploy
+    }
+    
+    if ($needsBackendPerm) {
+        Write-ColorOutput White "  - バックエンドディレクトリの権限設定を並列実行中..."
+        $jobs += Start-Job -ScriptBlock {
+            icacls $args[0] /grant "IIS_IUSRS:(OI)(CI)F" /T /Q 2>$null
+        } -ArgumentList $BackendDeploy
+    }
+    
+    # 並列ジョブの完了を待機
+    if ($jobs.Count -gt 0) {
+        Wait-Job $jobs | Out-Null
+        $jobs | Remove-Job
+        Write-ColorOutput Green "権限設定が完了しました。（並列処理 + /Q高速化適用）"
+    }
+}
 
 # 8. HTTPS設定 (自己署名証明書)
 Write-ColorOutput Yellow "ステップ 7: HTTPS設定 (自己署名証明書)..."
