@@ -1,6 +1,6 @@
 /**
  * 部門管理ページ
- * 部門・課・誤字修正リストの追加・削除・編集を行う
+ * 部門・課・専門用語リストの追加・削除・編集を行う
  * Excelライクな編集機能付き
  */
 
@@ -101,7 +101,7 @@ export const DepartmentManagement: React.FC<DepartmentManagementProps> = ({ onBa
   useEffect(() => {
     loadDepartments();
     loadJobTypes();
-    // 最初から空の誤字修正リストを表示
+    // 最初から空の専門用語リストを表示
     initializeEditableCorrections([]);
   }, []);
 
@@ -379,7 +379,7 @@ export const DepartmentManagement: React.FC<DepartmentManagementProps> = ({ onBa
       selectedDepartment.corrections.length : 0;
     
     const message = corrections > 0 ?
-      `部門「${departmentName}」を削除しますか？\n\n関連する誤字修正リスト（${corrections}件）も一緒に削除されます。\n\nこの操作は取り消せません。` :
+      `部門「${departmentName}」を削除しますか？\n\n関連する専門用語リスト（${corrections}件）も一緒に削除されます。\n\nこの操作は取り消せません。` :
       `部門「${departmentName}」を削除しますか？\n\nこの操作は取り消せません。`;
     
     if (!window.confirm(message)) {
@@ -773,7 +773,7 @@ export const DepartmentManagement: React.FC<DepartmentManagementProps> = ({ onBa
                 />
               </div>
               <div className="form-row">
-                <label>誤字修正リストのコピー元（任意）：</label>
+                <label>専門用語リストのコピー元（任意）：</label>
                 <select
                   value={newDepartment.copyFromId || ''}
                   onChange={(e) => setNewDepartment({ 
@@ -867,7 +867,7 @@ export const DepartmentManagement: React.FC<DepartmentManagementProps> = ({ onBa
           </div>
         </div>
 
-        {/* 右側: 誤字修正・部門編集 */}
+        {/* 右側: 専門用語リスト・部門編集 */}
         {selectedDepartment ? (
           <div className="corrections-section">
             <div className="section-header">
@@ -881,7 +881,7 @@ export const DepartmentManagement: React.FC<DepartmentManagementProps> = ({ onBa
                   className={`tab-button ${correctionsTab === 'corrections' ? 'active' : ''}`}
                   onClick={() => setCorrectionsTab('corrections')}
                 >
-                  誤字修正リスト
+                  専門用語リスト
                 </button>
                 <button 
                   className={`tab-button ${correctionsTab === 'department-edit' ? 'active' : ''}`}

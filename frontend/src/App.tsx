@@ -18,7 +18,8 @@ import {
   getDepartmentWithDetails, 
   getCorrectionsForClipboardWithIssuer,
   createDepartmentMember,
-  getAllJobTypes
+  getAllJobTypes,
+  addCorrection
 } from './services/departmentService';
 import { DepartmentManagement } from './components/DepartmentManagement';
 import { LoadingSpinner } from './components/LoadingSpinner';
@@ -76,6 +77,13 @@ function App() {
   const [isHtmlDownloading, setIsHtmlDownloading] = useState(false);
   const [isPdfDownloading, setIsPdfDownloading] = useState(false);
   const [isEmailSending, setIsEmailSending] = useState(false);
+
+  // 専門用語登録の状態
+  const [termCorrectReading, setTermCorrectReading] = useState('');
+  const [termCorrectDisplay, setTermCorrectDisplay] = useState('');
+  const [termDescription, setTermDescription] = useState('');
+  const [isTermRegistering, setIsTermRegistering] = useState(false);
+  const [isTermRegistrationSuccess, setIsTermRegistrationSuccess] = useState(false);
 
   // HtmlExportServiceは直接使用するため、useRefは不要
 
@@ -245,6 +253,53 @@ function App() {
     const newParts = parts.filter((_: string, idx: number) => selectedParticipants.has(idx));
     setMeetingInfo({...meetingInfo, 参加者: newParts});
     setSelectedParticipants(new Set());
+  };
+
+  // 専門用語登録ハンドラ
+  const handleTermRegistration = async () => {
+    // バリデーション
+    if (!termCorrectReading.trim()) {
+      alert('正しい読み方を入力してください。');
+      return;
+    }
+    if (!termCorrectDisplay.trim()) {
+      alert('正しい表示を入力してください。');
+      return;
+    }
+    if (!selectedDepartment) {
+      alert('部門を選択してください。');
+      return;
+    }
+
+    setIsTermRegistering(true);
+    try {
+      await addCorrection(selectedDepartment.id, {
+        correct_reading: termCorrectReading.trim(),
+        correct_display: termCorrectDisplay.trim(),
+        description: termDescription.trim() || undefined,
+      });
+      
+      // 部門詳細を再取得して最新状態に更新
+      const updatedDepartment = await getDepartmentWithDetails(selectedDepartment.id);
+      setSelectedDepartment(updatedDepartment);
+      
+      // 成功状態を表示
+      setIsTermRegistering(false);
+      setIsTermRegistrationSuccess(true);
+      
+      // 2秒後にフォームをクリアして元の状態に戻す
+      setTimeout(() => {
+        setTermCorrectReading('');
+        setTermCorrectDisplay('');
+        setTermDescription('');
+        setIsTermRegistrationSuccess(false);
+      }, 2000);
+      
+    } catch (error) {
+      console.error('専門用語登録エラー:', error);
+      alert('専門用語の登録に失敗しました。');
+      setIsTermRegistering(false);
+    }
   };
 
   // ウィンドウサイズの変更を監視
@@ -1195,6 +1250,121 @@ function App() {
           </div>
 
           <div className="sidebar-section">
+            <h3>専門用語登録</h3>
+            {selectedDepartment ? (
+              <>
+                <input
+                  type="text"
+                  value={termCorrectReading}
+                  onChange={e => setTermCorrectReading(e.target.value)}
+                  placeholder="正しい読み方"
+                  className="sidebar-input"
+                  disabled={isTermRegistering}
+                />
+                <input
+                  type="text"
+                  value={termCorrectDisplay}
+                  onChange={e => setTermCorrectDisplay(e.target.value)}
+                  placeholder="正しい表示"
+                  className="sidebar-input"
+                  disabled={isTermRegistering}
+                />
+                <input
+                  type="text"
+                  value={termDescription}
+                  onChange={e => setTermDescription(e.target.value)}
+                  placeholder="用語の説明"
+                  className="sidebar-input"
+                  disabled={isTermRegistering}
+                />
+                <LoadingSpinner 
+                  isLoading={isTermRegistering} 
+                  message="専門用語を登録中..."
+                >
+                  <button 
+                    onClick={handleTermRegistration} 
+                    className={`sidebar-button ${
+                      isTermRegistrationSuccess ? 'sidebar-button-success' : ''
+                    }`}
+                    disabled={
+                      isTermRegistering || 
+                      isTermRegistrationSuccess || 
+                      !termCorrectReading.trim() || 
+                      !termCorrectDisplay.trim()
+                    }
+                  >
+                    {isTermRegistrationSuccess ? '登録完了' : '登録'}
+                  </button>
+                </LoadingSpinner>
+              </>
+            ) : (
+              <div>
+                <button className="sidebar-button disabled" disabled>
+                  登録
+                </button>
+                <p className="warning-text small">
+                  ⚠ 部門を選択してください
+                </p>
+              </div>
+            )}
+          </div>
+
+          <div className="sidebar-section">
+            <h3>メール送信</h3>
+            {selectedDepartment?.email_address ? (
+              <LoadingSpinner 
+                isLoading={isEmailSending} 
+                message="メールを送信中..."
+              >
+                <button 
+                  onClick={handleSendPdfMail} 
+                  className="sidebar-button"
+                  disabled={isHtmlDownloading || isPdfDownloading || isEmailSending}
+                >
+                  PDF添付
+                </button>
+              </LoadingSpinner>
+            ) : (
+              <div>
+                <button className="sidebar-button disabled" disabled>
+                  PDF添付
+                </button>
+                <p className="warning-text small">
+                  ⚠ メールアドレスを登録してください
+                </p>
+              </div>
+            )}
+          </div>
+          
+          <div className="sidebar-section">
+            <h3>ダウンロード</h3>
+            <LoadingSpinner 
+              isLoading={isHtmlDownloading} 
+              message="HTMLファイルを準備中..."
+            >
+              <button 
+                onClick={handleDownloadHtml} 
+                className="sidebar-button"
+                disabled={isHtmlDownloading || isPdfDownloading || isEmailSending}
+              >
+                HTML形式
+              </button>
+            </LoadingSpinner>
+            <LoadingSpinner 
+              isLoading={isPdfDownloading} 
+              message="PDFファイルを生成中..."
+            >
+              <button 
+                onClick={handleDownloadPdf} 
+                className="sidebar-button"
+                disabled={isHtmlDownloading || isPdfDownloading || isEmailSending}
+              >
+                PDF形式
+              </button>
+            </LoadingSpinner>
+          </div>
+          
+          <div className="sidebar-section">
             <h3>元データ入力</h3>
             <textarea
               value={sourceDataText}
@@ -1231,61 +1401,7 @@ function App() {
               </div>
             )}
           </div>
-          
-          <div className="sidebar-section">
-            <h3>ダウンロード</h3>
-            <LoadingSpinner 
-              isLoading={isHtmlDownloading} 
-              message="HTMLファイルを準備中..."
-            >
-              <button 
-                onClick={handleDownloadHtml} 
-                className="sidebar-button"
-                disabled={isHtmlDownloading || isPdfDownloading || isEmailSending}
-              >
-                HTML形式
-              </button>
-            </LoadingSpinner>
-            <LoadingSpinner 
-              isLoading={isPdfDownloading} 
-              message="PDFファイルを生成中..."
-            >
-              <button 
-                onClick={handleDownloadPdf} 
-                className="sidebar-button"
-                disabled={isHtmlDownloading || isPdfDownloading || isEmailSending}
-              >
-                PDF形式
-              </button>
-            </LoadingSpinner>
-          </div>
-          
-          <div className="sidebar-section">
-            <h3>メール送信</h3>
-            {selectedDepartment?.email_address ? (
-              <LoadingSpinner 
-                isLoading={isEmailSending} 
-                message="メールを送信中..."
-              >
-                <button 
-                  onClick={handleSendPdfMail} 
-                  className="sidebar-button"
-                  disabled={isHtmlDownloading || isPdfDownloading || isEmailSending}
-                >
-                  PDF添付
-                </button>
-              </LoadingSpinner>
-            ) : (
-              <div>
-                <button className="sidebar-button disabled" disabled>
-                  PDF添付
-                </button>
-                <p className="warning-text small">
-                  ⚠ メールアドレスを登録してください
-                </p>
-              </div>
-            )}
-          </div>
+
         </div>
       </aside>
       

@@ -220,6 +220,7 @@ async def send_pdf_email(
             "大分類": meeting_data.get('大分類', ''),
             "中分類": meeting_data.get('中分類', ''),
             "小分類": meeting_data.get('小分類', ''),
+            "キーワード": meeting_data.get('キーワード', ''),
             "要約": convert_newlines_to_slash_n(meeting_data.get('要約', '')),
             "発行者": meeting_data.get('発行者', ''),
         }
