@@ -956,15 +956,7 @@ function App() {
         sourceDataTextContent = sourceDataText.trim();
       }
 
-      // 元データの有無チェック
-      const hasSourceData = sourceDataFileAttachment || sourceDataTextContent;
-      if (!hasSourceData) {
-        // 元データがない場合は確認ダイアログを表示
-        const shouldSend = window.confirm('元データがありませんがメール送信していいですか？');
-        if (!shouldSend) {
-          return; // ユーザーが「いいえ」を選択した場合は送信をキャンセル
-        }
-      }
+
 
       // フロントは構造化データ（meetingInfo + editorContent + 元データ）をサーバに渡す
       // 選択された部門のメールアドレスを使用
