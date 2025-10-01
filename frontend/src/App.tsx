@@ -567,6 +567,9 @@ function App() {
         return text ? text.replace(/\/n/g, '\n') : '';
       };
       
+      // 発行者の決定：選択された発行者またはフリー入力を優先
+      const finalIssuer = selectedIssuer || freeIssuerInput.trim() || parsedData['発行者'] || parsedData['issuer'] || parsedData['Issuer'] || '';
+      
       const info = {
         会議タイトル: parsedData['会議タイトル'] || parsedData['title'] || '',
         参加者: parsedData['参加者'] || parsedData['participants'] || [],
@@ -574,12 +577,12 @@ function App() {
         会議場所: parsedData['会議場所'] || parsedData['会議場所'] || '',
         要約: convertSlashNToNewline(parsedData['要約'] || parsedData['summary'] || ''),
         講評: convertSlashNToNewline(parsedData['講評'] || parsedData['review'] || ''),
-        発行者: parsedData['発行者'] || parsedData['issuer'] || parsedData['Issuer'] || '',
+        発行者: finalIssuer, // ブラウザ上で選択された発行者情報を使用
         機密レベル: parsedData['機密レベル'] || '社外秘', // デフォルトは「社外秘」
-        // 以下は読み取り専用で表示する分類情報
-        部: parsedData['部'] || parsedData['department'] || '',
-        課: parsedData['課'] || '',
-        職種: parsedData['職種'] || '',
+        // 以下はブラウザ上で選択された部門情報を使用（議事録読み取りテキストの情報は使わない）
+        部: selectedDepartment ? selectedDepartment.bu_name : '',
+        課: selectedDepartment ? selectedDepartment.ka_name : '',
+        職種: selectedDepartment ? selectedDepartment.job_type || '' : '',
         大分類: parsedData['大分類'] || parsedData['category1'] || '',
         中分類: parsedData['中分類'] || parsedData['category2'] || '',
         小分類: parsedData['小分類'] || parsedData['category3'] || '',
@@ -916,6 +919,18 @@ function App() {
   // HTML添付送信はフロントで廃止。PDF送信はJSONを送るフローとする。
 
   const handleSendPdfMail = async () => {
+    // 部門が選択されているかチェック
+    if (!selectedDepartment) {
+      alert('部門を選択してからメール送信してください。');
+      return;
+    }
+    
+    // 選択された部門にメールアドレスが登録されているかチェック
+    if (!selectedDepartment.email_address || !selectedDepartment.email_address.trim()) {
+      alert('選択された部門にメールアドレスが登録されていません。部門管理ページでメールアドレスを設定してください。');
+      return;
+    }
+
     await validateAndExecute(meetingInfo, async () => {
       // 元データの準備
       let sourceDataFileAttachment: any = undefined;
@@ -952,9 +967,12 @@ function App() {
       }
 
       // フロントは構造化データ（meetingInfo + editorContent + 元データ）をサーバに渡す
+      // 選択された部門のメールアドレスを使用
+      const recipientEmail = selectedDepartment?.email_address || '';
+      
       const pdfMailRequest: PdfMailSendRequest = {
         subject: '議事録',
-        recipient_email: '',
+        recipient_email: recipientEmail, // 選択された部門のメールアドレスを使用
         meetingInfo: meetingInfo || {},
         minutesHtml: editorContent || '',
         sourceDataText: sourceDataTextContent,

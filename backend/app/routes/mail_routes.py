@@ -236,9 +236,10 @@ async def send_pdf_email(
         
         # 部門のメールアドレスを取得して送信先を決定
         recipients = []
-        if request.recipient_email:
+        if request.recipient_email and request.recipient_email.strip():
             # 明示的に受信者が指定されている場合はそれを使用
-            recipients = [request.recipient_email]
+            recipients = [request.recipient_email.strip()]
+            logger.info(f"フロントエンドから指定されたメールアドレスに送信: {request.recipient_email.strip()}")
         else:
             # 部門情報から送信先を決定
             meeting_data = request.meetingInfo or {}

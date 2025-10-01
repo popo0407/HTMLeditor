@@ -3,6 +3,7 @@
 node_modules\
 build\
 __pycache__\
+tinymceEditor\
 .env
 .git\
 dist\
@@ -12,3 +13,5 @@ dist\
 Thumbs.db
 *.tmp
 *.temp
+backend\data\
+backend\logs\
