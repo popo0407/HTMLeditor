@@ -39,7 +39,8 @@ function App() {
     大分類: '',
     中分類: '',
     小分類: '',
-    キーワード: '' // キーワードフィールドを追加
+    キーワード: '', // キーワードフィールドを追加
+    その他キーワード: '' // その他キーワードフィールドを追加
   });
   const [activeTab, setActiveTab] = useState<'minutes' | 'info'>('minutes');
   const [editorContent, setEditorContent] = useState<string>('');
@@ -352,7 +353,7 @@ function App() {
     // 各フィールドをXMLタグから抽出
     const fields = [
       '会議タイトル', '参加者', '会議日時', '会議場所', 
-      '部', '課', '職種', '大分類', '中分類', '小分類', '要約', '講評', '発行者', '議事録', 'キーワード'
+      '部', '課', '職種', '大分類', '中分類', '小分類', '要約', '講評', '発行者', '議事録', 'キーワード', 'その他キーワード'
     ];
     
     fields.forEach(field => {
@@ -382,8 +383,8 @@ function App() {
           if (field === '要約' || field === '講評') {
             value = value.replace(/\/n/g, '\n');
           }
-          // キーワードフィールドは全角カンマ・中点を半角カンマに変換
-          if (field === 'キーワード') {
+          // キーワードフィールドとその他キーワードフィールドは全角カンマ・中点を半角カンマに変換
+          if (field === 'キーワード' || field === 'その他キーワード') {
             value = value.replace(/[，、]/g, ',');
           }
           result[field] = value;
@@ -449,6 +450,10 @@ function App() {
     // キーワード情報の抽出を追加
     const keywordsEl = meetingInfoContainer.querySelector('.meeting-info-keywords-value');
     if (keywordsEl) result['キーワード'] = keywordsEl.textContent?.trim() || '';
+    
+    // その他キーワード情報の抽出を追加
+    const otherKeywordsEl = meetingInfoContainer.querySelector('.meeting-info-other-keywords-value');
+    if (otherKeywordsEl) result['その他キーワード'] = otherKeywordsEl.textContent?.trim() || '';
     
     const participantsEl = meetingInfoContainer.querySelector('.meeting-info-participants');
     if (participantsEl) {
@@ -587,6 +592,7 @@ function App() {
         中分類: parsedData['中分類'] || parsedData['category2'] || '',
         小分類: parsedData['小分類'] || parsedData['category3'] || '',
         キーワード: parsedData['キーワード'] || '',
+        その他キーワード: parsedData['その他キーワード'] || '',
       };
 
       const minutesHtml = parsedData['議事録'] || '';
@@ -1570,6 +1576,8 @@ function App() {
                   <input type="text" value={meetingInfo.小分類 || ''} onChange={e => setMeetingInfo({...meetingInfo, 小分類: e.target.value})} />
                   <label>キーワード</label>
                   <input type="text" value={meetingInfo.キーワード || ''} onChange={e => setMeetingInfo({...meetingInfo, キーワード: e.target.value})} />
+                  <label>その他キーワード</label>
+                  <input type="text" value={meetingInfo.その他キーワード || ''} onChange={e => setMeetingInfo({...meetingInfo, その他キーワード: e.target.value})} />
                 </div>
               ) : (
                 <div className="minutes-editor-wrapper">

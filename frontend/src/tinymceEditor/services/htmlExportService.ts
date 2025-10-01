@@ -129,6 +129,7 @@ export class HtmlExportService {
   中分類?: string;
   小分類?: string;
   キーワード?: string;
+  その他キーワード?: string;
   機密レベル?: string;
   } | null | undefined, minutesHtml: string): string {
     if (!meetingInfo) return minutesHtml || '';
@@ -146,6 +147,7 @@ export class HtmlExportService {
   const category2 = meetingInfo.中分類 || '';
   const category3 = meetingInfo.小分類 || '';
   const keywords = meetingInfo.キーワード || '';
+  const otherKeywords = meetingInfo.その他キーワード || '';
     let participants: string[] | string = meetingInfo.参加者 || [];
     if (typeof participants === 'string') {
       participants = participants.split(/\r?\n/).filter(Boolean);
@@ -174,6 +176,7 @@ export class HtmlExportService {
     const category2Html = category2 ? `<h3 class="meeting-info-category2">中分類</h3><p class="meeting-info-category2-value">${HtmlExportService.escapeHtml(category2)}</p>` : '';
     const category3Html = category3 ? `<h3 class="meeting-info-category3">小分類</h3><p class="meeting-info-category3-value">${HtmlExportService.escapeHtml(category3)}</p>` : '';
     const keywordsHtml = keywords ? `<h3 class="meeting-info-keywords">キーワード</h3><p class="meeting-info-keywords-value">${HtmlExportService.escapeHtml(keywords)}</p>` : '';
+    const otherKeywordsHtml = otherKeywords ? `<h3 class="meeting-info-other-keywords">その他キーワード</h3><p class="meeting-info-other-keywords-value">${HtmlExportService.escapeHtml(otherKeywords)}</p>` : '';
 
     const issuerHtml = issuer ? `<h3 class="meeting-info-issuer">発行者</h3><p class="meeting-info-issuer-value">${HtmlExportService.escapeHtml(issuer)}</p>` : '';
 
@@ -189,6 +192,7 @@ export class HtmlExportService {
         ${category2Html}
         ${category3Html}
         ${keywordsHtml}
+        ${otherKeywordsHtml}
         <h3 class="meeting-info-participants-label">参加者</h3>
         <p class="meeting-info-participants">${participantsHtml}</p>
         <h3 class="meeting-info-summary-label">会議概要</h3>
@@ -221,6 +225,7 @@ export class HtmlExportService {
     中分類?: string;
     小分類?: string;
     キーワード?: string;
+    その他キーワード?: string;
     機密レベル?: string;
   } | null | undefined, minutesHtml: string): string {
     if (!meetingInfo) return '';
@@ -238,6 +243,7 @@ export class HtmlExportService {
     const category2 = meetingInfo.中分類 || '';
     const category3 = meetingInfo.小分類 || '';
   const keywords = meetingInfo.キーワード || '';
+  const otherKeywords = meetingInfo.その他キーワード || '';
 
     let participants: string[] | string = meetingInfo.参加者 || [];
     if (typeof participants === 'string') {
@@ -259,6 +265,7 @@ export class HtmlExportService {
 <中分類>${this.escapeXml(category2)}</中分類>
 <小分類>${this.escapeXml(category3)}</小分類>
 <キーワード>${this.escapeXml(keywords)}</キーワード>
+<その他キーワード>${this.escapeXml(otherKeywords)}</その他キーワード>
 <要約>${this.escapeXml(summary)}</要約>
 <講評>${this.escapeXml(review)}</講評>
 <発行者>${this.escapeXml(issuer)}</発行者>
