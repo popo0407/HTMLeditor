@@ -28,6 +28,7 @@ import { getBookmarkletCode, BOOKMARKLET_NAME } from './utils/bookmarklet';
 function App() {
   const [importText, setImportText] = useState('');
   const [meetingInfo, setMeetingInfo] = useState<any>({
+    議事録No: '', // 議事録No.フィールドを追加
     会議タイトル: '',
     参加者: [],
     会議日時: '',
@@ -35,12 +36,15 @@ function App() {
     要約: '',
     講評: '',
     発行者: '', // 発行者フィールドを追加
-    部門: '',
+    部: '', // 部門フィールドを追加
+    課: '', // 課フィールドを追加
+    職種: '', // 職種フィールドを追加
     大分類: '',
     中分類: '',
     小分類: '',
     キーワード: '', // キーワードフィールドを追加
-    その他キーワード: '' // その他キーワードフィールドを追加
+    その他キーワード: '', // その他キーワードフィールドを追加
+    機密レベル: '社外秘' // 機密レベルフィールドを追加
   });
   const [activeTab, setActiveTab] = useState<'minutes' | 'info'>('minutes');
   const [editorContent, setEditorContent] = useState<string>('');
@@ -186,6 +190,42 @@ function App() {
     }
     
     return sanitized;
+  };
+
+  // 課名から括弧内の文字列を抽出するヘルパー関数
+  const extractKaName = (kaName: string): string => {
+    if (!kaName) return '';
+    
+    // 括弧内の文字列を検索（全角・半角両方に対応）
+    const match = kaName.match(/[（(]([^）)]+)[）)]/);
+    if (match && match[1]) {
+      return match[1].trim();
+    }
+    
+    // 括弧がない場合は課名をそのまま返す
+    return kaName.trim();
+  };
+
+  // 現在日時をYY/M/D形式で生成するヘルパー関数
+  const generateCurrentDateString = (): string => {
+    const now = new Date();
+    const year = now.getFullYear().toString().slice(-2); // 下2桁
+    const month = (now.getMonth() + 1).toString(); // 月（1-12）
+    const day = now.getDate().toString(); // 日
+    return `${year}/${month}/${day}`;
+  };
+
+  // PDF作成情報を自動生成するヘルパー関数
+  const generateCreationInfo = () => {
+    const currentDate = generateCurrentDateString();
+    const kaName = selectedDepartment ? extractKaName(selectedDepartment.ka_name) : '';
+    const issuer = selectedIssuer || freeIssuerInput.trim() || '';
+    
+    return {
+      作成日: currentDate,
+      課名: kaName,
+      発行者: issuer
+    };
   };
 
   // PDFファイル名を生成するヘルパー関数（【社外秘】_会議日（YYYY-MM-DD）_会議タイトル）
@@ -576,6 +616,7 @@ function App() {
       const finalIssuer = selectedIssuer || freeIssuerInput.trim() || parsedData['発行者'] || parsedData['issuer'] || parsedData['Issuer'] || '';
       
       const info = {
+        議事録No: parsedData['議事録No'] || parsedData['議事録No.'] || '', // 議事録No.フィールドを追加
         会議タイトル: parsedData['会議タイトル'] || parsedData['title'] || '',
         参加者: parsedData['参加者'] || parsedData['participants'] || [],
         会議日時: parsedData['会議日時'] || parsedData['datetime'] || '',
@@ -586,7 +627,7 @@ function App() {
         機密レベル: parsedData['機密レベル'] || '社外秘', // デフォルトは「社外秘」
         // 以下はブラウザ上で選択された部門情報を使用（議事録読み取りテキストの情報は使わない）
         部: selectedDepartment ? selectedDepartment.bu_name : '',
-        課: selectedDepartment ? selectedDepartment.ka_name : '',
+        課: selectedDepartment ? selectedDepartment.ka_name : '', 
         職種: selectedDepartment ? selectedDepartment.job_type || '' : '',
         大分類: parsedData['大分類'] || parsedData['category1'] || '',
         中分類: parsedData['中分類'] || parsedData['category2'] || '',
@@ -772,6 +813,14 @@ function App() {
     try {
       const department = await getDepartmentWithDetails(departmentId);
       setSelectedDepartment(department);
+      
+      // 部門選択時にmeetingInfoも更新
+      setMeetingInfo((prev: any) => ({
+        ...prev,
+        部: department.bu_name || '',
+        課: department.ka_name || '',
+        職種: department.job_type || ''
+      }));
     } catch (error) {
       console.error('部門の詳細取得に失敗しました:', error);
       alert('部門の詳細取得に失敗しました。');
@@ -1448,6 +1497,13 @@ function App() {
                       秘
                     </button>
                   </div>
+                  <label>議事録No. (任意)</label>
+                  <input 
+                    type="text" 
+                    value={meetingInfo.議事録No || ''} 
+                    onChange={e => setMeetingInfo({...meetingInfo, 議事録No: e.target.value})} 
+                    placeholder="議事録No.1234567890ABCDEFGHIJK"
+                  />
                   <label>会議タイトル</label>
                   <input type="text" value={meetingInfo.会議タイトル || ''} onChange={e => setMeetingInfo({...meetingInfo, 会議タイトル: e.target.value})} />
                   <label>会議日時 (YYYY-MM-DD hh:mm:ss)</label>

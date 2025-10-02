@@ -77,12 +77,13 @@ def normalize_meeting(meeting: Dict[str, Any] | None) -> Dict[str, Any]:
         return {}
     
     normalized = {
+        '議事録No': meeting.get('議事録No') or meeting.get('議事録No.') or '',  # 議事録No.フィールドを追加
         'title': meeting.get('title') or meeting.get('会議タイトル') or '',
         'datetime': meeting.get('datetime') or meeting.get('会議日時') or '',
         'location': meeting.get('location') or meeting.get('会議場所') or '',
         'department': meeting.get('department') or meeting.get('部門') or '',
         'bu': meeting.get('bu') or meeting.get('部') or '',
-        'ka': meeting.get('ka') or meeting.get('課') or '',
+        '課': meeting.get('課') or meeting.get('ka') or '',  # 日本語キーに統一
         'job_type': meeting.get('job_type') or meeting.get('職種') or '',
         'participants': meeting.get('participants') or meeting.get('参加者') or [],
         'summary': meeting.get('summary') or meeting.get('要約') or '',
@@ -176,4 +177,4 @@ def generate_minutes_pdf(meeting_info: Dict[str, Any] | None, minutes_html_raw: 
     )
     
     rendered_html = render_minutes_html(meeting, safe_minutes_html)
-    return generate_pdf_from_html(rendered_html, confidential_level=confidential_level)
+    return generate_pdf_from_html(rendered_html, confidential_level=confidential_level, meeting_info=meeting)

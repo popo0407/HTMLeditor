@@ -3,7 +3,6 @@
 node_modules\
 build\
 __pycache__\
-tinymceEditor\
 .env
 .git\
 dist\
