@@ -131,7 +131,7 @@ export class HtmlExportService {
   キーワード?: string;
   その他キーワード?: string;
   機密レベル?: string;
-  } | null | undefined, minutesHtml: string): string {
+  } | null | undefined, minutesHtml: string, personaInfo?: { personalPersona?: string; departmentPersona?: string }): string {
     if (!meetingInfo) return minutesHtml || '';
 
     const title = meetingInfo.会議タイトル || '';
@@ -147,7 +147,30 @@ export class HtmlExportService {
   const category2 = meetingInfo.中分類 || '';
   const category3 = meetingInfo.小分類 || '';
   const keywords = meetingInfo.キーワード || '';
-  const otherKeywords = meetingInfo.その他キーワード || '';
+  let otherKeywords = meetingInfo.その他キーワード || '';
+  
+  // ペルソナ情報をHTMLコメントとして格納（表示されないが再読み込み時に取得可能）
+  let personaComment = '';
+  if (personaInfo) {
+    console.log('Building HTML with persona info:', personaInfo);
+    const personalPersona = personaInfo.personalPersona || '';
+    const departmentPersona = personaInfo.departmentPersona || '';
+    
+    if (personalPersona || departmentPersona) {
+      const personaDataObj = {
+        個人ペルソナ: personalPersona,
+        部門ペルソナ: departmentPersona
+      };
+      personaComment = `<!-- PERSONA_DATA:${JSON.stringify(personaDataObj)} -->`;
+      console.log('Generated persona comment:', personaComment);
+      console.log('Persona data object:', personaDataObj);
+    } else {
+      console.log('No persona data to include (both values are empty)');
+    }
+  } else {
+    console.log('No persona info provided to buildCombinedFragment');
+  }
+  
     let participants: string[] | string = meetingInfo.参加者 || [];
     if (typeof participants === 'string') {
       participants = participants.split(/\r?\n/).filter(Boolean);
@@ -176,11 +199,18 @@ export class HtmlExportService {
     const category2Html = category2 ? `<h3 class="meeting-info-category2">中分類</h3><p class="meeting-info-category2-value">${HtmlExportService.escapeHtml(category2)}</p>` : '';
     const category3Html = category3 ? `<h3 class="meeting-info-category3">小分類</h3><p class="meeting-info-category3-value">${HtmlExportService.escapeHtml(category3)}</p>` : '';
     const keywordsHtml = keywords ? `<h3 class="meeting-info-keywords">キーワード</h3><p class="meeting-info-keywords-value">${HtmlExportService.escapeHtml(keywords)}</p>` : '';
-    const otherKeywordsHtml = otherKeywords ? `<h3 class="meeting-info-other-keywords">その他キーワード</h3><p class="meeting-info-other-keywords-value">${HtmlExportService.escapeHtml(otherKeywords)}</p>` : '';
+    
+    // その他キーワードのHTML生成
+    let otherKeywordsHtml = '';
+    if (otherKeywords) {
+      const escapedKeywords = HtmlExportService.escapeHtml(otherKeywords);
+      otherKeywordsHtml = `<h3 class="meeting-info-other-keywords">その他キーワード</h3><p class="meeting-info-other-keywords-value">${escapedKeywords}</p>`;
+      console.log('Generated other keywords HTML:', otherKeywordsHtml);
+    }
 
     const issuerHtml = issuer ? `<h3 class="meeting-info-issuer">発行者</h3><p class="meeting-info-issuer-value">${HtmlExportService.escapeHtml(issuer)}</p>` : '';
 
-    const fragment = `
+    const fragment = `${personaComment}
       <div class="meeting-info-container">
         <h1 class="meeting-info-title">${HtmlExportService.escapeHtml(title)}</h1>
         <h3 class="meeting-info-datetime">会議日時: ${HtmlExportService.escapeHtml(datetime)}</h3>
@@ -206,6 +236,9 @@ export class HtmlExportService {
       </div>
     `;
 
+    console.log('Final fragment length:', fragment.length);
+    console.log('Final fragment includes persona comment:', fragment.includes('PERSONA_DATA'));
+    
     return fragment;
   }
 

@@ -8,7 +8,7 @@
 import React, { useState, useEffect } from 'react';
 import './App.css';
 import { TinyMCEEditor } from './tinymceEditor/components/TinyMCEEditor';
-import { sendPdfMail, PdfMailSendRequest } from './services/apiService';
+import { sendPdfMail, PdfMailSendRequest, exportToPdf } from './services/apiService';
 import { HtmlExportService } from './tinymceEditor/services/htmlExportService';
 import { 
   Department, 
@@ -53,6 +53,13 @@ function App() {
   const [editorHeight, setEditorHeight] = useState<number>(window.innerHeight);
   const [currentStep, setCurrentStep] = useState<'url-input' | 'department-management' | 'editor' | 'output' | 'bookmarklet-install'>('url-input');
   const [teamsUrl, setTeamsUrl] = useState('');
+  // セッションID管理
+  const [sessionId, setSessionId] = useState<string>('');
+  // ペルソナ情報の状態
+  const [personaInfo, setPersonaInfo] = useState<{個人ペルソナ: string, 部門ペルソナ: string}>({
+    個人ペルソナ: '',
+    部門ペルソナ: ''
+  });
   // 参加者の選択状態を管理
   const [selectedParticipants, setSelectedParticipants] = useState<Set<number>>(new Set());
   
@@ -386,6 +393,7 @@ function App() {
 
   // XML解析を補助するヘルパー関数群
 
+  // ペルソナ情報を抽出・除去するヘルパー関数
   const parseXmlData = (text: string): any => {
     // XML形式のデータを解析
     const result: any = {};
@@ -393,7 +401,7 @@ function App() {
     // 各フィールドをXMLタグから抽出
     const fields = [
       '会議タイトル', '参加者', '会議日時', '会議場所', 
-      '部', '課', '職種', '大分類', '中分類', '小分類', '要約', '講評', '発行者', '議事録', 'キーワード', 'その他キーワード'
+      '部', '課', '職種', '大分類', '中分類', '小分類', '要約', '講評', '発行者', '議事録', 'キーワード', 'その他キーワード', '個人ペルソナ', '部門ペルソナ'
     ];
     
     fields.forEach(field => {
@@ -441,6 +449,33 @@ function App() {
   };
 
   const parseHtmlWithMeetingInfo = (html: string): any => {
+    // HTMLコメントからペルソナ情報を抽出
+    console.log('Parsing HTML for persona info, content length:', html.length);
+    console.log('HTML preview:', html.substring(0, 500));
+    
+    // より寛容な正規表現を使用（改行やスペースを考慮）
+    const personaMatch = html.match(/<!--\s*PERSONA_DATA:(.*?)\s*-->/s);
+    let personaData: any = {};
+    if (personaMatch) {
+      try {
+        console.log('Found persona comment:', personaMatch[0]);
+        console.log('Persona JSON string:', personaMatch[1]);
+        personaData = JSON.parse(personaMatch[1]);
+        console.log('Extracted persona data from HTML comment:', personaData);
+      } catch (e) {
+        console.error('Failed to parse persona data from HTML comment:', e);
+        console.error('JSON string was:', personaMatch[1]);
+      }
+    } else {
+      console.log('No persona comment found in HTML');
+      // デバッグ用：HTMLから"PERSONA_DATA"を検索
+      if (html.includes('PERSONA_DATA')) {
+        console.log('Found PERSONA_DATA string, but regex did not match');
+        const personaIndex = html.indexOf('PERSONA_DATA');
+        console.log('Context around PERSONA_DATA:', html.substring(personaIndex - 50, personaIndex + 200));
+      }
+    }
+    
     // HTMLから会議情報を抽出
     const tempDiv = document.createElement('div');
     tempDiv.innerHTML = html;
@@ -553,6 +588,18 @@ function App() {
       result['議事録'] = minutesEl.innerHTML;
     }
     
+    // ペルソナ情報を結果に含める
+    if (personaData && (personaData['個人ペルソナ'] || personaData['部門ペルソナ'])) {
+      result['個人ペルソナ'] = personaData['個人ペルソナ'] || '';
+      result['部門ペルソナ'] = personaData['部門ペルソナ'] || '';
+      console.log('Added persona data to result:', {
+        個人ペルソナ: result['個人ペルソナ'],
+        部門ペルソナ: result['部門ペルソナ']
+      });
+    } else {
+      console.log('No persona data to add to result');
+    }
+    
     return result;
   };
 
@@ -640,6 +687,13 @@ function App() {
 
       setMeetingInfo(info);
       setEditorContent(minutesHtml);
+      
+      // ペルソナ情報をstateに設定
+      setPersonaInfo({
+        個人ペルソナ: parsedData['個人ペルソナ'] || '',
+        部門ペルソナ: parsedData['部門ペルソナ'] || ''
+      });
+      
       setActiveTab('info');
       setImportText('');
       setCurrentStep('editor');
@@ -921,7 +975,27 @@ function App() {
     await validateAndExecute(meetingInfo, async () => {
       let contentToExport = editorContent;
       if (meetingInfo) {
-        contentToExport = HtmlExportService.buildCombinedFragment(meetingInfo, editorContent);
+        // 既存のpersonaInfoステートを使用
+        console.log('Using persona information:', personaInfo);
+        
+        const personas = {
+          personalPersona: personaInfo.個人ペルソナ,
+          departmentPersona: personaInfo.部門ペルソナ
+        };
+        console.log('Formatted personas:', personas);
+        
+        contentToExport = HtmlExportService.buildCombinedFragment(meetingInfo, editorContent, personas);
+        console.log('Generated content length:', contentToExport.length);
+        console.log('Content preview:', contentToExport.substring(0, 500) + '...');
+        
+        // ペルソナコメントが含まれているかを確認
+        if (contentToExport.includes('PERSONA_DATA')) {
+          console.log('✓ Persona comment found in generated content');
+          const personaIndex = contentToExport.indexOf('PERSONA_DATA');
+          console.log('Persona comment context:', contentToExport.substring(personaIndex - 20, personaIndex + 200));
+        } else {
+          console.log('✗ Persona comment NOT found in generated content');
+        }
       }
 
       // 新しい形式でファイル名を生成（【社外秘】_会議日（YYYY-MM-DD）_会議タイトル）
@@ -937,24 +1011,15 @@ function App() {
 
   const handleDownloadPdf = async () => {
     await validateAndExecute(meetingInfo, async () => {
-      // meetingInfo + minutesHtml をそのままバックエンドに送りテンプレート統一
-      const API_BASE_URL = process.env.REACT_APP_API_URL;
+      // APIサービスを使用してPDF出力
       const payload = {
         meetingInfo: meetingInfo || null,
         minutesHtml: editorContent || '',
         filename: 'document',
         title: 'エクスポートされたドキュメント'
       };
-      const resp = await fetch(`${API_BASE_URL}/pdf/export`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-      if (!resp.ok) {
-        const t = await resp.text();
-        throw new Error(t || `status ${resp.status}`);
-      }
-      const blob = await resp.blob();
+      
+      const blob = await exportToPdf(payload);
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -1024,6 +1089,7 @@ function App() {
         minutesHtml: editorContent || '',
         sourceDataText: sourceDataTextContent,
         sourceDataFile: sourceDataFileAttachment,
+        personaInfo: personaInfo // ペルソナ情報を追加
       };
 
       await sendPdfMail(pdfMailRequest);

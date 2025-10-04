@@ -5,7 +5,7 @@
 メール送信機能のみを担当
 """
 
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Request
 from pydantic import BaseModel
 from typing import Optional
 from services.mail_service import MailService
@@ -162,6 +162,8 @@ class PdfMailRequest(BaseModel):
     sourceDataFile: Optional[dict] = None  # {name: str, content: str (base64), mimeType: str}
     # 元データファイル形式の選択
     sourceDataFormat: Optional[str] = "docx"  # "txt" or "docx"
+    # ペルソナ情報
+    personaInfo: Optional[dict] = None  # {個人ペルソナ: str, 部門ペルソナ: str}
 
 class MailResponse(BaseModel):
     """メール送信レスポンス"""
@@ -175,6 +177,7 @@ class MailResponse(BaseModel):
 @router.post("/send-pdf", response_model=MailResponse)
 async def send_pdf_email(
     request: PdfMailRequest,
+    fastapi_request: Request,
     settings = Depends(get_settings)
 ):
     """
@@ -191,6 +194,10 @@ async def send_pdf_email(
         # validate input (minutesHtml required)
         if not request.minutesHtml:
             raise HTTPException(status_code=400, detail='minutesHtml is required')
+
+        # セッションIDを取得
+        session_id = getattr(fastapi_request.state, 'session_id', None)
+        logger.info(f"Processing email with session ID: {session_id}")
 
         mail_service = MailService(
             host=settings.MAIL_HOST,
@@ -209,6 +216,9 @@ async def send_pdf_email(
                 return ''
             return str(text).replace('\n', '/n').replace('\r\n', '/n')
         
+        # ペルソナ情報を取得（フロントエンドから送信される）
+        personas = request.personaInfo or {}
+        
         body_json = {
             "会議タイトル": meeting_data.get('会議タイトル', ''),
             "参加者": meeting_data.get('参加者', []),
@@ -222,13 +232,15 @@ async def send_pdf_email(
             "小分類": meeting_data.get('小分類', ''),
             "キーワード": meeting_data.get('キーワード', ''),
             "その他キーワード": meeting_data.get('その他キーワード', ''),
+            "個人ペルソナ": personas.get('個人ペルソナ', ''),
+            "部門ペルソナ": personas.get('部門ペルソナ', ''),
             "要約": convert_newlines_to_slash_n(meeting_data.get('要約', '')),
             "発行者": meeting_data.get('発行者', ''),
         }
 
         # PDF 生成 (集中化サービス)
         try:
-            pdf_bytes = generate_minutes_pdf(request.meetingInfo or {}, request.minutesHtml or '')
+            pdf_bytes = generate_minutes_pdf(request.meetingInfo or {}, request.minutesHtml or '', session_id)
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"PDF生成失敗: {e}")
 

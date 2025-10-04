@@ -142,7 +142,7 @@ def render_minutes_html(meeting: Dict[str, Any], minutes_html: str) -> str:
     )
 
 
-def generate_minutes_pdf(meeting_info: Dict[str, Any] | None, minutes_html_raw: str) -> bytes:
+def generate_minutes_pdf(meeting_info: Dict[str, Any] | None, minutes_html_raw: str, session_id: str = None) -> bytes:
     import logging
     logger = logging.getLogger(__name__)
     
@@ -154,8 +154,10 @@ def generate_minutes_pdf(meeting_info: Dict[str, Any] | None, minutes_html_raw: 
     confidential_level = meeting.get('機密レベル', '社外秘')
     logger.info(f"Generate minutes PDF - confidential_level: {confidential_level}")
     
-    # Remove CSS content and style tags completely
+    # HTMLコンテンツの準備
     cleaned_html = minutes_html_raw or ''
+    
+    # Remove CSS content and style tags completely
     
     # Remove <style> tags and their content
     cleaned_html = re.sub(r'<style[^>]*>.*?</style>', '', cleaned_html, flags=re.DOTALL | re.IGNORECASE)

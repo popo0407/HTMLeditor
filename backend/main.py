@@ -19,6 +19,7 @@ from fastapi.staticfiles import StaticFiles
 from app.routes import mail_routes, pdf_routes, department_routes
 from app.config import get_settings
 from app.config.database import init_database
+from app.middleware.session_middleware import SessionMiddleware
 from pathlib import Path
 
 # デバッグ: インポートされたルーターの確認
@@ -67,6 +68,9 @@ app = FastAPI(
 origins = settings.get_cors_origins()
 print(f"CORS Origins: {origins}")
 
+# セッション管理ミドルウェアを追加
+app.add_middleware(SessionMiddleware)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
@@ -87,6 +91,7 @@ app.include_router(mail_routes.router, prefix="/api/mail", tags=["mail"])
 app.include_router(pdf_routes.router, prefix="/api/pdf", tags=["pdf"])
 # 部門管理APIは /api/departments を起点とする
 app.include_router(department_routes.router, prefix="/api/departments", tags=["departments"])
+
 
 # デバッグ: 登録されたルートを確認
 print("=== 登録されたルート一覧 ===")

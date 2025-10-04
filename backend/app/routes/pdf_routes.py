@@ -12,7 +12,7 @@ PDFファイル出力用のAPIルート
     legacy な html_content パラメータも引き続き受け付ける。
 """
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from typing import Optional
@@ -108,7 +108,7 @@ class PdfExportRequest(BaseModel):
 
 
 @router.post("/export")
-async def export_to_pdf(request: PdfExportRequest):
+async def export_to_pdf(request: PdfExportRequest, fastapi_request: Request):
     """PDFダウンロードエンドポイント (テンプレート統一版)
 
     優先ロジック:
@@ -117,13 +117,16 @@ async def export_to_pdf(request: PdfExportRequest):
     """
     try:
         if request.minutesHtml is not None:
+            # セッションIDを取得
+            session_id = getattr(fastapi_request.state, 'session_id', None)
+            
             # 会議情報 + 議事録本文 => テンプレートレンダリング
             meeting = normalize_meeting(request.meetingInfo or {})
 
             # 分類項目はテンプレート側から既に削除済み (meeting_minutes.html)
             # minutesHtml をサニタイズ (mail_routes と同等ポリシー)
             try:
-                pdf_bytes = generate_minutes_pdf(meeting, request.minutesHtml or '')
+                pdf_bytes = generate_minutes_pdf(meeting, request.minutesHtml or '', session_id)
             except Exception as e:
                 raise HTTPException(status_code=500, detail=f"PDF生成失敗: {e}")
 
